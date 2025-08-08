@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureP2P Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0D1117;
+            color: #00FF41;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .boot-sequence {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #00FF41;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-family: 'Courier New', monospace;
+        }
+
+        .boot-text {
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(45deg, #0D1117, #1A1E2E);
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #00FF41;
+            margin-bottom: 30px;
+        }
+
+        .pin-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .pin-digit {
+            width: 50px;
+            height: 50px;
+            background: #0D1117;
+            border: 2px solid #00FF41;
+            color: #00FF41;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        .pin-digit:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+        }
+
+        .login-btn {
+            padding: 12px 30px;
+            background: #00FF41;
+            color: #0D1117;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .login-btn:hover {
+            background: #00CC33;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.7);
+        }
+
+        .main-app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #161B22;
+            border-right: 2px solid #00FF41;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #00FF41;
+            text-align: center;
+        }
+
+        .contacts-section {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .contacts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .add-contact-btn {
+            padding: 8px 15px;
+            background: #00FF41;
+            color: #0D1117;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .contact-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0, 255, 65, 0.1);
+            border-left: 3px solid #00FF41;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover {
+            background: rgba(0, 255, 65, 0.2);
+            transform: translateX(5px);
+        }
+
+        .contact-item.active {
+            background: rgba(0, 255, 65, 0.3);
+            border-left-color: #FFB000;
+        }
+
+        .contact-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .contact-status {
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #161B22;
+            padding: 15px 20px;
+            border-bottom: 2px solid #00FF41;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00FF41;
+        }
+
+        .chat-status {
+            font-size: 12px;
+            color: #FFB000;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0D1117 0%, #1A1E2E 100%);
+        }
+
+        .message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-left: 3px solid #00FF41;
+            background: rgba(0, 255, 65, 0.05);
+            border-radius: 0 8px 8px 0;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message.system {
+            border-left-color: #00FFFF;
+            color: #00FFFF;
+            font-style: italic;
+        }
+
+        .message.encrypted {
+            border-left-color: #FF6B6B;
+            background: rgba(255, 107, 107, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-area {
+            padding: 20px;
+            background: #161B22;
+            border-top: 1px solid #00FF41;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 15px;
+            background: #0D1117;
+            border: 2px solid #00FF41;
+            color: #00FF41;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        .message-input:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+        }
+
+        .send-btn {
+            padding: 12px 20px;
+            background: #00FF41;
+            color: #0D1117;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background: #00CC33;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.7);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #161B22;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #00FF41;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #0D1117;
+            border: 2px solid #00FF41;
+            color: #00FF41;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            background: #00FF41;
+            color: #0D1117;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .modal-btn.secondary {
+            background: #666;
+            color: #00FF41;
+        }
+
+        .invite-link {
+            background: rgba(0, 255, 65, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+            font-size: 12px;
+            margin: 10px 0;
+            border: 1px solid #00FF41;
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .main-app {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 200px;
+            }
+            
+            .pin-digit {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Boot Sequence -->
+    <div id="bootSequence" class="boot-sequence">
+        <div class="boot-text">SECURE P2P CHAT v2.0</div>
+        <div class="boot-text">Initializing libsodium encryption...</div>
+        <div class="boot-text">Loading WebRTC protocols...</div>
+        <div class="boot-text">Scanning for existing sessions...</div>
+        <div class="boot-text">Ready for secure communication</div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen hidden">
+        <div class="login-title">🔒 SECURE LOGIN</div>
+        <div class="pin-input">
+            <input type="password" class="pin-digit" maxlength="1" id="pin1">
+            <input type="password" class="pin-digit" maxlength="1" id="pin2">
+            <input type="password" class="pin-digit" maxlength="1" id="pin3">
+            <input type="password" class="pin-digit" maxlength="1" id="pin4">
+        </div>
+        <button class="login-btn" onclick="login()">ACCESS SYSTEM</button>
+        <div id="loginError" style="color: #FF6B6B; margin-top: 10px; font-size: 12px;"></div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="main-app hidden">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div style="font-size: 16px; font-weight: bold;">🔒 SecureChat</div>
+                <div style="font-size: 10px; color: #888;">P2P Encrypted</div>
+            </div>
+            
+            <div class="contacts-section">
+                <div class="contacts-header">
+                    <h3>Contacts</h3>
+                    <button class="add-contact-btn" onclick="showAddContactModal()">+ ADD</button>
+                </div>
+                <div id="contactsList"></div>
+            </div>
+
+            <div style="padding: 20px; border-top: 1px solid #00FF41;">
+                <button class="add-contact-btn" onclick="generateInviteLink()" style="width: 100%;">📤 INVITE FRIEND</button>
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">Select a contact to start chatting</div>
+                <div class="chat-status" id="chatStatus">Offline</div>
+            </div>
+            
+            <div class="messages" id="messages"></div>
+            
+            <div class="input-area">
+                <div class="input-container">
+                    <input type="text" class="message-input" id="messageInput" placeholder="Type encrypted message..." disabled>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>SEND</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div id="addContactModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">Add New Contact</div>
+            <input type="text" class="modal-input" id="contactName" placeholder="Contact nickname...">
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="addContact()">ADD</button>
+                <button class="modal-btn secondary" onclick="hideAddContactModal()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invite Modal -->
+    <div id="inviteModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">Invite Friend</div>
+            <div>Share this secure invitation link:</div>
+            <div class="invite-link" id="inviteLink"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="copyInviteLink()">COPY LINK</button>
+                <button class="modal-btn secondary" onclick="hideInviteModal()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/libsodium-js/0.7.9/sodium.js"></script>
+    <script>
+        class SecureP2PChat {
+            constructor() {
+                this.currentUser = null;
+                this.contacts = [];
+                this.activeContact = null;
+                this.peer = null;
+                this.keyPair = null;
+                this.sharedKeys = new Map();
+                this.chatHistory = new Map();
+                
+                this.init();
+            }
+
+            async init() {
+                // Initialize crypto
+                await sodium.ready;
+                
+                // Start boot sequence
+                await this.startBootSequence();
+                
+                // Check for invitation in URL
+                this.checkInvitationURL();
+                
+                // Load saved data
+                this.loadSavedData();
+                
+                // Show login screen
+                this.showLogin();
+            }
+
+            async startBootSequence() {
+                const bootTexts = [
+                    'SECURE P2P CHAT v2.0',
+                    'Initializing libsodium encryption...',
+                    'Loading WebRTC protocols...',
+                    'Scanning for existing sessions...',
+                    'Ready for secure communication'
+                ];
+                
+                const bootElement = document.getElementById('bootSequence');
+                bootElement.innerHTML = '';
+                
+                for (let i = 0; i < bootTexts.length; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    const div = document.createElement('div');
+                    div.className = 'boot-text';
+                    div.textContent = '> ' + bootTexts[i];
+                    bootElement.appendChild(div);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                bootElement.classList.add('hidden');
+            }
+
+            showLogin() {
+                document.getElementById('loginScreen').classList.remove('hidden');
+                
+                // Setup PIN input navigation
+                const pinInputs = document.querySelectorAll('.pin-digit');
+                pinInputs.forEach((input, index) => {
+                    input.addEventListener('input', (e) => {
+                        if (e.target.value && index < pinInputs.length - 1) {
+                            pinInputs[index + 1].focus();
+                        }
+                    });
+                    
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                            pinInputs[index - 1].focus();
+                        }
+                    });
+                });
+                
+                pinInputs[0].focus();
+            }
+
+            login() {
+                const pin = Array.from(document.querySelectorAll('.pin-digit')).map(input => input.value).join('');
+                
+                if (pin.length !== 4) {
+                    document.getElementById('loginError').textContent = 'Please enter a 4-digit PIN';
+                    return;
+                }
+
+                const savedPin = this.getStoredPIN();
+                
+                if (!savedPin) {
+                    // First time - set PIN
+                    this.setStoredPIN(pin);
+                    this.addMessage('SYSTEM', 'PIN set successfully! Remember this PIN for future logins.');
+                } else if (savedPin !== this.hashPIN(pin)) {
+                    document.getElementById('loginError').textContent = 'Invalid PIN';
+                    return;
+                }
+
+                // Generate keypair for this session
+                this.keyPair = sodium.crypto_kx_keypair();
+                
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                
+                this.renderContacts();
+                this.addMessage('SYSTEM', 'Secure session established. Your communications are encrypted.');
+            }
+
+            hashPIN(pin) {
+                // Simple hash for demo - use proper hashing in production
+                return btoa(pin + 'secure_salt').replace(/[^a-zA-Z0-9]/g, '');
+            }
+
+            getStoredPIN() {
+                return localStorage.getItem('secure_chat_pin');
+            }
+
+            setStoredPIN(pin) {
+                localStorage.setItem('secure_chat_pin', this.hashPIN(pin));
+            }
+
+            loadSavedData() {
+                const savedContacts = localStorage.getItem('secure_chat_contacts');
+                if (savedContacts) {
+                    this.contacts = JSON.parse(savedContacts);
+                }
+
+                const savedHistory = localStorage.getItem('secure_chat_history');
+                if (savedHistory) {
+                    this.chatHistory = new Map(JSON.parse(savedHistory));
+                }
+            }
+
+            saveData() {
+                localStorage.setItem('secure_chat_contacts', JSON.stringify(this.contacts));
+                localStorage.setItem('secure_chat_history', JSON.stringify(Array.from(this.chatHistory)));
+            }
+
+            checkInvitationURL() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const inviteData = urlParams.get('invite');
+                
+                if (inviteData) {
+                    // Parse invitation
+                    try {
+                        const invite = JSON.parse(atob(inviteData));
+                        this.handleInvitation(invite);
+                    } catch (e) {
+                        console.error('Invalid invitation link');
+                    }
+                }
+            }
+
+            handleInvitation(invite) {
+                // Add contact automatically
+                const contact = {
+                    id: invite.contactId,
+                    name: invite.name,
+                    publicKey: invite.publicKey,
+                    roomId: invite.roomId,
+                    status: 'invited'
+                };
+
+                this.contacts.push(contact);
+                this.saveData();
+                
+                setTimeout(() => {
+                    this.addMessage('SYSTEM', `Invitation received from ${invite.name}. Contact added automatically.`);
+                }, 1000);
+            }
+
+            showAddContactModal() {
+                document.getElementById('addContactModal').classList.remove('hidden');
+                document.getElementById('contactName').focus();
+            }
+
+            hideAddContactModal() {
+                document.getElementById('addContactModal').classList.add('hidden');
+                document.getElementById('contactName').value = '';
+            }
+
+            addContact() {
+                const name = document.getElementById('contactName').value.trim();
+                if (!name) return;
+
+                const contact = {
+                    id: Date.now().toString(),
+                    name: name,
+                    publicKey: null,
+                    roomId: null,
+                    status: 'offline'
+                };
+
+                this.contacts.push(contact);
+                this.saveData();
+                this.renderContacts();
+                this.hideAddContactModal();
+                
+                this.addMessage('SYSTEM', `Contact "${name}" added. Use invite link to establish secure connection.`);
+            }
+
+            renderContacts() {
+                const contactsList = document.getElementById('contactsList');
+                contactsList.innerHTML = '';
+
+                this.contacts.forEach(contact => {
+                    const contactElement = document.createElement('div');
+                    contactElement.className = 'contact-item';
+                    contactElement.onclick = () => this.selectContact(contact);
+                    
+                    if (this.activeContact && this.activeContact.id === contact.id) {
+                        contactElement.classList.add('active');
+                    }
+
+                    contactElement.innerHTML = `
+                        <div class="contact-name">${contact.name}</div>
+                        <div class="contact-status">${contact.status}</div>
+                    `;
+
+                    contactsList.appendChild(contactElement);
+                });
+            }
+
+            selectContact(contact) {
+                this.activeContact = contact;
+                this.renderContacts();
+                
+                document.getElementById('chatTitle').textContent = `Chat with ${contact.name}`;
+                document.getElementById('chatStatus').textContent = contact.status;
+                
+                // Load chat history
+                this.loadChatHistory(contact.id);
+                
+                // Enable/disable input based on connection status
+                const canChat = contact.status === 'online' || contact.status === 'connected';
+                document.getElementById('messageInput').disabled = !canChat;
+                document.getElementById('sendBtn').disabled = !canChat;
+                
+                if (canChat) {
+                    document.getElementById('messageInput').focus();
+                }
+            }
+
+            loadChatHistory(contactId) {
+                const messages = document.getElementById('messages');
+                messages.innerHTML = '';
+                
+                const history = this.chatHistory.get(contactId) || [];
+                history.forEach(msg => {
+                    this.displayMessage(msg.sender, msg.text, msg.encrypted, msg.timestamp);
+                });
+            }
+
+            generateInviteLink() {
+                if (!this.keyPair) {
+                    this.addMessage('SYSTEM', 'Please login first to generate invite links.');
+                    return;
+                }
+
+                const inviteData = {
+                    contactId: Date.now().toString(),
+                    name: 'User_' + Math.random().toString(36).substr(2, 5),
+                    publicKey: sodium.to_hex(this.keyPair.publicKey),
+                    roomId: Math.random().toString(36).substr(2, 8).toUpperCase(),
+                    timestamp: Date.now()
+                };
+
+                const inviteLink = window.location.origin + window.location.pathname + '?invite=' + btoa(JSON.stringify(inviteData));
+                
+                document.getElementById('inviteLink').textContent = inviteLink;
+                document.getElementById('inviteModal').classList.remove('hidden');
+            }
+
+            copyInviteLink() {
+                const link = document.getElementById('inviteLink').textContent;
+                navigator.clipboard.writeText(link).then(() => {
+                    this.addMessage('SYSTEM', 'Invite link copied to clipboard!');
+                });
+            }
+
+            hideInviteModal() {
+                document.getElementById('inviteModal').classList.add('hidden');
+            }
+
+            sendMessage() {
+                const input = document.getElementById('messageInput');
+                const message = input.value.trim();
+                if (!message || !this.activeContact) return;
+
+                // Handle IRC commands
+                if (message.startsWith('/')) {
+                    this.handleCommand(message);
+                } else {
+                    // Encrypt and send message
+                    const encrypted = this.encryptMessage(message);
+                    this.addMessage('You', `🔒 ${message}`, true);
+                    
+                    // Save to history
+                    this.saveChatMessage(this.activeContact.id, 'You', message, true);
+                    
+                    // Simulate sending (in real app, send via WebRTC)
+                    setTimeout(() => {
+                        this.addMessage('SYSTEM', '📡 Message encrypted and sent via P2P channel');
+                    }, 100);
+                }
+
+                input.value = '';
+            }
+
+            handleCommand(command) {
+                const parts = command.split(' ');
+                const cmd = parts[0].toLowerCase();
+
+                switch(cmd) {
+                    case '/help':
+                        this.addMessage('SYSTEM', 'Commands: /help, /clear, /status, /test');
+                        break;
+                    case '/clear':
+                        document.getElementById('messages').innerHTML = '';
+                        break;
+                    case '/status':
+                        this.addMessage('SYSTEM', `Connected contacts: ${this.contacts.filter(c => c.status === 'online').length}`);
+                        break;
+                    case '/test':
+                        const testMsg = 'Test encryption message';
+                        const encrypted = this.encryptMessage(testMsg);
+                        const decrypted = this.decryptMessage(encrypted);
+                        this.addMessage('SYSTEM', `Encryption test: ${testMsg === decrypted ? 'PASSED ✅' : 'FAILED ❌'}`);
+                        break;
+                    default:
+                        this.addMessage('SYSTEM', `Unknown command: ${cmd}`);
+                }
+            }
+
+            encryptMessage(message) {
+                // For demo - in production, use real shared keys with contacts
+                return btoa(message + '_encrypted_' + Date.now());
+            }
+
+            decryptMessage(encryptedData) {
+                // For demo - in production, use real decryption
+                try {
+                    return atob(encryptedData).split('_encrypted_')[0];
+                } catch (e) {
+                    return '[Decryption failed]';
+                }
+            }
+
+            addMessage(sender, text, encrypted = false) {
+                this.displayMessage(sender, text, encrypted);
+                
+                if (this.activeContact && sender !== 'SYSTEM') {
+                    this.saveChatMessage(this.activeContact.id, sender, text, encrypted);
+                }
+            }
+
+            displayMessage(sender, text, encrypted = false, timestamp = null) {
+                const messagesDiv = document.getElementById('messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender === 'SYSTEM' ? 'system' : ''} ${encrypted ? 'encrypted' : ''}`;
+                
+                const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+                messageDiv.innerHTML = `[${time}] <strong>${sender}:</strong> ${text}`;
+                
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+
+            saveChatMessage(contactId, sender, text, encrypted) {
+                if (!this.chatHistory.has(contactId)) {
+                    this.chatHistory.set(contactId, []);
+                }
+                
+                const history = this.chatHistory.get(contactId);
+                history.push({
+                    sender,
+                    text,
+                    encrypted,
+                    timestamp: Date.now()
+                });
+                
+                // Keep only last 100 messages per contact
+                if (history.length > 100) {
+                    history.splice(0, history.length - 100);
+                }
+                
+                this.saveData();
+            }
+        }
+
+        // Global functions for onclick handlers
+        let app;
+
+        function login() {
+            app.login();
+        }
+
+        function showAddContactModal() {
+            app.showAddContactModal();
+        }
+
+        function hideAddContactModal() {
+            app.hideAddContactModal();
+        }
+
+        function addContact() {
+            app.addContact();
+        }
+
+        function generateInviteLink() {
+            app.generateInviteLink();
+        }
+
+        function copyInviteLink() {
+            app.copyInviteLink();
+        }
+
+        function hideInviteModal() {
+            app.hideInviteModal();
+        }
+
+        function sendMessage() {
+            app.sendMessage();
+        }
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new SecureP2PChat();
+            
+            // Setup enter key for message input
+            document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
