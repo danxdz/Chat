@@ -80,6 +80,45 @@ function App() {
         console.log('🧹 WebRTC data cleared')
       }
 
+      // Add test users creator
+      window.createTestUsers = () => {
+        const testUsers = [
+          { id: 1001, nickname: 'Alice', pin: '1111' },
+          { id: 1002, nickname: 'Bob', pin: '2222' },
+          { id: 1003, nickname: 'Charlie', pin: '3333' },
+          { id: 1004, nickname: 'Diana', pin: '4444' }
+        ]
+        
+        localStorage.setItem('users', JSON.stringify(testUsers))
+        
+        // Add each user as contacts for others
+        testUsers.forEach(user => {
+          const contacts = testUsers.filter(u => u.id !== user.id)
+          localStorage.setItem(`contacts_${user.id}`, JSON.stringify(contacts))
+        })
+        
+        console.log('👥 Test users created:')
+        console.log('Alice: PIN 1111')
+        console.log('Bob: PIN 2222') 
+        console.log('Charlie: PIN 3333')
+        console.log('Diana: PIN 4444')
+        console.log('All users have each other as contacts!')
+        
+        return testUsers
+      }
+
+      window.switchUser = (nickname) => {
+        const users = JSON.parse(localStorage.getItem('users') || '[]')
+        const user = users.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
+        if (user) {
+          localStorage.setItem('currentUser', JSON.stringify(user))
+          window.location.reload()
+          console.log(`🔄 Switched to ${user.nickname}`)
+        } else {
+          console.log('❌ User not found. Available users:', users.map(u => u.nickname))
+        }
+      }
+
       // Check if user is logged in
       const savedUser = localStorage.getItem('currentUser')
       if (savedUser) {
@@ -340,13 +379,17 @@ function ChatScreen({ user, onLogout }) {
   const [peers, setPeers] = useState(new Map()) // WebRTC peer connections
   const [dataChannels, setDataChannels] = useState(new Map()) // Data channels for messaging
   const [connectionStatus, setConnectionStatus] = useState(new Map()) // Connection statuses
+  const [allUsers, setAllUsers] = useState([])
+  const [showUserSwitcher, setShowUserSwitcher] = useState(false)
 
   useEffect(() => {
     // Load contacts and messages
     const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
     const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+    const users = JSON.parse(localStorage.getItem('users') || '[]')
     setContacts(savedContacts)
     setMessages(savedMessages)
+    setAllUsers(users)
 
     // Initialize WebRTC for existing contacts
     initializeWebRTC(savedContacts)
@@ -577,6 +620,11 @@ function ChatScreen({ user, onLogout }) {
     alert('Invite link copied!')
   }
 
+  const switchToUser = (targetUser) => {
+    localStorage.setItem('currentUser', JSON.stringify(targetUser))
+    window.location.reload()
+  }
+
   const sendMessage = (e) => {
     e.preventDefault()
     if (!newMessage.trim()) return
@@ -686,9 +734,84 @@ function ChatScreen({ user, onLogout }) {
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <div>
-          <span style={{ fontWeight: 'bold' }}>🔒 {user.nickname}</span>
-          <span style={{ marginLeft: '1rem', color: '#888' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUserSwitcher(!showUserSwitcher)}
+              style={{
+                background: '#444',
+                border: 'none',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              👤 {user.nickname} ▼
+            </button>
+            
+            {showUserSwitcher && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                background: '#333',
+                border: '1px solid #555',
+                borderRadius: '4px',
+                zIndex: 1000,
+                minWidth: '150px',
+                marginTop: '0.25rem'
+              }}>
+                <div style={{ padding: '0.5rem', borderBottom: '1px solid #555', fontSize: '0.8rem', color: '#888' }}>
+                  Switch User:
+                </div>
+                {allUsers.filter(u => u.id !== user.id).map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => switchToUser(u)}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'white',
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                    onMouseOver={(e) => e.target.style.background = '#444'}
+                    onMouseOut={(e) => e.target.style.background = 'transparent'}
+                  >
+                    👤 {u.nickname}
+                  </button>
+                ))}
+                <div style={{ padding: '0.5rem', borderTop: '1px solid #555' }}>
+                  <button
+                    onClick={() => {
+                      window.createTestUsers()
+                      setShowUserSwitcher(false)
+                      setTimeout(() => window.location.reload(), 100)
+                    }}
+                    style={{
+                      width: '100%',
+                      background: '#0066cc',
+                      border: 'none',
+                      color: 'white',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    ➕ Create Test Users
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <span style={{ color: '#888' }}>
             {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
           </span>
         </div>
