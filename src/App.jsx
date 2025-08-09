@@ -1,140 +1,283 @@
 import { useState, useEffect } from 'react'
-import { initSodium } from './utils/crypto'
-import { generateStartupMagicLink, hasAnyUsers } from './utils/startup'
-import Login from './components/Login'
-import InviteSetup from './components/InviteSetup'
-import Chat from './components/Chat'
-import Toast from './components/Toast'
-import './App.css'
 
 function App() {
-  const [currentView, setCurrentView] = useState('loading') // loading, login, inviteSetup, chat
-  const [user, setUser] = useState(null)
-  const [toast, setToast] = useState(null)
+  const [currentView, setCurrentView] = useState('loading')
   const [sodium, setSodium] = useState(null)
+  const [user, setUser] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    initializeApp()
+    initApp()
   }, [])
 
-  const initializeApp = async () => {
+  const initApp = async () => {
     try {
-      console.log('🔧 Initializing simplified app...')
-      const sodiumInstance = await initSodium()
-      console.log('Sodium instance received:', !!sodiumInstance)
-      setSodium(sodiumInstance)
-      
-      // Generate startup magic link if needed
-      await generateStartupMagicLink()
-      
-      // Check URL for invitation magic link
-      const urlParams = new URLSearchParams(window.location.search)
-      const inviteToken = urlParams.get('invite')
-      
-      if (inviteToken) {
-        console.log('🎊 Magic link detected - showing account creation')
-        setCurrentView('inviteSetup')
+      // Wait for sodium to load
+      if (!window.sodium) {
+        setError('Sodium not loaded')
         return
       }
-      
-      // Check if any users exist
-      if (hasAnyUsers()) {
-        console.log('✅ Users exist - showing login')
-        setCurrentView('login')
-      } else {
-        console.log('ℹ️ No users yet - showing account creation directly')
-        setCurrentView('inviteSetup') // Show account creation directly instead of waiting
-      }
-      
-    } catch (error) {
-      console.error('Failed to initialize app:', error)
-      showToast('Failed to initialize app', 'error')
-    }
-  }
 
-  const showToast = (message, type = 'info') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
+      await window.sodium.ready
+      setSodium(window.sodium)
+
+      // Check if user is logged in
+      const savedUser = localStorage.getItem('currentUser')
+      if (savedUser) {
+        setUser(JSON.parse(savedUser))
+        setCurrentView('chat')
+      } else {
+        // Check if this is an invitation
+        const urlParams = new URLSearchParams(window.location.search)
+        const invite = urlParams.get('invite')
+        
+        if (invite) {
+          setCurrentView('register')
+        } else {
+          setCurrentView('login')
+        }
+      }
+    } catch (err) {
+      setError('Failed to initialize: ' + err.message)
+    }
   }
 
   const handleLogin = (userData) => {
     setUser(userData)
+    localStorage.setItem('currentUser', JSON.stringify(userData))
     setCurrentView('chat')
-    showToast(`Welcome back ${userData.nickname}!`, 'success')
   }
 
-  const handleInviteComplete = (userData) => {
+  const handleRegister = (userData) => {
     setUser(userData)
+    localStorage.setItem('currentUser', JSON.stringify(userData))
     setCurrentView('chat')
-    showToast(`Welcome ${userData.nickname}!`, 'success')
   }
 
   const handleLogout = () => {
     setUser(null)
+    localStorage.removeItem('currentUser')
     setCurrentView('login')
-    showToast('Logged out', 'info')
   }
 
   if (currentView === 'loading') {
     return (
-      <div className="loading-screen">
-        <div className="loading-content">
-          <h1>🔒 Secure Chat</h1>
-          <p>Initializing encryption...</p>
-          <div className="loading-spinner"></div>
+      <div className="screen">
+        <div className="form">
+          <h1>Loading...</h1>
+          {error && <div className="error">{error}</div>}
         </div>
       </div>
     )
   }
 
-  if (currentView === 'waiting') {
-    return (
-      <div className="loading-screen">
-        <div className="loading-content">
-          <h1>🔒 Secure Chat</h1>
-          <p>No users registered yet</p>
-          <div className="info-box">
-            <p><strong>🔗 How to join:</strong></p>
-            <ul>
-              <li>Click the <strong>🛠️ DEV</strong> button (top-right)</li>
-              <li>Copy the <strong>🎫 Magic Link</strong></li>
-              <li>Open that link to create your account</li>
-              <li>Or share it with others to invite them</li>
-            </ul>
-          </div>
+  if (currentView === 'login') {
+    return <LoginScreen onLogin={handleLogin} sodium={sodium} />
+  }
+
+  if (currentView === 'register') {
+    return <RegisterScreen onRegister={handleRegister} sodium={sodium} />
+  }
+
+  if (currentView === 'chat') {
+    return <ChatScreen user={user} onLogout={handleLogout} />
+  }
+
+  return null
+}
+
+function LoginScreen({ onLogin, sodium }) {
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      // Get saved user data
+      const users = JSON.parse(localStorage.getItem('users') || '[]')
+      
+      if (users.length === 0) {
+        setError('No users found. You need an invitation to register.')
+        setLoading(false)
+        return
+      }
+
+      // Simple PIN check (in real app, use proper hashing)
+      const user = users.find(u => u.pin === pin)
+      
+      if (!user) {
+        setError('Invalid PIN')
+        setLoading(false)
+        return
+      }
+
+      onLogin(user)
+    } catch (err) {
+      setError('Login failed: ' + err.message)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="screen">
+      <form className="form" onSubmit={handleSubmit}>
+        <h1>🔒 Login</h1>
+        
+        <div className="input-group">
+          <label>PIN</label>
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="Enter your PIN"
+            required
+          />
         </div>
-      </div>
-    )
+
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
+
+        {error && <div className="error">{error}</div>}
+      </form>
+    </div>
+  )
+}
+
+function RegisterScreen({ onRegister, sodium }) {
+  const [nickname, setNickname] = useState('')
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      if (!nickname.trim()) {
+        setError('Nickname is required')
+        setLoading(false)
+        return
+      }
+
+      if (pin.length < 4) {
+        setError('PIN must be at least 4 digits')
+        setLoading(false)
+        return
+      }
+
+      // Save user
+      const users = JSON.parse(localStorage.getItem('users') || '[]')
+      const newUser = {
+        id: Date.now(),
+        nickname: nickname.trim(),
+        pin: pin // In real app, hash this
+      }
+
+      users.push(newUser)
+      localStorage.setItem('users', JSON.stringify(users))
+
+      onRegister(newUser)
+    } catch (err) {
+      setError('Registration failed: ' + err.message)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="screen">
+      <form className="form" onSubmit={handleSubmit}>
+        <h1>🎉 Register</h1>
+        
+        <div className="input-group">
+          <label>Nickname</label>
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="Enter your nickname"
+            required
+          />
+        </div>
+
+        <div className="input-group">
+          <label>PIN</label>
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="Create a PIN"
+            required
+          />
+        </div>
+
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? 'Creating Account...' : 'Create Account'}
+        </button>
+
+        {error && <div className="error">{error}</div>}
+      </form>
+    </div>
+  )
+}
+
+function ChatScreen({ user, onLogout }) {
+  const [inviteLink, setInviteLink] = useState('')
+
+  const generateInvite = () => {
+    const invite = btoa(JSON.stringify({ from: user.nickname, timestamp: Date.now() }))
+    const link = `${window.location.origin}?invite=${invite}`
+    setInviteLink(link)
+  }
+
+  const copyInvite = () => {
+    navigator.clipboard.writeText(inviteLink)
+    alert('Invite link copied!')
   }
 
   return (
     <div className="app">
-      {currentView === 'login' && (
-        <Login 
-          sodium={sodium}
-          onLogin={handleLogin}
-          showToast={showToast}
-        />
-      )}
+      <div style={{ padding: '1rem', background: '#2d2d2d', borderBottom: '1px solid #555' }}>
+        <span>Welcome, {user.nickname}!</span>
+        <button onClick={onLogout} style={{ float: 'right', background: '#ff6b6b' }} className="btn">
+          Logout
+        </button>
+      </div>
       
-      {currentView === 'inviteSetup' && (
-        <InviteSetup 
-          sodium={sodium}
-          onComplete={handleInviteComplete}
-          showToast={showToast}
-        />
-      )}
-      
-      {currentView === 'chat' && user && (
-        <Chat 
-          user={user}
-          sodium={sodium}
-          onLogout={handleLogout}
-          showToast={showToast}
-        />
-      )}
-      
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      <div style={{ padding: '2rem' }}>
+        <h2>Chat Interface</h2>
+        <p>Chat functionality will be implemented here.</p>
+        
+        <div style={{ marginTop: '2rem' }}>
+          <button onClick={generateInvite} className="btn">
+            Generate Invite Link
+          </button>
+          
+          {inviteLink && (
+            <div style={{ marginTop: '1rem' }}>
+              <p>Share this link to invite others:</p>
+              <div style={{ 
+                background: '#333', 
+                padding: '1rem', 
+                borderRadius: '4px', 
+                marginTop: '0.5rem',
+                wordBreak: 'break-all'
+              }}>
+                {inviteLink}
+              </div>
+              <button onClick={copyInvite} className="btn" style={{ marginTop: '0.5rem' }}>
+                Copy Link
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
