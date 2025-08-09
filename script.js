@@ -15,79 +15,77 @@ let app = {
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('=== P2P SECURE CHAT DEBUG START ===');
-    console.log('DOM loaded, initializing app...');
-    console.log('User Agent:', navigator.userAgent);
-    console.log('Current URL:', window.location.href);
+    console.log('P2P Secure Chat starting...');
     console.log('SimplePeer available:', typeof SimplePeer !== 'undefined');
-    console.log('Sodium initially available:', typeof window.sodium !== 'undefined');
-    
-    // Debug all global objects
-    console.log('window.SimplePeer:', window.SimplePeer);
-    console.log('window.sodium:', window.sodium);
+    console.log('Sodium available:', typeof window.sodium !== 'undefined');
     
     try {
         await initSodium();
         loadContacts();
         setupEventListeners();
         checkInviteInURL();
-        console.log('=== APP INITIALIZATION COMPLETE ===');
+        console.log('App initialized successfully');
     } catch (error) {
-        console.error('=== APP INITIALIZATION FAILED ===', error);
-        console.error('Error stack:', error.stack);
-        showLoginError('Application failed to initialize. Check console for details.');
-        updateLoginPrompt('Initialization failed - check console');
+        console.error('App initialization failed:', error);
+        showLoginError('Encryption library failed to load. Please refresh the page.');
+        updateLoginPrompt('❌ Failed to load encryption');
     }
 });
 
-// Initialize libsodium with multiple fallback strategies
+// Initialize libsodium
 async function initSodium() {
-    console.log('=== SODIUM INITIALIZATION START ===');
+    console.log('Initializing sodium...');
+    updateLoginPrompt('⏳ Loading encryption...');
     
     try {
-        // Strategy 1: Check if sodium is already available
-        if (window.sodium) {
-            console.log('Sodium already available, checking ready state...');
-            return await handleSodiumReady();
-        }
+        // Wait for sodium to be available
+        let attempts = 0;
+        const maxAttempts = 100; // 10 seconds
         
-        // Strategy 2: Wait for sodium to load
-        console.log('Waiting for sodium to load...');
-        const sodiumLoaded = await waitForSodiumLoad();
-        
-        if (!sodiumLoaded) {
-            // Strategy 3: Try loading fallback libraries
-            console.log('Standard loading failed, trying fallback CDNs...');
-            loadFallbackLibraries();
+        while (!window.sodium && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
             
-            // Wait for fallback libraries to load
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            if (window.sodium) {
-                console.log('Fallback sodium loaded successfully');
-                return await handleSodiumReady();
+            if (attempts % 20 === 0) {
+                console.log(`Waiting for sodium... ${attempts}/${maxAttempts}`);
+                updateLoginPrompt(`⏳ Loading encryption... ${Math.round((attempts/maxAttempts)*100)}%`);
             }
-            
-            // Strategy 4: Try alternative initialization
-            console.log('Fallback loading also failed, trying alternative approach...');
-            return await tryAlternativeInit();
         }
         
-        return await handleSodiumReady();
+        if (!window.sodium) {
+            throw new Error('Sodium library not loaded after 10 seconds');
+        }
+        
+        console.log('Sodium found, initializing...');
+        updateLoginPrompt('🔧 Initializing encryption...');
+        
+        // Handle sodium ready
+        if (window.sodium.ready) {
+            if (typeof window.sodium.ready === 'function') {
+                await new Promise((resolve) => {
+                    window.sodium.ready(resolve);
+                });
+            } else if (typeof window.sodium.ready.then === 'function') {
+                await window.sodium.ready;
+            }
+        }
+        
+        app.sodium = window.sodium;
+        console.log('Sodium initialized successfully');
+        
+        // Test basic functionality
+        try {
+            const testBytes = app.sodium.randombytes_buf(32);
+            console.log('Sodium test passed - generated', testBytes.length, 'bytes');
+        } catch (testError) {
+            console.warn('Sodium basic test failed:', testError);
+        }
+        
+        enableLoginForm();
         
     } catch (error) {
-        console.error('=== SODIUM INITIALIZATION FAILED ===', error);
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
-        
-        showLoginError('Encryption library failed to load. Please refresh the page.');
-        updateLoginPrompt('❌ Encryption initialization failed');
-        
-        // Try to provide more specific error information
-        if (!window.SimplePeer) {
-            console.error('SimplePeer also not available - network/CDN issues likely');
-            updateLoginPrompt('❌ Network connection issues detected');
-        }
+        console.error('Sodium initialization failed:', error);
+        throw error;
     }
 }
 
