@@ -1,17 +1,16 @@
 {
-  "name": "p2p-secure-chat",
-  "public": true,
-  "github": {
-    "silent": true
-  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com 'sha384-MZ3ciGjiWCKKLGxi6Gf7uIU8N5/QSyhpZHhvn2TdHP0ofkCkbCGW1j3ZMzYhocpu' 'sha384-gCnyHG9VBRDilmIebIto8nB4mzAM7KZBl67bw97Gae6TkRT9/PXkfyO+EE9FwNrq'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
@@ -23,14 +22,8 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
         }
       ]
     }
-  ],
-  "cleanUrls": true,
-  "trailingSlash": false
+  ]
 }
