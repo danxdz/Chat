@@ -3,11 +3,88 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Secure Chat</title>
+    <title>🔒 Secure Chat</title>
     <script src="/sodium.js"></script>
+    <style>
+      .dev-nav {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 10000;
+        border: 1px solid #333;
+        min-width: 200px;
+      }
+      .dev-nav h3 {
+        margin: 0 0 10px 0;
+        color: #0066cc;
+        font-size: 14px;
+      }
+      .dev-nav a {
+        display: block;
+        color: #fff;
+        text-decoration: none;
+        padding: 5px 0;
+        border-bottom: 1px solid #333;
+      }
+      .dev-nav a:hover {
+        color: #0066cc;
+      }
+      .dev-nav a:last-child {
+        border-bottom: none;
+      }
+      .toggle-nav {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #0066cc;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        z-index: 10001;
+      }
+      .dev-nav.hidden {
+        display: none;
+      }
+    </style>
   </head>
   <body>
+    <!-- Development Navigation -->
+    <button class="toggle-nav" onclick="toggleNav()">🛠️ DEV</button>
+    <div id="dev-nav" class="dev-nav">
+      <h3>🔧 Development Tools</h3>
+      <a href="/">🏠 Main App (React)</a>
+      <a href="/complete-verification.html">🧪 Complete System Test</a>
+      <a href="/demo.html">📱 User Experience Demo</a>
+      <a href="/test-flows.html">🔄 Test Flows</a>
+      <a href="/quick-sodium-test.html">⚡ Quick Sodium Test</a>
+      <a href="/sodium-test.html">🔐 Sodium Function Test</a>
+    </div>
+
+    <!-- React App Root -->
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <script>
+      function toggleNav() {
+        const nav = document.getElementById('dev-nav');
+        nav.classList.toggle('hidden');
+      }
+      
+      // Hide nav by default if we're in the main app
+      if (window.location.pathname === '/' && !window.location.search) {
+        setTimeout(() => {
+          document.getElementById('dev-nav').classList.add('hidden');
+        }, 2000);
+      }
+    </script>
   </body>
 </html>
