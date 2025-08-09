@@ -1,16 +1,9 @@
 {
   "name": "p2p-secure-chat",
-  "version": 2,
   "public": true,
   "github": {
     "silent": true
   },
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/index.html"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
