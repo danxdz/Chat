@@ -1,4 +1,51 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
+
+// Error Boundary Component
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('🚨 React Error Boundary caught an error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="screen">
+          <div className="form">
+            <h1 style={{ color: '#dc3545' }}>⚠️ Something went wrong</h1>
+            <p>The application encountered an error:</p>
+            <pre style={{ 
+              background: '#333', 
+              padding: '1rem', 
+              borderRadius: '4px', 
+              fontSize: '0.8rem',
+              overflow: 'auto'
+            }}>
+              {this.state.error?.toString()}
+            </pre>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="btn"
+              style={{ background: '#dc3545' }}
+            >
+              🔄 Reload App
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 function App() {
   const [currentView, setCurrentView] = useState('loading')
@@ -149,6 +196,7 @@ function App() {
   }
 
   const handleRegister = (userData) => {
+    console.log('🎉 Registration successful, switching to chat for user:', userData)
     setUser(userData)
     localStorage.setItem('currentUser', JSON.stringify(userData))
     setCurrentView('chat')
@@ -180,6 +228,12 @@ function App() {
   }
 
   if (currentView === 'chat') {
+    if (!user) {
+      console.error('❌ Trying to render chat without user data')
+      setCurrentView('login')
+      return null
+    }
+    console.log('🚀 Rendering ChatScreen for user:', user.nickname)
     return <ChatScreen user={user} onLogout={handleLogout} />
   }
 
@@ -382,66 +436,90 @@ function ChatScreen({ user, onLogout }) {
   const [showUserSwitcher, setShowUserSwitcher] = useState(false)
   const [gun, setGun] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
+  const [chatError, setChatError] = useState('')
 
   useEffect(() => {
+    console.log('🎯 ChatScreen useEffect - Initializing...')
+    
     // Initialize Gun.js for decentralized P2P
     if (window.Gun) {
       console.log('🔫 Initializing Gun.js P2P network...')
       
-      const gunInstance = Gun({
-        peers: [
-          'https://gun-manhattan.herokuapp.com/gun',
-          'https://gun-us.herokuapp.com/gun'
-        ],
-        localStorage: false, // Use Gun's storage instead
-        radisk: true,
-        WebRTC: {
-          off: false
-        }
-      })
-      
-      setGun(gunInstance)
-      console.log('✅ Gun.js P2P network initialized')
+      try {
+        const gunInstance = Gun({
+          peers: [
+            'https://gun-manhattan.herokuapp.com/gun',
+            'https://gun-us.herokuapp.com/gun'
+          ],
+          localStorage: false, // Use Gun's storage instead
+          radisk: true,
+          WebRTC: {
+            off: false
+          }
+        })
+        
+        setGun(gunInstance)
+        console.log('✅ Gun.js P2P network initialized')
+      } catch (error) {
+        console.error('❌ Failed to initialize Gun.js:', error)
+        setChatError('Failed to initialize P2P network: ' + error.message)
+      }
+    } else {
+      console.error('❌ Gun.js not available')
+      setChatError('Gun.js library not loaded')
     }
   }, [])
 
   useEffect(() => {
-    if (!gun) return
+    if (!gun) {
+      console.log('⏳ Waiting for Gun.js to initialize...')
+      return
+    }
 
-    // Load contacts and messages
-    const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
-    const users = JSON.parse(localStorage.getItem('users') || '[]')
-    setContacts(savedContacts)
-    setAllUsers(users)
+    console.log('🔄 Setting up chat data and listeners...')
 
-    // Subscribe to real-time messages for this user
-    gun.get(`chat_${user.id}`).map().on((messageData, messageKey) => {
-      if (messageData && messageData.id && messageData.text) {
-        console.log('📨 Received P2P message:', messageData)
-        
-        setMessages(prev => {
-          // Avoid duplicates
-          const exists = prev.find(m => m.id === messageData.id)
-          if (exists) return prev
+    try {
+      // Load contacts and messages
+      const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
+      const users = JSON.parse(localStorage.getItem('users') || '[]')
+      setContacts(savedContacts)
+      setAllUsers(users)
+      console.log('📋 Loaded contacts:', savedContacts.length)
+      console.log('👥 All users:', users.length)
+
+      // Subscribe to real-time messages for this user
+      gun.get(`chat_${user.id}`).map().on((messageData, messageKey) => {
+        if (messageData && messageData.id && messageData.text) {
+          console.log('📨 Received P2P message:', messageData)
           
-          const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
-          // Also save to localStorage as backup
-          localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-          return updated
-        })
-      }
-    })
+          setMessages(prev => {
+            // Avoid duplicates
+            const exists = prev.find(m => m.id === messageData.id)
+            if (exists) return prev
+            
+            const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+            // Also save to localStorage as backup
+            localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+            return updated
+          })
+        }
+      })
 
-    // Load existing messages from localStorage
-    const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
-    setMessages(savedMessages)
+      // Load existing messages from localStorage
+      const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+      setMessages(savedMessages)
+      console.log('💬 Loaded messages:', savedMessages.length)
 
-    // Initialize connections with contacts
-    savedContacts.forEach(contact => {
-      setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
-      console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
-    })
+      // Initialize connections with contacts
+      savedContacts.forEach(contact => {
+        setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
+        console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
+      })
 
+    } catch (error) {
+      console.error('❌ Error setting up chat:', error)
+      setChatError('Failed to setup chat: ' + error.message)
+    }
   }, [gun, user.id])
 
   const sendP2PMessage = async (message) => {
@@ -768,8 +846,22 @@ function ChatScreen({ user, onLogout }) {
               overflowY: 'auto',
               background: '#1a1a1a'
             }}
-          >
-            {filteredMessages.length === 0 ? (
+                      >
+              {chatError && (
+                <div style={{ 
+                  background: '#dc3545', 
+                  color: 'white', 
+                  padding: '1rem', 
+                  borderRadius: '4px', 
+                  margin: '1rem',
+                  textAlign: 'center'
+                }}>
+                  ⚠️ {chatError}
+                  <br />
+                  <small>Chat functionality may be limited</small>
+                </div>
+              )}
+              {filteredMessages.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#888', marginTop: '2rem' }}>
                 No messages yet. Start the conversation!
               </div>
@@ -888,5 +980,14 @@ function ChatScreen({ user, onLogout }) {
   )
 }
 
-export default App// Fresh deployment Sat Aug  9 06:04:14 PM UTC 2025
+// Wrap App with ErrorBoundary for better error handling
+function WrappedApp() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  )
+}
+
+export default WrappedApp// Fresh deployment Sat Aug  9 06:04:14 PM UTC 2025
 // Force redeploy Sat Aug  9 09:48:10 PM UTC 2025
