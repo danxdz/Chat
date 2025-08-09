@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sodium Test</title>
+    <script src="/sodium.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: rgba(40, 167, 69, 0.2); border: 1px solid #28a745; }
+        .error { background: rgba(220, 53, 69, 0.2); border: 1px solid #dc3545; }
+        .info { background: rgba(0, 102, 204, 0.2); border: 1px solid #0066cc; }
+    </style>
+</head>
+<body>
+    <h1>🔒 Sodium.js Test</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        // Test sodium loading
+        log('🔧 Testing sodium.js loading...', 'info');
+        
+        // Check if sodium is available
+        if (typeof window.sodium !== 'undefined') {
+            log('✅ window.sodium is available', 'success');
+            
+            // Check if sodium is ready
+            if (window.sodium.ready) {
+                log('✅ window.sodium.ready is truthy', 'success');
+                
+                // Wait for sodium to be ready
+                window.sodium.ready.then(() => {
+                    log('✅ Sodium initialization completed!', 'success');
+                    
+                    // Test basic functions
+                    try {
+                        if (typeof window.sodium.crypto_pwhash === 'function') {
+                            log('✅ crypto_pwhash function available', 'success');
+                        } else {
+                            log('❌ crypto_pwhash function not available', 'error');
+                        }
+                        
+                        if (typeof window.sodium.to_hex === 'function') {
+                            log('✅ to_hex function available', 'success');
+                        } else {
+                            log('❌ to_hex function not available', 'error');
+                        }
+                        
+                        if (typeof window.sodium.randombytes_buf === 'function') {
+                            log('✅ randombytes_buf function available', 'success');
+                        } else {
+                            log('❌ randombytes_buf function not available', 'error');
+                        }
+                        
+                        // Test actual crypto operation
+                        const testData = new TextEncoder().encode('test');
+                        const hash = window.sodium.crypto_hash(testData);
+                        const hexHash = window.sodium.to_hex(hash);
+                        log(`✅ Crypto test successful! Hash: ${hexHash.substring(0, 16)}...`, 'success');
+                        
+                        // Test random generation
+                        const randomBytes = window.sodium.randombytes_buf(16);
+                        const randomHex = window.sodium.to_hex(randomBytes);
+                        log(`✅ Random generation test successful! Random: ${randomHex}`, 'success');
+                        
+                        log('🎉 All sodium tests passed! Ready for use.', 'success');
+                        
+                    } catch (error) {
+                        log(`❌ Sodium function test failed: ${error.message}`, 'error');
+                    }
+                    
+                }).catch(error => {
+                    log(`❌ Sodium ready promise failed: ${error.message}`, 'error');
+                });
+                
+            } else {
+                log('⚠️ window.sodium.ready is falsy', 'error');
+            }
+            
+        } else {
+            log('❌ window.sodium is not available - script may not be loaded', 'error');
+        }
+        
+        // Test after a delay in case of async loading
+        setTimeout(() => {
+            if (typeof window.sodium === 'undefined') {
+                log('❌ Sodium still not available after 2 seconds', 'error');
+                log('📝 Checking script tag...', 'info');
+                const scripts = document.querySelectorAll('script[src*="sodium"]');
+                if (scripts.length > 0) {
+                    log(`✅ Found ${scripts.length} sodium script tag(s)`, 'info');
+                    scripts.forEach((script, i) => {
+                        log(`Script ${i + 1}: ${script.src}`, 'info');
+                    });
+                } else {
+                    log('❌ No sodium script tags found', 'error');
+                }
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
