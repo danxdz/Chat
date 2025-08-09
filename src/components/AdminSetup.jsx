@@ -83,13 +83,13 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
     <div className="screen">
       <div className="container">
         <div className="header">
-          <h1 className="terminal-glow">🔒 Secure Chat</h1>
-          <p>Create admin account</p>
+          <h1>🔒 Secure Chat</h1>
+          <p>Create administrator account</p>
         </div>
         
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="nickname">Nickname</label>
+            <label htmlFor="nickname">Display Name</label>
             <div className="nickname-input">
               <input
                 type="text"
@@ -103,7 +103,7 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
                 type="button"
                 className="btn secondary small"
                 onClick={generateNewNickname}
-                title="Generate random nickname"
+                title="Generate random name"
               >
                 🎲
               </button>
@@ -121,7 +121,7 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
               maxLength={6}
               pattern="[0-9]*"
               inputMode="numeric"
-              placeholder="••••••"
+              placeholder="Enter PIN"
               required
             />
           </div>
@@ -131,15 +131,15 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
             className="btn primary"
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Admin'}
+            {loading ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
         
         <div className="info-box">
-          <p>Admin privileges:</p>
+          <p>Administrator privileges:</p>
           <ul>
-            <li>Create invitation links</li>
-            <li>Manage contacts</li>
+            <li>Create invitation links for new users</li>
+            <li>Manage contact lists</li>
             <li>Full system access</li>
           </ul>
         </div>

@@ -4,6 +4,9 @@ export const initSodium = async (maxAttempts = 30) => {
   // Check if sodium is already available and ready
   if (window.sodium && window.sodium.ready) {
     console.log('✅ Libsodium already ready!')
+    console.log('Available functions:', Object.keys(window.sodium).filter(key => 
+      typeof window.sodium[key] === 'function'
+    ).slice(0, 10))
     return window.sodium
   }
   
@@ -17,12 +20,18 @@ export const initSodium = async (maxAttempts = 30) => {
         // Wait for sodium to be ready
         if (window.sodium.ready) {
           console.log('✅ Libsodium ready!')
+          console.log('Available functions:', Object.keys(window.sodium).filter(key => 
+            typeof window.sodium[key] === 'function'
+          ).slice(0, 10))
           return window.sodium
         } else {
           // Wait for sodium.ready promise if it exists
           await window.sodium.ready
           if (window.sodium.ready) {
             console.log('✅ Libsodium ready after await!')
+            console.log('Available functions:', Object.keys(window.sodium).filter(key => 
+              typeof window.sodium[key] === 'function'
+            ).slice(0, 10))
             return window.sodium
           }
         }
@@ -45,8 +54,18 @@ export const hashPIN = (pin, sodium) => {
     throw new Error('Sodium not initialized')
   }
   
-  if (!sodium.crypto_pwhash) {
-    throw new Error('Sodium crypto_pwhash function not available')
+  console.log('🔐 Checking sodium functions...')
+  console.log('Sodium object keys:', Object.keys(sodium).slice(0, 20))
+  console.log('crypto_pwhash available:', typeof sodium.crypto_pwhash)
+  console.log('to_hex available:', typeof sodium.to_hex)
+  
+  if (typeof sodium.crypto_pwhash !== 'function') {
+    throw new Error('Sodium crypto_pwhash function not available. Available functions: ' + 
+      Object.keys(sodium).filter(key => typeof sodium[key] === 'function').slice(0, 10).join(', '))
+  }
+  
+  if (typeof sodium.to_hex !== 'function') {
+    throw new Error('Sodium to_hex function not available')
   }
   
   console.log('🔐 Hashing PIN...')

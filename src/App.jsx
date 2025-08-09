@@ -20,9 +20,16 @@ function App() {
   const initializeApp = async () => {
     try {
       console.log('🔧 Initializing app...')
+      console.log('Window sodium available:', !!window.sodium)
+      
+      if (window.sodium) {
+        console.log('Sodium object keys:', Object.keys(window.sodium).slice(0, 20))
+        console.log('Sodium ready value:', window.sodium.ready)
+      }
       
       // Initialize libsodium
       const sodiumInstance = await initSodium()
+      console.log('Sodium instance received:', !!sodiumInstance)
       setSodium(sodiumInstance)
       
       // Check URL for invitation
@@ -48,7 +55,7 @@ function App() {
       
     } catch (error) {
       console.error('Failed to initialize app:', error)
-      showToast('Failed to initialize app', 'error')
+      showToast('Failed to initialize app: ' + error.message, 'error')
     }
   }
 
