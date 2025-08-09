@@ -37,6 +37,36 @@ function App() {
       
       setSodium(sodium)
 
+      // Generate and log magic link for first access
+      const users = JSON.parse(localStorage.getItem('users') || '[]')
+      if (users.length === 0) {
+        const magicToken = btoa(JSON.stringify({
+          type: 'first_access',
+          timestamp: Date.now(),
+          admin: true
+        }))
+        const magicLink = `${window.location.origin}?invite=${magicToken}`
+        
+        console.log('🔑 MAGIC LINK FOR FIRST ACCESS:')
+        console.log(magicLink)
+        console.log('')
+        console.log('📋 Copy this link to create the first account!')
+        console.log('🎯 Or just add this to URL: ?invite=' + magicToken)
+      }
+
+      // Add dev helper to window
+      window.generateMagicLink = () => {
+        const magicToken = btoa(JSON.stringify({
+          type: 'invitation',
+          timestamp: Date.now(),
+          from: 'admin'
+        }))
+        const magicLink = `${window.location.origin}?invite=${magicToken}`
+        console.log('🔗 NEW MAGIC LINK:')
+        console.log(magicLink)
+        return magicLink
+      }
+
       // Check if user is logged in
       const savedUser = localStorage.getItem('currentUser')
       if (savedUser) {
