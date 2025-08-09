@@ -56,20 +56,33 @@ function generateRandomNickname() {
     return `${adj}${noun}${num}`;
 }
 
-// Master setup functions
-function showMasterSetup() {
-    console.log('=== showMasterSetup() called ===');
+// Admin creation (one-time only)
+function showAdminCreation() {
+    console.log('=== showAdminCreation() called ===');
     hideAllScreens();
     
-    const masterScreen = document.getElementById('masterSetupScreen');
-    if (masterScreen) {
-        masterScreen.style.display = 'block';
-        console.log('Master setup screen displayed');
+    const setupScreen = document.getElementById('setupScreen');
+    if (setupScreen) {
+        setupScreen.style.display = 'block';
+        
+        // Set admin creation message
+        const setupMessage = document.getElementById('setupMessage');
+        if (setupMessage) {
+            setupMessage.innerHTML = `
+                <h2>🔧 Create Admin Account</h2>
+                <p>Set up the first admin account to manage this secure chat system.</p>
+            `;
+        }
+        
+        // Set random nickname
+        const randomNickname = generateRandomNickname();
+        document.getElementById('nicknameInput').value = randomNickname;
+        
+        setupScreenEventListeners();
+        console.log('Admin creation screen displayed');
     } else {
-        console.error('Master setup screen not found!');
+        console.error('Setup screen not found!');
     }
-    
-    setupMasterEventListeners();
 }
 
 function setupMasterEventListeners() {
@@ -893,43 +906,32 @@ function updateLoginPrompt(message) {
 function enableLoginForm() {
     console.log('=== enableLoginForm() called ===');
     
-    const hasAnyUsers = localStorage.getItem('userPIN') !== null;
-    const isFirstUser = localStorage.getItem('isFirstUser') === 'true';
+    const adminExists = localStorage.getItem('adminAccountCreated') === 'true';
     
     console.log('State check:', {
-        hasAnyUsers,
-        isFirstUser,
-        userPIN: localStorage.getItem('userPIN') ? 'exists' : 'null',
-        isFirstUserFlag: localStorage.getItem('isFirstUser')
+        adminExists,
+        adminAccountCreated: localStorage.getItem('adminAccountCreated')
     });
     
-    // Check URL for invitation
+    // Check URL for invitation FIRST
     const urlParams = new URLSearchParams(window.location.search);
     const inviteToken = urlParams.get('invite');
     
     if (inviteToken) {
-        console.log('Invitation detected, handling invite link');
-        // User came via invitation link
+        console.log('🎊 Magic link detected - processing invitation');
         handleInviteLink(inviteToken);
         return;
     }
     
-    if (!hasAnyUsers && !isFirstUser) {
-        console.log('First time visit - showing master setup');
-        // No users exist and not first user - show master setup
-        showMasterSetup();
+    // If no admin account exists yet, show one-time admin setup
+    if (!adminExists) {
+        console.log('🔧 No admin exists - showing one-time admin creation');
+        showAdminCreation();
         return;
     }
     
-    if (!hasAnyUsers && isFirstUser) {
-        console.log('First user completing setup - showing setup screen');
-        // First user needs to complete setup
-        showSetupScreen('Welcome! Complete your admin account setup.');
-        return;
-    }
-    
-    console.log('Existing user - showing login screen');
-    // Regular login for existing users
+    // Admin exists - show normal login page
+    console.log('✅ Admin exists - showing login page');
     showLoginScreen();
 }
 
