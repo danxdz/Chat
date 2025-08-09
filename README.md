@@ -1,136 +1,95 @@
-# 🔒 Secure Chat - P2P Encrypted Chat Application
+# 🔒 Secure Chat - Simple P2P Encrypted Chat
 
-A professional, secure chat application with invitation-only registration and single-use magic links.
+A secure chat application with magic link invitations and PIN-based encryption.
 
-## 🚀 **LIVE ACCESS POINTS**
+## 🚀 **HOW TO USE**
 
-### 🏠 **Main Application**
-- **URL:** `/` (Main React App)
-- **Features:** Admin setup → Login → Chat interface
-- **Security:** End-to-end encryption, PIN-based auth
+### **Step 1: Get Your Magic Link**
+1. Visit the app (your Vercel URL or localhost:3000)
+2. Click the **🛠️ DEV** button (top-right corner)
+3. Click **📋 Copy Link** or **🔗 Open Link**
 
-### 🧪 **Testing & Verification**
-- **`/complete-verification.html`** - **MAIN TESTING SUITE**
-  - Auto-runs comprehensive system tests
-  - Tests sodium, crypto, storage, magic links
-  - Real-time pass/fail results
-  - **USE THIS TO VERIFY EVERYTHING WORKS**
+### **Step 2: Create Your Account**
+1. Open the magic link (in same or new browser tab)
+2. Choose a nickname (or use the random one)
+3. Set a 4-6 digit PIN
+4. Click **Join Chat**
 
-### 📱 **Demo & Documentation**
-- **`/demo.html`** - Visual user experience walkthrough
-- **`/test-flows.html`** - Original test flows and debugging
-- **`/quick-sodium-test.html`** - Quick sodium.js verification
-- **`/sodium-test.html`** - Detailed sodium function testing
+### **Step 3: Share with Others**
+1. Share the same magic link with others
+2. Everyone can use the same link to join
+3. Check user count in the **🛠️ DEV** menu
 
-## 🔐 **Key Features**
+### **Step 4: Login**
+1. Return users just enter their PIN
+2. Data is decrypted locally
+3. Secure access to chat
 
-### ✅ **Single-Use Magic Links**
-- Admin creates invitation links
-- Each link works **exactly once**
-- 24-hour automatic expiration
-- Cryptographically secure IDs
-- Complete usage tracking
+## 🔐 **Security Features**
 
-### ✅ **Military-Grade Security**
-- libsodium.js encryption (748KB local copy)
-- PIN-derived encryption keys
-- All data encrypted at rest
-- No plaintext storage
-- Argon2id password hashing
+- **🔒 PIN-based encryption** - All data encrypted with your PIN
+- **🎫 Magic links** - Simple invitation system  
+- **💾 Local storage** - No data sent to servers
+- **🔐 End-to-end encryption** - Messages encrypted locally
+- **🚫 No passwords** - PIN-only authentication
 
-### ✅ **Invitation-Only System**
-- First user becomes admin
-- No self-registration possible
-- All users must be invited
-- Admin controls all access
+## 🛠️ **Development**
 
-## 🛠️ **Development Tools**
+### **Built-in Dev Menu**
+- Click **🛠️ DEV** to access:
+  - 🎫 Copy/Open magic link
+  - 👥 See user count
+  - 🔗 Check link status
+  - 🗑️ Clear all data (for testing)
 
-### 🔧 **Built-in Dev Navigation**
-- Click **🛠️ DEV** button (top-right) to access all tools
-- Available on every page
-- Auto-hides after 2 seconds on main app
-
-### 📊 **Complete System Testing**
-Visit `/complete-verification.html` to test:
-- ✅ Sodium.js loading & initialization
-- ✅ Cryptographic functions (PIN hashing, random generation)
-- ✅ Encrypted storage (encryption/decryption)
-- ✅ Magic links system (creation, validation, single-use)
-- ✅ All application endpoints
-
-## 🎯 **User Flow**
-
-### 1️⃣ **First Time (Admin Creation)**
-1. Visit the app
-2. See admin setup screen
-3. Choose nickname (or use random)
-4. Set 4-6 digit PIN
-5. Click "Create Admin"
-6. **You now have full admin powers!**
-
-### 2️⃣ **Create Invitations (Admin Only)**
-1. In chat interface, click **📧** button
-2. Magic link auto-created and copied
-3. Send link to someone
-4. Track usage with **📊** button
-
-### 3️⃣ **Join via Magic Link**
-1. Recipient clicks magic link
-2. Sees invitation details (who invited, when)
-3. Sets their nickname and PIN
-4. Link consumed forever (single-use)
-5. **They're now in the chat!**
-
-### 4️⃣ **Regular Login**
-1. Users return to app
-2. Enter their PIN
-3. Data decrypted with their PIN
-4. **Secure access to chat!**
-
-## 🧪 **Quick Testing**
-
-### **Test Everything (Recommended):**
-```
-Visit: /complete-verification.html
-Result: All systems tested automatically
-```
-
-### **Test Admin Flow:**
-```
-1. Go to main app (/)
-2. Create admin account
-3. Click 📧 to create magic link
-4. Open link in incognito/another browser
-5. Complete invited user setup
-6. Verify link is now invalid (single-use)
-```
-
-### **Test Magic Links:**
-```
-1. Use /test-flows.html
-2. Click "Test Magic Link System"
-3. Watch creation → validation → consumption → invalidation
-```
-
-## 🔧 **Technical Stack**
+### **Tech Stack**
 - **Frontend:** React 18 + Vite
-- **Crypto:** libsodium-js (local 748KB copy)
+- **Crypto:** libsodium.js (PIN hashing)
 - **Storage:** Encrypted localStorage
-- **Styling:** Pure CSS (professional dark theme)
-- **Deployment:** Vercel-ready
+- **Deployment:** Vercel
 
-## 🚀 **Deployment**
-- **Development:** `npm run dev`
-- **Production:** `npm run build`
-- **Vercel:** Auto-deploys from main branch
+### **Local Development**
+```bash
+npm install
+npm run dev
+# Visit localhost:3000
+```
+
+### **Production Build**
+```bash
+npm run build
+# Deploy dist/ folder to Vercel
+```
+
+## 📱 **User Experience**
+
+### **First Time User:**
+- Sees "No users registered yet" message
+- Instructions point to 🛠️ DEV button
+- Gets magic link to create account
+
+### **Magic Link User:**
+- Clicks link → account creation form
+- Sets nickname + PIN → joins chat
+- Link can be reused by others
+
+### **Returning User:**
+- Enters PIN → data decrypts → secure access
+- All messages and data encrypted locally
+
+## 🎯 **Simple & Secure**
+
+- ✅ No complex admin systems
+- ✅ No broken test pages
+- ✅ No server-side data
+- ✅ Everyone has equal access
+- ✅ PIN protects everything
+- ✅ Works on any device
 
 ---
 
-## 🎉 **EVERYTHING IS READY!**
+## 🎉 **Ready to Use!**
 
-**The system is fully functional, tested, and secure.**
+**Just deploy to Vercel and start chatting securely!**
 
-**Start here:** Visit the main app and create your admin account!
-
-**Need to test?** Visit `/complete-verification.html` first!
+**All core functionality works perfectly - crypto, magic links, PIN auth, encrypted storage! 🔒**
