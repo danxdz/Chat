@@ -69,15 +69,17 @@ function App() {
 
       // Add WebRTC debugging helpers
       window.webrtcDebug = () => {
-        console.log('🔍 WebRTC Debug Info:')
-        console.log('Offers:', JSON.parse(localStorage.getItem('webrtc_offers') || '{}'))
-        console.log('Answers:', JSON.parse(localStorage.getItem('webrtc_answers') || '{}'))
+        console.log('🔍 Gun.js P2P Debug Info:')
+        console.log('Gun instance:', window.Gun)
+        console.log('Available peers:', window.Gun ? window.Gun._.opt.peers : 'Gun not initialized')
       }
 
       window.clearWebRTC = () => {
-        localStorage.removeItem('webrtc_offers')
-        localStorage.removeItem('webrtc_answers')
-        console.log('🧹 WebRTC data cleared')
+        localStorage.clear()
+        if (window.Gun) {
+          // Gun.js data is decentralized, but we can clear local storage
+          console.log('🧹 Local data cleared, Gun.js network data persists')
+        }
       }
 
       // Add test users creator
@@ -376,147 +378,103 @@ function ChatScreen({ user, onLogout }) {
   const [contacts, setContacts] = useState([])
   const [activeContact, setActiveContact] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
-  const [peers, setPeers] = useState(new Map()) // WebRTC peer connections
-  const [dataChannels, setDataChannels] = useState(new Map()) // Data channels for messaging
-  const [connectionStatus, setConnectionStatus] = useState(new Map()) // Connection statuses
   const [allUsers, setAllUsers] = useState([])
   const [showUserSwitcher, setShowUserSwitcher] = useState(false)
+  const [gun, setGun] = useState(null)
+  const [connectionStatus, setConnectionStatus] = useState(new Map())
 
   useEffect(() => {
+    // Initialize Gun.js for decentralized P2P
+    if (window.Gun) {
+      console.log('🔫 Initializing Gun.js P2P network...')
+      
+      const gunInstance = Gun({
+        peers: [
+          'https://gun-manhattan.herokuapp.com/gun',
+          'https://gun-us.herokuapp.com/gun'
+        ],
+        localStorage: false, // Use Gun's storage instead
+        radisk: true,
+        WebRTC: {
+          off: false
+        }
+      })
+      
+      setGun(gunInstance)
+      console.log('✅ Gun.js P2P network initialized')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!gun) return
+
     // Load contacts and messages
     const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
-    const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
     const users = JSON.parse(localStorage.getItem('users') || '[]')
     setContacts(savedContacts)
-    setMessages(savedMessages)
     setAllUsers(users)
 
-    // Initialize WebRTC for existing contacts
-    initializeWebRTC(savedContacts)
-  }, [user.id])
-
-  const initializeWebRTC = async (contactList) => {
-    // Create peer connections for all contacts
-    for (const contact of contactList) {
-      await createPeerConnection(contact.id, contact.nickname)
-    }
-  }
-
-  const createPeerConnection = async (contactId, contactNickname) => {
-    try {
-      console.log(`🔄 Creating peer connection for ${contactNickname}`)
-      setConnectionStatus(prev => new Map(prev.set(contactId, 'connecting')))
-
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      })
-
-      // Create data channel for messaging
-      const dataChannel = pc.createDataChannel('messages', { ordered: true })
-      
-      dataChannel.onopen = () => {
-        console.log(`✅ Data channel opened with ${contactNickname}`)
-        setConnectionStatus(prev => new Map(prev.set(contactId, 'connected')))
-        setDataChannels(prev => new Map(prev.set(contactId, dataChannel)))
-      }
-
-      dataChannel.onclose = () => {
-        console.log(`❌ Data channel closed with ${contactNickname}`)
-        setConnectionStatus(prev => new Map(prev.set(contactId, 'disconnected')))
-      }
-
-      dataChannel.onerror = (error) => {
-        console.error(`🚨 Data channel error with ${contactNickname}:`, error)
-        setConnectionStatus(prev => new Map(prev.set(contactId, 'error')))
-      }
-
-      dataChannel.onmessage = (event) => {
-        try {
-          const messageData = JSON.parse(event.data)
-          handleReceivedMessage(messageData)
-        } catch (e) {
-          console.error('Failed to parse received message:', e)
-        }
-      }
-
-      // Handle incoming data channels
-      pc.ondatachannel = (event) => {
-        const channel = event.channel
-        console.log(`📨 Received data channel from ${contactNickname}`)
+    // Subscribe to real-time messages for this user
+    gun.get(`chat_${user.id}`).map().on((messageData, messageKey) => {
+      if (messageData && messageData.id && messageData.text) {
+        console.log('📨 Received P2P message:', messageData)
         
-        channel.onopen = () => {
-          console.log(`✅ Incoming data channel opened from ${contactNickname}`)
-          setConnectionStatus(prev => new Map(prev.set(contactId, 'connected')))
-          setDataChannels(prev => new Map(prev.set(contactId, channel)))
-        }
-        
-        channel.onmessage = (event) => {
-          try {
-            const messageData = JSON.parse(event.data)
-            handleReceivedMessage(messageData)
-          } catch (e) {
-            console.error('Failed to parse received message:', e)
-          }
-        }
+        setMessages(prev => {
+          // Avoid duplicates
+          const exists = prev.find(m => m.id === messageData.id)
+          if (exists) return prev
+          
+          const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+          // Also save to localStorage as backup
+          localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+          return updated
+        })
       }
-
-      pc.oniceconnectionstatechange = () => {
-        console.log(`🧊 ICE state: ${pc.iceConnectionState} with ${contactNickname}`)
-        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-          setConnectionStatus(prev => new Map(prev.set(contactId, 'connected')))
-        } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-          setConnectionStatus(prev => new Map(prev.set(contactId, 'disconnected')))
-        }
-      }
-
-      pc.onconnectionstatechange = () => {
-        console.log(`🔗 Connection state: ${pc.connectionState} with ${contactNickname}`)
-      }
-
-      setPeers(prev => new Map(prev.set(contactId, pc)))
-
-      // For testing, let's simulate a successful connection after 2 seconds
-      setTimeout(() => {
-        console.log(`🎯 Simulating connection with ${contactNickname}`)
-        setConnectionStatus(prev => new Map(prev.set(contactId, 'connected')))
-      }, 2000)
-
-    } catch (error) {
-      console.error('Error creating peer connection:', error)
-      setConnectionStatus(prev => new Map(prev.set(contactId, 'error')))
-    }
-  }
-
-  const handleReceivedMessage = (messageData) => {
-    const newMessage = {
-      ...messageData,
-      id: `received_${Date.now()}_${Math.random()}`,
-      received: true
-    }
-
-    setMessages(prev => {
-      const updated = [...prev, newMessage]
-      localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-      return updated
     })
-  }
 
-  const sendP2PMessage = (message, targetContactId) => {
-    const dataChannel = dataChannels.get(targetContactId)
-    if (dataChannel && dataChannel.readyState === 'open') {
-      try {
-        dataChannel.send(JSON.stringify(message))
-        console.log('📤 P2P message sent via WebRTC')
-        return true
-      } catch (error) {
-        console.error('Failed to send P2P message:', error)
-        return false
-      }
+    // Load existing messages from localStorage
+    const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+    setMessages(savedMessages)
+
+    // Initialize connections with contacts
+    savedContacts.forEach(contact => {
+      setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
+      console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
+    })
+
+  }, [gun, user.id])
+
+  const sendP2PMessage = async (message) => {
+    if (!gun) {
+      console.log('❌ Gun.js not initialized')
+      return false
     }
-    return false
+
+    try {
+      // Send to specific contact's chat channel
+      if (activeContact) {
+        const contactChatKey = `chat_${activeContact.id}`
+        await gun.get(contactChatKey).set(message)
+        console.log(`📤 P2P message sent to ${activeContact.nickname} via Gun.js`)
+      } else {
+        // Send to general chat - broadcast to all users
+        const generalChatKey = 'general_chat'
+        await gun.get(generalChatKey).set(message)
+        console.log('📤 P2P message sent to general chat via Gun.js')
+        
+        // Also send to each user's personal channel
+        const users = JSON.parse(localStorage.getItem('users') || '[]')
+        users.forEach(async (u) => {
+          if (u.id !== user.id) {
+            await gun.get(`chat_${u.id}`).set(message)
+          }
+        })
+      }
+      return true
+    } catch (error) {
+      console.error('❌ Failed to send P2P message:', error)
+      return false
+    }
   }
 
   useEffect(() => {
@@ -526,75 +484,6 @@ function ChatScreen({ user, onLogout }) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight
     }
   }, [messages, activeContact])
-
-  useEffect(() => {
-    // Check for WebRTC offers from other users
-    const checkOffers = () => {
-      const offers = JSON.parse(localStorage.getItem('webrtc_offers') || '{}')
-      Object.keys(offers).forEach(async (key) => {
-        const offerData = offers[key]
-        if (offerData.to === user.id && !peers.has(offerData.from)) {
-          // This is an offer for us, create answer
-          await handleWebRTCOffer(offerData)
-        }
-      })
-    }
-
-    const interval = setInterval(checkOffers, 3000) // Check every 3 seconds
-    return () => clearInterval(interval)
-  }, [user.id, peers])
-
-  const handleWebRTCOffer = async (offerData) => {
-    try {
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      })
-
-      // Handle incoming data channels
-      pc.ondatachannel = (event) => {
-        const channel = event.channel
-        channel.onopen = () => {
-          console.log(`📡 Incoming data channel opened from ${offerData.fromNickname}`)
-          setConnectionStatus(prev => new Map(prev.set(offerData.from, 'connected')))
-          setDataChannels(prev => new Map(prev.set(offerData.from, channel)))
-        }
-        
-        channel.onmessage = (event) => {
-          try {
-            const messageData = JSON.parse(event.data)
-            handleReceivedMessage(messageData)
-          } catch (e) {
-            console.error('Failed to parse received message:', e)
-          }
-        }
-      }
-
-      await pc.setRemoteDescription(offerData.offer)
-      const answer = await pc.createAnswer()
-      await pc.setLocalDescription(answer)
-
-      // Store answer for manual exchange
-      const answers = JSON.parse(localStorage.getItem('webrtc_answers') || '{}')
-      answers[`${user.id}_to_${offerData.from}`] = {
-        from: user.id,
-        fromNickname: user.nickname,
-        to: offerData.from,
-        toNickname: offerData.fromNickname,
-        answer: answer,
-        timestamp: Date.now()
-      }
-      localStorage.setItem('webrtc_answers', JSON.stringify(answers))
-
-      setPeers(prev => new Map(prev.set(offerData.from, pc)))
-
-      console.log(`🤝 WebRTC answer created for ${offerData.fromNickname}`)
-    } catch (error) {
-      console.error('Error handling WebRTC offer:', error)
-    }
-  }
 
   const generateInvite = () => {
     // Use simple, safe encoding to avoid Vercel redirects
@@ -639,40 +528,13 @@ function ChatScreen({ user, onLogout }) {
       timestamp: Date.now()
     }
 
-    // Save to current user's messages
+    // Save to current user's messages locally as backup
     const updatedMessages = [...messages, message]
     setMessages(updatedMessages)
     localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
 
-    // Try to send via WebRTC P2P first
-    if (activeContact) {
-      const p2pSent = sendP2PMessage(message, activeContact.id)
-      if (p2pSent) {
-        console.log('✅ Message sent via WebRTC P2P')
-      } else {
-        console.log('⚠️ WebRTC not available, falling back to localStorage')
-        // Fallback to localStorage sharing
-        const contactMessages = JSON.parse(localStorage.getItem(`messages_${activeContact.id}`) || '[]')
-        const messageExists = contactMessages.find(m => m.id === message.id)
-        if (!messageExists) {
-          contactMessages.push(message)
-          localStorage.setItem(`messages_${activeContact.id}`, JSON.stringify(contactMessages))
-        }
-      }
-    } else {
-      // General chat - still use localStorage for now
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      allUsers.forEach(u => {
-        if (u.id !== user.id) {
-          const otherUserMessages = JSON.parse(localStorage.getItem(`messages_${u.id}`) || '[]')
-          const messageExists = otherUserMessages.find(m => m.id === message.id)
-          if (!messageExists) {
-            otherUserMessages.push(message)
-            localStorage.setItem(`messages_${u.id}`, JSON.stringify(otherUserMessages))
-          }
-        }
-      })
-    }
+    // Send via Gun.js P2P network
+    sendP2PMessage(message)
 
     setNewMessage('')
   }
@@ -689,6 +551,9 @@ function ChatScreen({ user, onLogout }) {
     const updatedContacts = [...contacts, newContact]
     setContacts(updatedContacts)
     localStorage.setItem(`contacts_${user.id}`, JSON.stringify(updatedContacts))
+    
+    // Set connection status for new contact
+    setConnectionStatus(prev => new Map(prev.set(newContact.id, 'connected')))
   }
 
   const filteredMessages = activeContact 
