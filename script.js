@@ -292,6 +292,14 @@ function completeSetup() {
         console.error('app.sodium not available');
         return;
     }
+
+    // Enforce invitation-only registration for non-admin users
+    const isFirstUserFlag = localStorage.getItem('isFirstUser') === 'true';
+    const pendingInvitationRaw = sessionStorage.getItem('pendingInvitation');
+    if (!isFirstUserFlag && !pendingInvitationRaw) {
+        showSetupError('Registration requires a valid invitation. Please open your invitation link to proceed.');
+        return;
+    }
     
     try {
         console.log('Starting setup process...');
