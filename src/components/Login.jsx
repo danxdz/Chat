@@ -24,9 +24,23 @@ function Login({ sodium, onLogin, showToast }) {
     setLoading(true)
     
     try {
-      // Verify PIN
-      const derived = hashPIN(pin, sodium)
-      const hashedPIN = sodium.to_hex(derived)
+      // Verify PIN - handle both sync and async hashPIN
+      let hashedPIN
+      try {
+        const result = hashPIN(pin, sodium)
+        // Check if result is a Promise (async fallback)
+        if (result && typeof result.then === 'function') {
+          hashedPIN = await result
+        } else {
+          hashedPIN = result
+        }
+      } catch (error) {
+        console.error('hashPIN error during login:', error)
+        showToast('Failed to verify PIN: ' + error.message, 'error')
+        setLoading(false)
+        return
+      }
+      
       const storedPIN = localStorage.getItem('userPIN')
       
       if (hashedPIN !== storedPIN) {

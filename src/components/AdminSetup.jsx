@@ -40,13 +40,31 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
     setLoading(true)
     
     try {
-      console.log('Hashing PIN with sodium...')
+      console.log('🔐 Hashing PIN with sodium...')
       
-      // Create admin account
-      const derived = hashPIN(pin, sodium)
-      const hashedPIN = sodium.to_hex(derived)
+      // Create admin account - handle both sync and async hashPIN
+      let hashedPIN
+      try {
+        const result = hashPIN(pin, sodium)
+        // Check if result is a Promise (async fallback)
+        if (result && typeof result.then === 'function') {
+          hashedPIN = await result
+        } else {
+          hashedPIN = result
+        }
+      } catch (error) {
+        console.error('hashPIN error:', error)
+        showToast('Failed to hash PIN: ' + error.message, 'error')
+        setLoading(false)
+        return
+      }
       
-      console.log('PIN hashed successfully, length:', hashedPIN.length)
+      console.log('✅ PIN hashed successfully')
+      console.log('Hashed PIN length:', hashedPIN?.length || 'undefined')
+      
+      if (!hashedPIN) {
+        throw new Error('PIN hashing returned empty result')
+      }
       
       // Save admin data
       localStorage.setItem('userPIN', hashedPIN)
@@ -54,7 +72,13 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
       localStorage.setItem('isAdmin', 'true')
       localStorage.setItem('adminAccountCreated', 'true')
       
-      console.log('Admin data saved to localStorage')
+      console.log('💾 Admin data saved to localStorage')
+      console.log('localStorage check:', {
+        userPIN: localStorage.getItem('userPIN') ? 'exists' : 'missing',
+        userNickname: localStorage.getItem('userNickname'),
+        isAdmin: localStorage.getItem('isAdmin'),
+        adminAccountCreated: localStorage.getItem('adminAccountCreated')
+      })
       
       // Return user data
       const userData = {
@@ -63,13 +87,13 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
         pin: pin // Keep for session
       }
       
-      console.log('Admin account created successfully!')
+      console.log('🎉 ADMIN ACCOUNT CREATED SUCCESSFULLY!')
       showToast('Admin account created!', 'success')
       
       onAdminCreated(userData)
       
     } catch (error) {
-      console.error('Failed to create admin account:', error)
+      console.error('❌ Failed to create admin account:', error)
       showToast('Failed to create account: ' + error.message, 'error')
       setLoading(false)
     }

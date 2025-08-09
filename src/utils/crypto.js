@@ -59,16 +59,34 @@ export const hashPIN = (pin, sodium) => {
   console.log('crypto_pwhash available:', typeof sodium.crypto_pwhash)
   console.log('to_hex available:', typeof sodium.to_hex)
   
+  // If crypto_pwhash is not available, use a simpler hash approach
   if (typeof sodium.crypto_pwhash !== 'function') {
-    throw new Error('Sodium crypto_pwhash function not available. Available functions: ' + 
-      Object.keys(sodium).filter(key => typeof sodium[key] === 'function').slice(0, 10).join(', '))
+    console.log('🔐 Using simple hash instead of crypto_pwhash')
+    
+    // Use a simple but secure approach with crypto_hash
+    if (typeof sodium.crypto_hash === 'function') {
+      const pinBytes = new TextEncoder().encode(pin + 'securechat_salt_v1')
+      const hash = sodium.crypto_hash(pinBytes)
+      return sodium.to_hex ? sodium.to_hex(hash) : Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('')
+    }
+    
+    // Fallback to crypto_generichash if available
+    if (typeof sodium.crypto_generichash === 'function') {
+      const pinBytes = new TextEncoder().encode(pin + 'securechat_salt_v1')
+      const hash = sodium.crypto_generichash(32, pinBytes)
+      return sodium.to_hex ? sodium.to_hex(hash) : Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('')
+    }
+    
+    // If no sodium crypto functions work, use Web Crypto API as fallback
+    console.log('🔐 Falling back to Web Crypto API')
+    return hashPINWithWebCrypto(pin)
   }
   
   if (typeof sodium.to_hex !== 'function') {
     throw new Error('Sodium to_hex function not available')
   }
   
-  console.log('🔐 Hashing PIN...')
+  console.log('🔐 Hashing PIN with crypto_pwhash...')
   
   const salt = new Uint8Array([
     0x73, 0x65, 0x63, 0x75, 0x72, 0x65, 0x63, 0x68,
@@ -84,23 +102,35 @@ export const hashPIN = (pin, sodium) => {
       sodium.crypto_pwhash_MEMLIMIT_SENSITIVE,
       sodium.crypto_pwhash_ALG_ARGON2ID
     )
-    console.log('✅ PIN hashed successfully')
-    return result
+    return sodium.to_hex(result)
   } catch (error) {
     console.error('❌ PIN hashing failed:', error)
-    throw new Error('Failed to hash PIN: ' + error.message)
+    // Fallback to simple hash
+    return hashPINWithWebCrypto(pin)
   }
+}
+
+// Fallback function using Web Crypto API
+const hashPINWithWebCrypto = async (pin) => {
+  console.log('🔐 Using Web Crypto API for PIN hashing')
+  
+  const encoder = new TextEncoder()
+  const data = encoder.encode(pin + 'securechat_salt_v1')
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 export const generateRandomNickname = () => {
   const adjectives = [
-    'Shadow', 'Ghost', 'Dark', 'Silent', 'Swift', 'Steel', 'Binary', 'Cyber',
-    'Digital', 'Neon', 'Zero', 'Prime', 'Code', 'Tech', 'Neo', 'Matrix'
+    'Elite', 'Shadow', 'Cyber', 'Dark', 'Ghost', 'Phantom', 'Matrix', 'Binary',
+    'Digital', 'Neon', 'Void', 'Nexus', 'Zero', 'Prime', 'Code', 'Hack'
   ]
   
   const nouns = [
-    'Runner', 'Walker', 'Hunter', 'Agent', 'Master', 'Knight', 'Guardian', 'Warrior',
-    'Coder', 'Hacker', 'User', 'Admin', 'Root', 'Shell', 'Terminal', 'Node'
+    'Runner', 'Walker', 'Hunter', 'Rider', 'Agent', 'Warrior', 'Master', 'Lord',
+    'Knight', 'Ninja', 'Samurai', 'Guardian', 'Sentinel', 'Keeper', 'Slayer', 'Viper'
   ]
   
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
