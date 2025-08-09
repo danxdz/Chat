@@ -124,6 +124,150 @@ body {
     margin: 5px 0;
 }
 
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 1px solid #444;
+    border-radius: 10px;
+    max-width: 90%;
+    max-height: 90%;
+    width: 500px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    background: rgba(46, 204, 64, 0.1);
+    border-bottom: 1px solid rgba(46, 204, 64, 0.3);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2ECC40;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.invite-url-container {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.invite-url-container input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #444;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.invite-details {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.invite-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.invite-actions .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.invite-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.invite-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.invite-item:last-child {
+    border-bottom: none;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    cursor: pointer;
+}
+
+.btn-small.danger {
+    background: rgba(255, 59, 48, 0.2);
+    border-color: rgba(255, 59, 48, 0.5);
+    color: #ff3b30;
+}
+
+.btn-small:hover {
+    opacity: 0.8;
+}
+
+.invite-stats {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
 /* Main App Layout */
 .app-container {
     display: none;

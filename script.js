@@ -11,8 +11,10 @@ let app = {
     storageKey: null,
     retryTimers: {},
     lockoutUntil: 0,
-    adminPinUsed: false,
-    nickname: null
+    nickname: null,
+    isAdmin: false,
+    invitations: {},
+    users: {}
 };
 
 // Master admin setup key - only for the very first user (change this!)
@@ -119,12 +121,22 @@ function validateInvitation(token) {
         const decoded = atob(token);
         const invitation = JSON.parse(decoded);
         
+        // Validate required fields
+        if (!invitation.id || !invitation.inviterId || !invitation.expiresAt) {
+            return null;
+        }
+        
         // Check expiration
         const now = Date.now();
-        const expiresAt = invitation.expiresAt;
-        
-        if (now > expiresAt) {
+        if (now > invitation.expiresAt) {
             return null; // Expired
+        }
+        
+        // Check if invitation was already used (check against stored invitations)
+        const storedInvitations = JSON.parse(localStorage.getItem('invitations') || '{}');
+        const storedInvite = storedInvitations[invitation.id];
+        if (storedInvite && storedInvite.used) {
+            return null; // Already used
         }
         
         return invitation;
@@ -133,10 +145,51 @@ function validateInvitation(token) {
     }
 }
 
+function markInvitationAsUsed(inviteId, usedBy) {
+    try {
+        // Mark invitation as used in localStorage
+        const invitations = JSON.parse(localStorage.getItem('invitations') || '{}');
+        if (invitations[inviteId]) {
+            invitations[inviteId].used = true;
+            invitations[inviteId].usedBy = usedBy;
+            invitations[inviteId].usedAt = Date.now();
+            localStorage.setItem('invitations', JSON.stringify(invitations));
+        }
+        
+        // Also try to mark it in the inviter's storage if we have access
+        // (This would need to be done via P2P communication in a real implementation)
+        console.log(`Invitation ${inviteId} marked as used by ${usedBy}`);
+    } catch (error) {
+        console.error('Failed to mark invitation as used:', error);
+    }
+}
+
 function showInviteError(message) {
-    // Create error display or redirect to main page with error
-    alert(message);
-    window.location.href = window.location.pathname; // Remove query params
+    hideAllScreens();
+    
+    // Create error screen
+    const errorScreen = document.createElement('div');
+    errorScreen.className = 'login-screen';
+    errorScreen.innerHTML = `
+        <h1 class="login-title terminal-glow">⚠️ Invitation Error</h1>
+        <div class="login-form box-glow">
+            <p style="color: #ff3b30; margin-bottom: 20px;">${message}</p>
+            <div class="info-box">
+                <p><strong>Possible reasons:</strong></p>
+                <ul>
+                    <li>Invitation link has expired</li>
+                    <li>Invitation was already used</li>
+                    <li>Invalid invitation format</li>
+                    <li>Invitation was revoked</li>
+                </ul>
+            </div>
+            <button onclick="window.location.href = window.location.pathname" class="btn">
+                🏠 Go to Home Page
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(errorScreen);
 }
 
 // Helper function to hide all screens
@@ -236,6 +289,8 @@ function completeSetup() {
             const invitation = JSON.parse(pendingInvitation);
             // Add inviter as contact automatically
             addInviterAsContact(invitation);
+            // Mark invitation as used
+            markInvitationAsUsed(invitation.id, finalNickname);
             sessionStorage.removeItem('pendingInvitation');
         }
         
@@ -276,6 +331,180 @@ function addInviterAsContact(invitation) {
         console.log(`Added ${invitation.inviterName} as contact via invitation`);
     } catch (error) {
         console.error('Failed to add inviter as contact:', error);
+    }
+}
+
+// ==================== INVITATION MANAGEMENT SYSTEM ====================
+
+function createInvitationLink() {
+    if (!app.isAdmin) {
+        showSystemMessage('❌ Only admins can create invitations');
+        return;
+    }
+    
+    try {
+        // Generate unique invitation token
+        const inviteId = app.sodium.to_hex(app.sodium.randombytes_buf(16));
+        const expiresAt = Date.now() + (INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
+        
+        // Create invitation object
+        const invitation = {
+            id: inviteId,
+            inviterId: app.userId,
+            inviterName: app.nickname,
+            inviterPublicKey: app.sodium.to_hex(app.keyPair.publicKey),
+            createdAt: Date.now(),
+            expiresAt: expiresAt,
+            used: false,
+            usedBy: null,
+            usedAt: null
+        };
+        
+        // Encode invitation as base64 token
+        const token = btoa(JSON.stringify(invitation));
+        
+        // Store invitation locally
+        const invitations = JSON.parse(localStorage.getItem('invitations') || '{}');
+        invitations[inviteId] = invitation;
+        localStorage.setItem('invitations', JSON.stringify(invitations));
+        
+        // Create invitation URL
+        const baseUrl = window.location.origin + window.location.pathname;
+        const inviteUrl = `${baseUrl}?invite=${token}`;
+        
+        // Show invitation modal
+        showInvitationModal(inviteUrl, invitation);
+        
+    } catch (error) {
+        console.error('Failed to create invitation:', error);
+        showSystemMessage('❌ Failed to create invitation');
+    }
+}
+
+function showInvitationModal(inviteUrl, invitation) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎉 Invitation Created!</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Share this link to invite someone:</strong></p>
+                <div class="invite-url-container">
+                    <input type="text" id="inviteUrlInput" value="${inviteUrl}" readonly>
+                    <button onclick="copyInviteUrl()" class="btn secondary-btn">📋 Copy</button>
+                </div>
+                <div class="invite-details">
+                    <p><strong>Details:</strong></p>
+                    <ul>
+                        <li>Created by: ${invitation.inviterName}</li>
+                        <li>Expires: ${new Date(invitation.expiresAt).toLocaleString()}</li>
+                        <li>Valid for: ${INVITATION_EXPIRY_HOURS} hours</li>
+                    </ul>
+                </div>
+                <div class="invite-actions">
+                    <button onclick="shareInvite('${inviteUrl}')" class="btn">📱 Share</button>
+                    <button onclick="emailInvite('${inviteUrl}')" class="btn">📧 Email</button>
+                    <button onclick="viewInvitations()" class="btn secondary-btn">📋 Manage All</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function copyInviteUrl() {
+    const input = document.getElementById('inviteUrlInput');
+    input.select();
+    document.execCommand('copy');
+    showSystemMessage('✅ Invitation link copied to clipboard!');
+}
+
+function shareInvite(url) {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Join P2P Secure Chat',
+            text: `${app.nickname} invited you to join a secure chat!`,
+            url: url
+        });
+    } else {
+        copyInviteUrl();
+    }
+}
+
+function emailInvite(url) {
+    const subject = encodeURIComponent('Invitation to P2P Secure Chat');
+    const body = encodeURIComponent(`Hi!
+
+${app.nickname} has invited you to join a secure P2P chat.
+
+Click this link to create your account:
+${url}
+
+This invitation expires in ${INVITATION_EXPIRY_HOURS} hours.
+
+Best regards,
+P2P Secure Chat`);
+    
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+}
+
+function viewInvitations() {
+    const invitations = JSON.parse(localStorage.getItem('invitations') || '{}');
+    const inviteList = Object.values(invitations)
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .map(inv => {
+            const status = inv.used ? '✅ Used' : (inv.expiresAt < Date.now() ? '⏰ Expired' : '🟢 Active');
+            const date = new Date(inv.createdAt).toLocaleDateString();
+            const usedInfo = inv.used ? ` by ${inv.usedBy}` : '';
+            return `<div class="invite-item">
+                <span>${status} - Created ${date}${usedInfo}</span>
+                ${!inv.used && inv.expiresAt > Date.now() ? 
+                    `<button onclick="revokeInvitation('${inv.id}')" class="btn-small danger">Revoke</button>` : 
+                    ''
+                }
+            </div>`;
+        }).join('');
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📋 Invitation Management</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="invite-list">
+                    ${inviteList || '<p>No invitations created yet.</p>'}
+                </div>
+                <div class="invite-stats">
+                    <p><strong>Statistics:</strong></p>
+                    <ul>
+                        <li>Total created: ${Object.keys(invitations).length}</li>
+                        <li>Used: ${Object.values(invitations).filter(i => i.used).length}</li>
+                        <li>Active: ${Object.values(invitations).filter(i => !i.used && i.expiresAt > Date.now()).length}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function revokeInvitation(inviteId) {
+    const invitations = JSON.parse(localStorage.getItem('invitations') || '{}');
+    if (invitations[inviteId]) {
+        delete invitations[inviteId];
+        localStorage.setItem('invitations', JSON.stringify(invitations));
+        showSystemMessage('✅ Invitation revoked');
+        // Refresh the modal
+        document.querySelector('.modal-overlay').remove();
+        viewInvitations();
     }
 }
 
@@ -1367,6 +1596,12 @@ function setupEventListeners() {
     document.getElementById('addContactBtn').onclick = () => {
         document.getElementById('addContactModal').style.display = 'flex';
     };
+    
+    // Create Invitation (Admin only)
+    const createInviteBtn = document.getElementById('createInviteBtn');
+    if (createInviteBtn) {
+        createInviteBtn.onclick = createInvitationLink;
+    }
     
     document.getElementById('createContactBtn').onclick = () => {
         const name = document.getElementById('contactNameInput').value.trim();
