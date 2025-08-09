@@ -72,6 +72,16 @@ body {
     cursor: not-allowed;
 }
 
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Admin PIN highlight */
+.login-form p {
+    transition: all 0.3s ease;
+}
+
 /* Main App Layout */
 .app-container {
     display: none;

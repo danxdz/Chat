@@ -10,8 +10,12 @@ let app = {
     userId: null,
     storageKey: null,
     retryTimers: {},
-    lockoutUntil: 0
+    lockoutUntil: 0,
+    adminPinUsed: false
 };
+
+// One-time admin PIN - change this for your deployment
+const ADMIN_PIN = "123456"; // This will work only once, then gets disabled
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
@@ -302,7 +306,17 @@ function enableLoginForm() {
     const loginBtn = document.getElementById('loginBtn');
     
     if (loginPrompt && pinInput && loginBtn) {
-        loginPrompt.textContent = '✅ Encryption ready! Enter your 4-digit PIN';
+        // Check if user already has a PIN set or if they should use admin PIN
+        const hasUserPIN = localStorage.getItem('userPIN') !== null;
+        const adminPinUsed = localStorage.getItem('adminPinUsed') === 'true';
+        
+        if (!hasUserPIN && !adminPinUsed) {
+            loginPrompt.textContent = '✅ First time? Use admin PIN: 123456';
+        } else if (!hasUserPIN && adminPinUsed) {
+            loginPrompt.textContent = '✅ Enter your new 4-6 digit PIN';
+        } else {
+            loginPrompt.textContent = '✅ Enter your 4-6 digit PIN';
+        }
         loginPrompt.style.color = '#2ECC40';
         
         setTimeout(() => {
@@ -391,13 +405,38 @@ function hashPIN(pin) {
 
 function login() {
     const pin = document.getElementById('pinInput').value;
-    if (pin.length !== 4) {
-        showLoginError('PIN must be 4 digits');
+    
+    // Validate PIN length (4-6 digits)
+    if (pin.length < 4 || pin.length > 6) {
+        showLoginError('PIN must be 4-6 digits');
+        return;
+    }
+    
+    // Validate PIN contains only numbers
+    if (!/^\d+$/.test(pin)) {
+        showLoginError('PIN must contain only numbers');
         return;
     }
 
     if (!app.sodium) {
         showLoginError('Encryption library not ready. Please wait and try again.');
+        return;
+    }
+
+    // Check for admin PIN (one-time use)
+    const adminPinUsed = localStorage.getItem('adminPinUsed') === 'true';
+    if (pin === ADMIN_PIN && !adminPinUsed) {
+        console.log('Admin PIN used - setting up new user');
+        localStorage.setItem('adminPinUsed', 'true');
+        localStorage.removeItem('userPIN'); // Clear any existing PIN
+        localStorage.removeItem('failedAttempts');
+        localStorage.removeItem('lockoutUntil');
+        showLoginSuccess('Admin access granted! Set your new PIN.');
+        setTimeout(() => {
+            // Reset form for new PIN entry
+            document.getElementById('pinInput').value = '';
+            updateLoginPrompt('Enter your new 4-6 digit PIN');
+        }, 1000);
         return;
     }
 
@@ -415,13 +454,16 @@ function login() {
         const storedPIN = localStorage.getItem('userPIN');
 
         if (storedPIN === null) {
+            // Setting new PIN
             localStorage.setItem('userPIN', hashedPIN);
             showLoginSuccess('PIN set successfully!');
             setTimeout(() => authenticateUser(pin), 300);
         } else if (storedPIN === hashedPIN) {
+            // Correct PIN
             localStorage.removeItem('failedAttempts');
             authenticateUser(pin);
         } else {
+            // Wrong PIN
             const attempts = parseInt(localStorage.getItem('failedAttempts') || '0', 10) + 1;
             localStorage.setItem('failedAttempts', String(attempts));
             if (attempts >= 5) {
@@ -430,7 +472,7 @@ function login() {
                 localStorage.removeItem('failedAttempts');
                 showLoginError('Too many attempts. Locked for 60s');
             } else {
-                showLoginError('Invalid PIN');
+                showLoginError(`Invalid PIN (${attempts}/5 attempts)`);
             }
         }
     } catch (error) {
