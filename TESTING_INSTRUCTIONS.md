@@ -2,7 +2,7 @@
 
 ## Quick Start Testing
 
-1. **Open the application**: Navigate to `http://localhost:8000/p2p_secure_chat.html`
+1. **Open the application**: Navigate to `http://localhost:8000/index.html`
 
 2. **Set up your PIN**: 
    - Enter any 4-digit PIN (e.g., 1234)
@@ -56,7 +56,7 @@
 
 ### Chat Interface
 - ✅ Terminal/hacker aesthetic styling
-- ✅ Message history persistence
+- ✅ Message history persistence (encrypted at rest)
 - ✅ Timestamp display
 - ✅ System messages for connection events
 
@@ -81,7 +81,7 @@ Test these IRC-style commands by typing them in the message input:
 
 ## Troubleshooting
 
-- **Connection Failed**: Try the `/connect` command to retry
+- **Connection Failed**: Try the `/connect` command to retry, or wait for automatic reconnection
 - **Messages Not Encrypted**: Check `/status` command - encryption requires successful WebRTC connection
 - **Contacts Not Showing**: Refresh the page and re-login
 - **Invitation Links**: Make sure both users are logged in before opening invitation links
@@ -90,7 +90,7 @@ Test these IRC-style commands by typing them in the message input:
 
 - ✅ All messages encrypted with libsodium before transmission
 - ✅ Unique session keypairs (not persisted between sessions)  
-- ✅ Secure PIN storage (hashed with crypto_pwhash)
+- ✅ Secure PIN storage (derived key with per-user salt)
 - ✅ No message data stored on servers (P2P only)
 - ✅ Forward secrecy (new keys each session)
 

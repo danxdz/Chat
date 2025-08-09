@@ -7,7 +7,10 @@ let app = {
     peers: {},
     sharedKeys: {},
     isAuthenticated: false,
-    userId: null
+    userId: null,
+    storageKey: null,
+    retryTimers: {},
+    lockoutUntil: 0
 };
 
 // Initialize application
@@ -65,17 +68,30 @@ async function initSodium() {
 }
 
 // PIN Authentication Functions
-function hashPIN(pin) {
+function getOrCreateSalt() {
+    const existing = localStorage.getItem('userSalt');
+    if (existing) return app.sodium.from_hex(existing);
+    const salt = app.sodium.randombytes_buf(app.sodium.crypto_pwhash_SALTBYTES);
+    localStorage.setItem('userSalt', app.sodium.to_hex(salt));
+    return salt;
+}
+
+function deriveKeyFromPIN(pin) {
     if (!app.sodium) return null;
-    const salt = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]); // Fixed salt for demo
+    const salt = getOrCreateSalt();
     return app.sodium.crypto_pwhash(
         32,
         pin,
         salt,
-        app.sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
-        app.sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
+        app.sodium.crypto_pwhash_OPSLIMIT_MODERATE,
+        app.sodium.crypto_pwhash_MEMLIMIT_MODERATE,
         app.sodium.crypto_pwhash_ALG_DEFAULT
     );
+}
+
+function hashPIN(pin) {
+    const key = deriveKeyFromPIN(pin);
+    return key; // store full derived key as PIN hash surrogate
 }
 
 function login() {
@@ -90,20 +106,37 @@ function login() {
         return;
     }
 
+    const now = Date.now();
+    const lockoutUntil = parseInt(localStorage.getItem('lockoutUntil') || '0', 10);
+    if (now < lockoutUntil) {
+        const seconds = Math.ceil((lockoutUntil - now) / 1000);
+        showLoginError(`Too many attempts. Try again in ${seconds}s`);
+        return;
+    }
+
     try {
-        const hashedPIN = app.sodium.to_hex(hashPIN(pin));
+        const derived = hashPIN(pin);
+        const hashedPIN = app.sodium.to_hex(derived);
         const storedPIN = localStorage.getItem('userPIN');
 
         if (storedPIN === null) {
-            // First time user - set PIN
             localStorage.setItem('userPIN', hashedPIN);
             showLoginSuccess('PIN set successfully!');
-            setTimeout(() => authenticateUser(pin), 1000);
+            setTimeout(() => authenticateUser(pin), 300);
         } else if (storedPIN === hashedPIN) {
-            // Returning user - authenticate
+            localStorage.removeItem('failedAttempts');
             authenticateUser(pin);
         } else {
-            showLoginError('Invalid PIN');
+            const attempts = parseInt(localStorage.getItem('failedAttempts') || '0', 10) + 1;
+            localStorage.setItem('failedAttempts', String(attempts));
+            if (attempts >= 5) {
+                const until = Date.now() + 60_000; // 1 minute
+                localStorage.setItem('lockoutUntil', String(until));
+                localStorage.removeItem('failedAttempts');
+                showLoginError('Too many attempts. Locked for 60s');
+            } else {
+                showLoginError('Invalid PIN');
+            }
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -116,6 +149,9 @@ function authenticateUser(pin) {
     app.keyPair = app.sodium.crypto_box_keypair();
     app.userId = app.sodium.to_hex(app.keyPair.publicKey).substring(0, 8);
     app.isAuthenticated = true;
+
+    // Derive storage encryption key for at-rest encryption of messages
+    app.storageKey = deriveKeyFromPIN(pin);
     
     // Show main app
     document.getElementById('loginScreen').style.display = 'none';
@@ -125,6 +161,7 @@ function authenticateUser(pin) {
     document.getElementById('userInfo').textContent = `ID: ${app.userId}`;
     
     // Load and display contacts
+    loadEncryptedContacts();
     displayContacts();
     
     // Process any pending invites
@@ -140,11 +177,36 @@ function generateKeypair() {
 
 // Contact Management Functions
 function loadContacts() {
+    // Load legacy plaintext contacts (pre-login)
     const stored = localStorage.getItem('contacts');
     app.contacts = stored ? JSON.parse(stored) : {};
 }
 
+function loadEncryptedContacts() {
+    const enc = localStorage.getItem('contacts_enc');
+    if (enc && app.storageKey) {
+        const parsed = JSON.parse(enc);
+        const json = decryptFromStorage(parsed);
+        if (json) {
+            app.contacts = JSON.parse(json);
+            return;
+        }
+    }
+    // fallback to plaintext if exists
+    loadContacts();
+}
+
 function saveContacts() {
+    if (app.storageKey) {
+        const payload = encryptForStorage(JSON.stringify(app.contacts));
+        if (payload) {
+            localStorage.setItem('contacts_enc', JSON.stringify(payload));
+            // Clean legacy key to avoid leaking plaintext
+            localStorage.removeItem('contacts');
+            return;
+        }
+    }
+    // Fallback plaintext for demo if no key
     localStorage.setItem('contacts', JSON.stringify(app.contacts));
 }
 
@@ -220,9 +282,18 @@ function createPeerConnection(contactId, isInitiator) {
     
     peer.on('signal', (signalData) => {
         console.log('Signal data generated for', contactId);
-        // In a real app, this would be sent through a signaling server
-        // For demo, we'll store it for manual exchange
-        localStorage.setItem(`signal_${contactId}`, JSON.stringify(signalData));
+        // Broadcast via localStorage for demo cross-tab signaling
+        const payload = {
+            kind: 'webrtc',
+            from: app.userId,
+            fromPublicKey: app.sodium.to_hex(app.keyPair.publicKey),
+            signal: signalData,
+            ts: Date.now()
+        };
+        const key = `webrtc_${payload.from}_${payload.ts}`;
+        localStorage.setItem(key, JSON.stringify(payload));
+        // Clean it shortly after to keep storage tidy
+        setTimeout(() => localStorage.removeItem(key), 10_000);
     });
     
     peer.on('connect', () => {
@@ -230,18 +301,42 @@ function createPeerConnection(contactId, isInitiator) {
         updateContactStatus(contactId, 'online');
         showSystemMessage(`Connected to ${app.contacts[contactId].name}`);
         
-        // Derive shared key for encryption
-        if (app.contacts[contactId].publicKey) {
-            app.sharedKeys[contactId] = app.sodium.crypto_box_beforenm(
-                app.sodium.from_hex(app.contacts[contactId].publicKey),
-                app.keyPair.privateKey
-            );
+        // Exchange public keys to establish shared key if missing
+        try {
+            const contact = app.contacts[contactId];
+            const myPub = app.sodium.to_hex(app.keyPair.publicKey);
+            peer.send(JSON.stringify({ type: 'pubkey', publicKey: myPub }));
+            if (contact.publicKey) {
+                app.sharedKeys[contactId] = app.sodium.crypto_box_beforenm(
+                    app.sodium.from_hex(contact.publicKey),
+                    app.keyPair.privateKey
+                );
+            }
+        } catch (e) {
+            console.error('Error during key exchange:', e);
+        }
+        // Cancel any reconnect timers
+        if (app.retryTimers[contactId]) {
+            clearTimeout(app.retryTimers[contactId].timer);
+            delete app.retryTimers[contactId];
         }
     });
     
     peer.on('data', (data) => {
         try {
             const message = JSON.parse(data.toString());
+            if (message.type === 'pubkey' && message.publicKey) {
+                const contact = app.contacts[contactId];
+                if (!contact.publicKey) {
+                    contact.publicKey = message.publicKey;
+                    saveContacts();
+                }
+                app.sharedKeys[contactId] = app.sodium.crypto_box_beforenm(
+                    app.sodium.from_hex(contact.publicKey),
+                    app.keyPair.privateKey
+                );
+                return;
+            }
             receiveMessage(message, contactId);
         } catch (error) {
             console.error('Error parsing received data:', error);
@@ -252,18 +347,35 @@ function createPeerConnection(contactId, isInitiator) {
         console.error('Peer error:', error);
         updateContactStatus(contactId, 'offline');
         showSystemMessage(`Connection error with ${app.contacts[contactId].name}`);
+        scheduleReconnect(contactId);
     });
     
     peer.on('close', () => {
         console.log('Peer connection closed:', contactId);
         updateContactStatus(contactId, 'offline');
         showSystemMessage(`Disconnected from ${app.contacts[contactId].name}`);
+        scheduleReconnect(contactId);
     });
     
     app.peers[contactId] = peer;
     updateContactStatus(contactId, 'connecting');
     
     return peer;
+}
+
+function scheduleReconnect(contactId) {
+    if (!app.retryTimers[contactId]) {
+        app.retryTimers[contactId] = { attempts: 0, timer: null };
+    }
+    const state = app.retryTimers[contactId];
+    if (state.attempts >= 6) return; // stop after ~max backoff
+    const delay = Math.min(30_000, 1000 * Math.pow(2, state.attempts));
+    state.attempts += 1;
+    state.timer = setTimeout(() => {
+        if (app.contacts[contactId] && (!app.peers[contactId] || app.peers[contactId].destroyed)) {
+            attemptConnection(contactId);
+        }
+    }, delay);
 }
 
 function attemptConnection(contactId) {
@@ -315,6 +427,28 @@ function decryptMessage(encryptedData, sharedKey) {
         return app.sodium.to_string(plaintext);
     } catch (error) {
         console.error('Decryption failed:', error);
+        return null;
+    }
+}
+
+// Storage encryption helpers (at-rest)
+function encryptForStorage(plaintext) {
+    if (!app.sodium || !app.storageKey) return null;
+    const nonce = app.sodium.randombytes_buf(app.sodium.crypto_secretbox_NONCEBYTES);
+    const messageBytes = app.sodium.from_string(plaintext);
+    const boxed = app.sodium.crypto_secretbox_easy(messageBytes, nonce, app.storageKey);
+    return { c: app.sodium.to_hex(boxed), n: app.sodium.to_hex(nonce) };
+}
+
+function decryptFromStorage(payload) {
+    if (!app.sodium || !app.storageKey || !payload) return null;
+    try {
+        const boxed = app.sodium.from_hex(payload.c);
+        const nonce = app.sodium.from_hex(payload.n);
+        const opened = app.sodium.crypto_secretbox_open_easy(boxed, nonce, app.storageKey);
+        return app.sodium.to_string(opened);
+    } catch (e) {
+        console.error('Failed to decrypt storage payload:', e);
         return null;
     }
 }
@@ -426,11 +560,15 @@ function displayMessage(message) {
     
     const time = new Date(message.timestamp).toLocaleTimeString();
     const encryptedIcon = message.encrypted ? '🔒' : '';
-    
-    messageEl.innerHTML = `
-        ${message.content}
-        <span class="message-time">${encryptedIcon} ${time}</span>
-    `;
+
+    const textNode = document.createElement('span');
+    textNode.textContent = message.content;
+    const timeNode = document.createElement('span');
+    timeNode.className = 'message-time';
+    timeNode.textContent = `${encryptedIcon} ${time}`;
+
+    messageEl.appendChild(textNode);
+    messageEl.appendChild(timeNode);
     
     chatArea.appendChild(messageEl);
     chatArea.scrollTop = chatArea.scrollHeight;
@@ -440,7 +578,13 @@ function showSystemMessage(text) {
     const chatArea = document.getElementById('chatArea');
     const messageEl = document.createElement('div');
     messageEl.className = 'message system';
-    messageEl.innerHTML = `${text} <span class="message-time">${new Date().toLocaleTimeString()}</span>`;
+    const textNode = document.createElement('span');
+    textNode.textContent = text;
+    const timeNode = document.createElement('span');
+    timeNode.className = 'message-time';
+    timeNode.textContent = new Date().toLocaleTimeString();
+    messageEl.appendChild(textNode);
+    messageEl.appendChild(timeNode);
     chatArea.appendChild(messageEl);
     chatArea.scrollTop = chatArea.scrollHeight;
 }
@@ -647,6 +791,60 @@ function setupEventListeners() {
             }
         };
     });
+
+    // Listen for cross-tab signaling events
+    window.addEventListener('storage', (e) => {
+        if (!e.key || !e.newValue) return;
+        if (!e.key.startsWith('webrtc_')) return;
+        try {
+            const payload = JSON.parse(e.newValue);
+            if (!payload || payload.kind !== 'webrtc') return;
+            if (payload.from === app.userId) return; // ignore own
+            handleIncomingSignal(payload);
+        } catch (err) {
+            console.error('Failed to handle storage signal:', err);
+        }
+    });
+}
+
+function handleIncomingSignal(payload) {
+    // Try to identify contact by public key or by userId hint
+    let contactId = null;
+    const entries = Object.entries(app.contacts);
+    const matchByPub = entries.find(([_, c]) => c.publicKey && c.publicKey.toLowerCase() === (payload.fromPublicKey || '').toLowerCase());
+    if (matchByPub) contactId = matchByPub[0];
+    if (!contactId) {
+        const byRemoteId = entries.find(([_, c]) => c.remoteUserId && c.remoteUserId === payload.from);
+        if (byRemoteId) contactId = byRemoteId[0];
+    }
+    if (!contactId) {
+        // Fallback: find a single contact without public key
+        const candidates = entries.filter(([_, c]) => !c.publicKey);
+        if (candidates.length === 1) {
+            contactId = candidates[0][0];
+        }
+    }
+    if (!contactId) {
+        // Create a new contact based on sender identity
+        const name = `User_${payload.from}`;
+        contactId = addContact(name);
+    }
+    // Ensure we store sender's public key if provided
+    if (payload.fromPublicKey) {
+        app.contacts[contactId].publicKey = payload.fromPublicKey;
+        app.contacts[contactId].remoteUserId = payload.from;
+        saveContacts();
+        displayContacts();
+    }
+    // Create or reuse peer as non-initiator
+    if (!app.peers[contactId] || app.peers[contactId].destroyed) {
+        createPeerConnection(contactId, false);
+    }
+    try {
+        app.peers[contactId].signal(payload.signal);
+    } catch (e) {
+        console.error('Failed to apply incoming signal:', e);
+    }
 }
 
 // Utility Functions

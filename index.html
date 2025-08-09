@@ -6,18 +6,18 @@
     <title>P2P Secure Chat</title>
     <!-- Vercel deployment trigger -->
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/libsodium-js/0.7.11/sodium.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha384-MZ3ciGjiWCKKLGxi6Gf7uIU8N5/QSyhpZHhvn2TdHP0ofkCkbCGW1j3ZMzYhocpu" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/libsodium-js/0.7.11/sodium.js" integrity="sha384-gCnyHG9VBRDilmIebIto8nB4mzAM7KZBl67bw97Gae6TkRT9/PXkfyO+EE9FwNrq" crossorigin="anonymous"></script>
 </head>
 <body>
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
-        <h1 class="login-title terminal-glow">⬢ P2P SECURE CHAT ⬢</h1>
+        <h1 class="login-title terminal-glow">P2P Secure Chat</h1>
         <div class="login-form box-glow">
             <p id="loginPrompt">Loading encryption library...</p>
             <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••" disabled>
             <br>
-            <button id="loginBtn" class="btn" disabled>LOGIN</button>
+            <button id="loginBtn" class="btn" disabled>Login</button>
         </div>
         <div id="loginError" class="error-message"></div>
     </div>
@@ -27,11 +27,11 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="terminal-glow">CONTACTS</div>
+                <div class="terminal-glow">Contacts</div>
                 <div id="userInfo" style="font-size: 0.8rem; margin-top: 0.5rem;"></div>
             </div>
             <div class="contacts-list" id="contactsList"></div>
-            <button class="add-contact-btn" id="addContactBtn">+ ADD CONTACT</button>
+            <button class="add-contact-btn" id="addContactBtn">+ Add Contact</button>
         </div>
 
         <!-- Chat Header -->
@@ -56,7 +56,7 @@
     <!-- Add Contact Modal -->
     <div id="addContactModal" class="modal">
         <div class="modal-content box-glow">
-            <div class="modal-header terminal-glow">ADD CONTACT</div>
+            <div class="modal-header terminal-glow">Add Contact</div>
             <input type="text" id="contactNameInput" class="modal-input" placeholder="Enter contact nickname">
             <div class="modal-buttons">
                 <button id="createContactBtn" class="btn">CREATE</button>
@@ -68,7 +68,7 @@
     <!-- Invite Link Modal -->
     <div id="inviteLinkModal" class="modal">
         <div class="modal-content box-glow">
-            <div class="modal-header terminal-glow">INVITATION LINK</div>
+            <div class="modal-header terminal-glow">Invitation Link</div>
             <p>Share this link with your contact:</p>
             <div id="inviteLink" class="invite-link"></div>
             <div class="modal-buttons">

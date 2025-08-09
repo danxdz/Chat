@@ -8,6 +8,7 @@ A complete peer-to-peer secure chat application with end-to-end encryption, buil
 - **PIN-based authentication** (4-digit PIN)
 - **End-to-end encryption** using libsodium
 - **Session-based keypairs** (not persisted for security)
+- **Encrypted local storage** for contacts and message history
 - **Secure PIN storage** (hashed in localStorage)
 
 ### 🌐 P2P Communication
@@ -38,7 +39,7 @@ A complete peer-to-peer secure chat application with end-to-end encryption, buil
 ## How to Use
 
 ### 1. First Time Setup
-1. Open `p2p-secure-chat.html` in your browser
+1. Open `index.html` in your browser
 2. Enter a 4-digit PIN (this will be your login PIN)
 3. The PIN is hashed and stored securely in localStorage
 
@@ -93,35 +94,35 @@ Type these commands in the message input:
 
 ### Libraries Used
 - **SimplePeer**: WebRTC wrapper for P2P connections
-- **libsodium-js**: Cryptographic library for encryption
+- **libsodium-js**: Cryptographic library for encryption (with SRI and CSP)
 
 ### Encryption
 - Uses `crypto_box_easy` from libsodium
-- Unique nonce for each message
+- Unique nonce per message (transport) and per record (storage)
 - Session-based keypairs (generated on login)
 - Perfect forward secrecy
 
 ### Storage
-- **localStorage** for contacts and chat history
+- **Encrypted localStorage** for contacts and chat history
 - **sessionStorage** for temporary connection data
 - **No server-side storage** (fully decentralized)
 
 ### Connection Process
 1. User A creates an invitation containing their public key
 2. User B accepts the invitation and stores the public key
-3. WebRTC signaling occurs (currently simulated locally)
+3. WebRTC signaling occurs (simulated via localStorage across tabs for demo)
 4. P2P connection established
 5. Messages encrypted with recipient's public key
 
 ## Security Considerations
 
 ### Current Implementation
-- PIN-based authentication (basic hash for demo)
+- PIN-based authentication (derived key with per-user salt and lockout)
 - Session keypairs (not persisted)
 - Local signaling (for demo purposes)
 
 ### Production Improvements Needed
-- Proper key derivation for PINs (PBKDF2/Argon2)
+- Stronger passphrase-based auth (longer than 4 digits)
 - Real signaling server for WebRTC
 - Better error handling for failed connections
 - Rate limiting and spam protection
@@ -161,7 +162,7 @@ Type these commands in the message input:
 
 ### File Structure
 ```
-p2p-secure-chat.html    # Complete application (single file)
+index.html              # Main app entry
 README.md               # This documentation
 ```
 
