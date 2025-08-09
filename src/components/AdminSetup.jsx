@@ -8,7 +8,7 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Set random nickname on load
+    // Set random hacker nickname on load
     setNickname(generateRandomNickname())
   }, [])
 
@@ -17,28 +17,39 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
     
     if (loading) return
     
+    console.log('🔥 CREATING ADMIN ACCOUNT...')
+    console.log('Sodium available:', !!sodium)
+    console.log('Nickname:', nickname)
+    console.log('PIN length:', pin.length)
+    
     // Validate
     if (!nickname.trim()) {
-      showToast('Please enter a nickname', 'error')
+      showToast('❌ Please enter a nickname', 'error')
       return
     }
     
     if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
-      showToast('PIN must be 4-6 digits', 'error')
+      showToast('❌ PIN must be 4-6 digits', 'error')
       return
     }
     
     if (!sodium) {
-      showToast('Encryption not ready. Please refresh.', 'error')
+      showToast('❌ Encryption not ready. Please refresh.', 'error')
+      console.error('Sodium not available')
       return
     }
     
     setLoading(true)
     
     try {
+      console.log('🔐 Hashing PIN with sodium...')
+      
       // Create admin account
       const derived = hashPIN(pin, sodium)
       const hashedPIN = sodium.to_hex(derived)
+      
+      console.log('✅ PIN hashed successfully')
+      console.log('Hashed PIN length:', hashedPIN.length)
       
       // Save admin data
       localStorage.setItem('userPIN', hashedPIN)
@@ -46,7 +57,13 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
       localStorage.setItem('isAdmin', 'true')
       localStorage.setItem('adminAccountCreated', 'true')
       
-      console.log('Admin account created successfully')
+      console.log('💾 Admin data saved to localStorage')
+      console.log('localStorage check:', {
+        userPIN: localStorage.getItem('userPIN') ? 'exists' : 'missing',
+        userNickname: localStorage.getItem('userNickname'),
+        isAdmin: localStorage.getItem('isAdmin'),
+        adminAccountCreated: localStorage.getItem('adminAccountCreated')
+      })
       
       // Return user data
       const userData = {
@@ -55,11 +72,14 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
         pin: pin // Keep for session
       }
       
+      console.log('🎉 ADMIN ACCOUNT CREATED SUCCESSFULLY!')
+      showToast('🎉 Admin account created!', 'success')
+      
       onAdminCreated(userData)
       
     } catch (error) {
-      console.error('Failed to create admin account:', error)
-      showToast('Failed to create account', 'error')
+      console.error('❌ Failed to create admin account:', error)
+      showToast('❌ Failed to create account: ' + error.message, 'error')
       setLoading(false)
     }
   }
@@ -72,13 +92,13 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
     <div className="screen">
       <div className="container">
         <div className="header">
-          <h1>🔒 Secure Chat</h1>
-          <p>Create admin account</p>
+          <h1 className="terminal-glow">🔒 SECURE CHAT</h1>
+          <p>ADMIN INITIALIZATION PROTOCOL</p>
         </div>
         
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="nickname">Your nickname</label>
+            <label htmlFor="nickname">OPERATOR CALLSIGN</label>
             <div className="nickname-input">
               <input
                 type="text"
@@ -92,7 +112,7 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
                 type="button"
                 className="btn secondary small"
                 onClick={generateNewNickname}
-                title="Generate random nickname"
+                title="Generate random callsign"
               >
                 🎲
               </button>
@@ -100,7 +120,7 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
           </div>
           
           <div className="input-group">
-            <label htmlFor="pin">Create PIN (4-6 digits)</label>
+            <label htmlFor="pin">ACCESS CODE (4-6 DIGITS)</label>
             <input
               type="password"
               id="pin"
@@ -110,6 +130,7 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
               maxLength={6}
               pattern="[0-9]*"
               inputMode="numeric"
+              placeholder="••••••"
               required
             />
           </div>
@@ -119,16 +140,17 @@ function AdminSetup({ sodium, onAdminCreated, showToast }) {
             className="btn primary"
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Admin Account'}
+            {loading ? '⚡ INITIALIZING...' : '🚀 CREATE ADMIN'}
           </button>
         </form>
         
         <div className="info-box">
-          <p><strong>ℹ️ Admin privileges:</strong></p>
+          <p>⚡ ADMIN PRIVILEGES:</p>
           <ul>
-            <li>Create invitation links</li>
-            <li>Manage contacts</li>
-            <li>Secure P2P communication</li>
+            <li>Generate secure invitation links</li>
+            <li>Manage all system contacts</li>
+            <li>Full access to encrypted channels</li>
+            <li>System administration rights</li>
           </ul>
         </div>
       </div>
