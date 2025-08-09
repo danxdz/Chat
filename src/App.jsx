@@ -1,4 +1,9 @@
 import { useState, useEffect } from 'react'
+import Gun from 'gun/gun'
+import 'gun/lib/webrtc'
+import 'gun/lib/radix'
+import 'gun/lib/radisk'
+import 'gun/lib/store'
 
 function App() {
   const [currentView, setCurrentView] = useState('loading')
@@ -69,16 +74,13 @@ function App() {
 
       // Add WebRTC debugging helpers
       window.webrtcDebug = () => {
-        console.log('🔍 Gun.js P2P Debug Info:')
-        console.log('Gun instance:', window.Gun)
-        console.log('Available peers:', window.Gun ? window.Gun._.opt.peers : 'Gun not initialized')
+        console.log('🔍 Gun module loaded:', typeof Gun === 'function')
       }
 
       window.clearWebRTC = () => {
         localStorage.clear()
-        if (window.Gun) {
-          // Gun.js data is decentralized, but we can clear local storage
-          console.log('🧹 Local data cleared, Gun.js network data persists')
+        if (Gun) {
+          console.log('🧹 Local data cleared')
         }
       }
 
@@ -393,24 +395,19 @@ function ChatScreen({ user, onLogout }) {
 
   useEffect(() => {
     // Initialize Gun.js for decentralized P2P
-    if (window.Gun) {
-      console.log('🔫 Initializing Gun.js P2P network...')
-      
-      const gunInstance = Gun({
-        peers: [
-          'https://gun-manhattan.herokuapp.com/gun',
-          'https://gun-us.herokuapp.com/gun'
-        ],
-        localStorage: false, // Use Gun's storage instead
-        radisk: true,
-        WebRTC: {
-          off: false
-        }
-      })
-      
-      setGun(gunInstance)
-      console.log('✅ Gun.js P2P network initialized')
-    }
+    console.log('🔫 Initializing Gun.js (no public peers)...')
+    
+    const gunInstance = Gun({
+      peers: [], // no public peers for privacy
+      localStorage: false,
+      radisk: true,
+      WebRTC: {
+        off: false
+      }
+    })
+    
+    setGun(gunInstance)
+    console.log('✅ Gun.js initialized')
   }, [])
 
   useEffect(() => {
