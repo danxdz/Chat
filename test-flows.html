@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Test - Secure Chat</title>
+    <script src="/sodium.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 8px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        .info { border-left: 4px solid #0066cc; }
+    </style>
+</head>
+<body>
+    <h1>🔒 Secure Chat - Flow Tests</h1>
+    
+    <div class="test-section">
+        <h2>1. Sodium Initialization Test</h2>
+        <button onclick="testSodium()">Test Sodium Loading</button>
+        <div id="sodium-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Crypto Functions Test</h2>
+        <button onclick="testCrypto()">Test PIN Hashing</button>
+        <div id="crypto-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Encrypted Storage Test</h2>
+        <button onclick="testStorage()">Test Encrypted Storage</button>
+        <div id="storage-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Admin Flow Test</h2>
+        <button onclick="testAdminFlow()">Test Admin Registration</button>
+        <div id="admin-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Invite Flow Test</h2>
+        <button onclick="testInviteFlow()">Test Invite Creation</button>
+        <div id="invite-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Application Status</h2>
+        <button onclick="checkAppStatus()">Check Current Status</button>
+        <div id="status-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>7. Clear All Data</h2>
+        <button onclick="clearAllData()" style="background: #dc3545;">⚠️ Clear All Data</button>
+        <div id="clear-result" class="result"></div>
+    </div>
+
+    <script type="module">
+        // Import crypto and storage functions
+        import { initSodium, hashPIN } from './src/utils/crypto.js'
+        import { initStorage, encryptedSetItem, encryptedGetItem, clearEncryptedStorage } from './src/utils/storage.js'
+
+        let sodium = null
+
+        // Make functions global for button access
+        window.testSodium = async function() {
+            const result = document.getElementById('sodium-result')
+            result.innerHTML = 'Testing sodium initialization...'
+            
+            try {
+                console.log('🔧 Starting sodium test...')
+                sodium = await initSodium()
+                
+                if (sodium && sodium.ready) {
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Sodium initialized successfully!<br>
+                            - Ready: ${!!sodium.ready}<br>
+                            - crypto_pwhash available: ${typeof sodium.crypto_pwhash}<br>
+                            - to_hex available: ${typeof sodium.to_hex}<br>
+                            - crypto_secretbox_easy available: ${typeof sodium.crypto_secretbox_easy}
+                        </div>
+                    `
+                } else {
+                    throw new Error('Sodium not properly initialized')
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Sodium test failed: ${error.message}</div>`
+                console.error('Sodium test error:', error)
+            }
+        }
+
+        window.testCrypto = async function() {
+            const result = document.getElementById('crypto-result')
+            result.innerHTML = 'Testing crypto functions...'
+            
+            try {
+                if (!sodium) {
+                    await window.testSodium()
+                }
+                
+                const testPIN = '1234'
+                console.log('🔐 Testing PIN hashing...')
+                
+                const hash1 = hashPIN(testPIN, sodium)
+                const hash2 = hashPIN(testPIN, sodium)
+                
+                if (hash1 && hash2 && hash1 === hash2) {
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Crypto functions working!<br>
+                            - PIN hashing: PASS<br>
+                            - Hash consistency: PASS<br>
+                            - Hash length: ${hash1.length}<br>
+                            - Sample hash: ${hash1.substring(0, 16)}...
+                        </div>
+                    `
+                } else {
+                    throw new Error('Hash inconsistency or empty result')
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Crypto test failed: ${error.message}</div>`
+                console.error('Crypto test error:', error)
+            }
+        }
+
+        window.testStorage = async function() {
+            const result = document.getElementById('storage-result')
+            result.innerHTML = 'Testing encrypted storage...'
+            
+            try {
+                if (!sodium) {
+                    await window.testSodium()
+                }
+                
+                const testPIN = '1234'
+                const testData = { name: 'TestUser', isAdmin: true, timestamp: Date.now() }
+                
+                console.log('🔐 Testing encrypted storage...')
+                
+                // Initialize storage
+                initStorage(sodium, testPIN)
+                
+                // Test set/get
+                encryptedSetItem('testData', testData)
+                const retrieved = encryptedGetItem('testData')
+                
+                if (JSON.stringify(retrieved) === JSON.stringify(testData)) {
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Encrypted storage working!<br>
+                            - Encryption: PASS<br>
+                            - Decryption: PASS<br>
+                            - Data integrity: PASS<br>
+                            - Test data: ${JSON.stringify(retrieved)}
+                        </div>
+                    `
+                } else {
+                    throw new Error('Data integrity check failed')
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Storage test failed: ${error.message}</div>`
+                console.error('Storage test error:', error)
+            }
+        }
+
+        window.testAdminFlow = async function() {
+            const result = document.getElementById('admin-result')
+            result.innerHTML = 'Testing admin flow...'
+            
+            try {
+                if (!sodium) {
+                    await window.testSodium()
+                }
+                
+                const testNickname = 'TestAdmin'
+                const testPIN = '1234'
+                
+                console.log('👑 Testing admin registration flow...')
+                
+                // Simulate admin registration
+                const hashedPIN = hashPIN(testPIN, sodium)
+                initStorage(sodium, testPIN)
+                
+                encryptedSetItem('userPIN', hashedPIN)
+                encryptedSetItem('userNickname', testNickname)
+                encryptedSetItem('isAdmin', true)
+                encryptedSetItem('userAccountCreated', true)
+                localStorage.setItem('adminAccountCreated', 'true')
+                
+                // Verify admin data
+                const storedNickname = encryptedGetItem('userNickname')
+                const isAdmin = encryptedGetItem('isAdmin')
+                const adminExists = localStorage.getItem('adminAccountCreated')
+                
+                if (storedNickname === testNickname && isAdmin === true && adminExists === 'true') {
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Admin flow working!<br>
+                            - Admin registration: PASS<br>
+                            - Admin flag storage: PASS<br>
+                            - Encrypted data: PASS<br>
+                            - Admin nickname: ${storedNickname}<br>
+                            - Admin status: ${isAdmin}
+                        </div>
+                    `
+                } else {
+                    throw new Error('Admin flow verification failed')
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Admin flow test failed: ${error.message}</div>`
+                console.error('Admin flow test error:', error)
+            }
+        }
+
+        window.testInviteFlow = async function() {
+            const result = document.getElementById('invite-result')
+            result.innerHTML = 'Testing invite flow...'
+            
+            try {
+                const inviteData = {
+                    nickname: 'TestAdmin',
+                    timestamp: Date.now(),
+                    id: 'test123',
+                    adminInvite: true
+                }
+                
+                console.log('📧 Testing invite creation...')
+                
+                // Create invite
+                const inviteParams = btoa(JSON.stringify(inviteData))
+                const inviteUrl = `${window.location.origin}?invite=${inviteParams}`
+                
+                // Parse invite back
+                const parsed = JSON.parse(atob(inviteParams))
+                
+                if (JSON.stringify(parsed) === JSON.stringify(inviteData)) {
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Invite flow working!<br>
+                            - Invite creation: PASS<br>
+                            - Data encoding: PASS<br>
+                            - Data parsing: PASS<br>
+                            - Sample URL: ${inviteUrl.substring(0, 50)}...<br>
+                            - Invite ID: ${parsed.id}
+                        </div>
+                    `
+                } else {
+                    throw new Error('Invite data integrity check failed')
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Invite flow test failed: ${error.message}</div>`
+                console.error('Invite flow test error:', error)
+            }
+        }
+
+        window.checkAppStatus = function() {
+            const result = document.getElementById('status-result')
+            
+            try {
+                const adminExists = localStorage.getItem('adminAccountCreated') === 'true'
+                const encryptedKeys = Object.keys(localStorage).filter(key => key.startsWith('encrypted_'))
+                const hasInvite = new URLSearchParams(window.location.search).has('invite')
+                
+                result.innerHTML = `
+                    <div class="info">
+                        📊 Current Application Status:<br>
+                        - Admin account exists: ${adminExists}<br>
+                        - Encrypted storage items: ${encryptedKeys.length}<br>
+                        - Current URL has invite: ${hasInvite}<br>
+                        - Sodium loaded: ${!!window.sodium}<br>
+                        - Dev server running: ${window.location.protocol === 'http:'}<br>
+                        - Encrypted keys: ${encryptedKeys.join(', ') || 'none'}
+                    </div>
+                `
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Status check failed: ${error.message}</div>`
+            }
+        }
+
+        window.clearAllData = function() {
+            const result = document.getElementById('clear-result')
+            
+            try {
+                // Clear all localStorage
+                localStorage.clear()
+                
+                // Clear any sodium state
+                sodium = null
+                
+                result.innerHTML = `
+                    <div class="success">
+                        ✅ All data cleared!<br>
+                        - localStorage cleared<br>
+                        - Sodium reset<br>
+                        - Ready for fresh testing
+                    </div>
+                `
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Clear failed: ${error.message}</div>`
+            }
+        }
+
+        // Auto-check status on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                window.checkAppStatus()
+            }, 1000)
+        })
+    </script>
+</body>
+</html>

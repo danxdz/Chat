@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { initSodium } from './utils/crypto'
-import UserSetup from './components/UserSetup'
+import AdminSetup from './components/AdminSetup'
 import Login from './components/Login'
+import InviteSetup from './components/InviteSetup'
 import Chat from './components/Chat'
 import Toast from './components/Toast'
 import './App.css'
 
 function App() {
-  const [currentView, setCurrentView] = useState('loading') // loading, userSetup, login, chat
+  const [currentView, setCurrentView] = useState('loading') // loading, adminSetup, login, inviteSetup, chat
   const [user, setUser] = useState(null)
   const [toast, setToast] = useState(null)
   const [sodium, setSodium] = useState(null)
@@ -25,14 +26,24 @@ function App() {
       console.log('Sodium instance received:', !!sodiumInstance)
       setSodium(sodiumInstance)
       
-      // Check if user account exists (only flag in plaintext)
-      const userExists = localStorage.getItem('hasAccount') === 'true'
+      // Check URL for invitation magic link
+      const urlParams = new URLSearchParams(window.location.search)
+      const inviteToken = urlParams.get('invite')
       
-      if (!userExists) {
-        console.log('🔧 No user exists - showing user setup')
-        setCurrentView('userSetup')
+      if (inviteToken) {
+        console.log('🎊 Magic link detected')
+        setCurrentView('inviteSetup')
+        return
+      }
+      
+      // Check if admin account exists (only flag in plaintext)
+      const adminExists = localStorage.getItem('adminAccountCreated') === 'true'
+      
+      if (!adminExists) {
+        console.log('🔧 No admin exists - showing admin creation')
+        setCurrentView('adminSetup')
       } else {
-        console.log('✅ User exists - showing login')
+        console.log('✅ Admin exists - showing login')
         setCurrentView('login')
       }
       
@@ -47,16 +58,22 @@ function App() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleUserCreated = (userData) => {
+  const handleAdminCreated = (userData) => {
     setUser(userData)
     setCurrentView('chat')
-    showToast(`Welcome ${userData.nickname}!`, 'success')
+    showToast(`Welcome ${userData.nickname}! You are the admin.`, 'success')
   }
 
   const handleLogin = (userData) => {
     setUser(userData)
     setCurrentView('chat')
     showToast(`Welcome back ${userData.nickname}!`, 'success')
+  }
+
+  const handleInviteComplete = (userData) => {
+    setUser(userData)
+    setCurrentView('chat')
+    showToast(`Welcome ${userData.nickname}!`, 'success')
   }
 
   const handleLogout = () => {
@@ -79,10 +96,10 @@ function App() {
 
   return (
     <div className="app">
-      {currentView === 'userSetup' && (
-        <UserSetup 
+      {currentView === 'adminSetup' && (
+        <AdminSetup 
           sodium={sodium}
-          onUserCreated={handleUserCreated}
+          onAdminCreated={handleAdminCreated}
           showToast={showToast}
         />
       )}
@@ -91,6 +108,14 @@ function App() {
         <Login 
           sodium={sodium}
           onLogin={handleLogin}
+          showToast={showToast}
+        />
+      )}
+      
+      {currentView === 'inviteSetup' && (
+        <InviteSetup 
+          sodium={sodium}
+          onComplete={handleInviteComplete}
           showToast={showToast}
         />
       )}

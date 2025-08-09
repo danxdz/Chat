@@ -138,28 +138,30 @@
 .info-box {
   margin-top: 24px;
   padding: 16px;
-  background: rgba(0, 102, 204, 0.05);
+  background: rgba(0, 102, 204, 0.1);
   border: 1px solid rgba(0, 102, 204, 0.2);
-  border-radius: 6px;
+  border-radius: 4px;
   text-align: left;
 }
 
 .info-box p {
   margin: 0 0 8px 0;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .info-box ul {
   margin: 0;
-  padding-left: 16px;
-  color: var(--text-dim);
-  font-size: 14px;
+  padding-left: 20px;
+  color: var(--text-muted);
 }
 
 .info-box li {
   margin: 4px 0;
+  font-size: 13px;
 }
 
 .form input[type="password"] {

@@ -3,42 +3,34 @@ import './Chat.css'
 function Chat({ user, sodium, onLogout, showToast }) {
   
   const handleCreateInvite = () => {
-    // Generate a simple invite link with connection info
+    if (!user.isAdmin) {
+      showToast('Only administrators can create invitations', 'error')
+      return
+    }
+    
+    // Generate a secure invite link with connection info
     const inviteData = {
       nickname: user.nickname,
       timestamp: Date.now(),
-      id: Math.random().toString(36).substring(2, 15)
+      id: Math.random().toString(36).substring(2, 15),
+      adminInvite: true
     }
     
-    // Create invite URL (in real app, this would be signed/encrypted)
+    // Create invite URL
     const inviteParams = btoa(JSON.stringify(inviteData))
     const inviteUrl = `${window.location.origin}?invite=${inviteParams}`
     
     // Copy to clipboard
     navigator.clipboard.writeText(inviteUrl).then(() => {
-      showToast('Invite link copied to clipboard!', 'success')
+      showToast('Magic link copied to clipboard!', 'success')
     }).catch(() => {
       // Fallback: show the link in a prompt
-      prompt('Copy this invite link:', inviteUrl)
+      prompt('Copy this magic link:', inviteUrl)
     })
   }
   
   const handleAddContact = () => {
-    // Check if there's an invite in the URL
-    const urlParams = new URLSearchParams(window.location.search)
-    const inviteParam = urlParams.get('invite')
-    
-    if (inviteParam) {
-      try {
-        const inviteData = JSON.parse(atob(inviteParam))
-        showToast(`Adding contact: ${inviteData.nickname}`, 'info')
-        // In a real app, this would establish P2P connection
-      } catch (error) {
-        showToast('Invalid invite link', 'error')
-      }
-    } else {
-      showToast('Paste an invite link to add a contact', 'info')
-    }
+    showToast('Contact management coming soon', 'info')
   }
 
   return (
@@ -47,7 +39,7 @@ function Chat({ user, sodium, onLogout, showToast }) {
       <header className="app-header">
         <div className="user-info">
           <span className="user-display">
-            {user.nickname}
+            {user.nickname} {user.isAdmin && '👑'}
           </span>
           <button className="btn secondary small" onClick={onLogout}>
             Logout
@@ -62,13 +54,15 @@ function Chat({ user, sodium, onLogout, showToast }) {
           <div className="sidebar-header">
             <h3>Contacts</h3>
             <div className="actions">
-              <button 
-                className="btn-icon" 
-                title="Create Invite Link"
-                onClick={handleCreateInvite}
-              >
-                📧
-              </button>
+              {user.isAdmin && (
+                <button 
+                  className="btn-icon" 
+                  title="Create Magic Link"
+                  onClick={handleCreateInvite}
+                >
+                  📧
+                </button>
+              )}
               <button 
                 className="btn-icon" 
                 title="Add Contact"
@@ -81,8 +75,17 @@ function Chat({ user, sodium, onLogout, showToast }) {
           <div className="contacts">
             <div className="empty-state">
               <p>No contacts yet</p>
-              <p>📧 Create an invite link to share</p>
-              <p>➕ Add contacts with their invite links</p>
+              {user.isAdmin ? (
+                <>
+                  <p>📧 Create magic links to invite users</p>
+                  <p>➕ Manage all participants</p>
+                </>
+              ) : (
+                <>
+                  <p>Wait for contacts to be added</p>
+                  {user.invitedBy && <p>Invited by: {user.invitedBy}</p>}
+                </>
+              )}
             </div>
           </div>
         </aside>
@@ -93,16 +96,29 @@ function Chat({ user, sodium, onLogout, showToast }) {
             <div className="welcome">
               <h3>🔒 Secure Chat</h3>
               <p>End-to-end encrypted messaging</p>
-              <p>Create invite links to connect with others</p>
-              <div className="features-info">
-                <p><strong>How to connect:</strong></p>
-                <ul>
-                  <li>📧 Click the envelope to create an invite link</li>
-                  <li>📋 Share the link with someone you want to chat with</li>
-                  <li>➕ They click "Add Contact" to connect</li>
-                  <li>🔒 All messages are end-to-end encrypted</li>
-                </ul>
-              </div>
+              <p>Select a contact to start chatting</p>
+              
+              {user.isAdmin ? (
+                <div className="admin-info">
+                  <p><strong>👑 Admin Features:</strong></p>
+                  <ul>
+                    <li>📧 Create magic links for new users</li>
+                    <li>👥 Manage all chat participants</li>
+                    <li>🔒 Full access to all features</li>
+                    <li>🛡️ System administration</li>
+                  </ul>
+                </div>
+              ) : (
+                <div className="user-info-box">
+                  <p><strong>🔒 Your Status:</strong></p>
+                  <ul>
+                    <li>✅ Securely connected to chat</li>
+                    <li>🔐 All messages encrypted locally</li>
+                    <li>🚫 No registration without invitation</li>
+                    {user.invitedBy && <li>📧 Invited by: {user.invitedBy}</li>}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </section>

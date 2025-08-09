@@ -131,13 +131,14 @@
 .admin-info {
   margin-top: 32px;
   padding: 20px;
-  background: rgba(52, 199, 89, 0.1);
-  border: 1px solid rgba(52, 199, 89, 0.2);
-  border-radius: var(--radius);
+  background: rgba(0, 102, 204, 0.1);
+  border: 1px solid rgba(0, 102, 204, 0.2);
+  border-radius: 8px;
   text-align: left;
   max-width: 300px;
   margin-left: auto;
   margin-right: auto;
+  color: var(--text-dim);
 }
 
 .admin-info p {
@@ -149,10 +150,39 @@
 .admin-info ul {
   margin: 0;
   padding-left: 20px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .admin-info li {
+  margin: 4px 0;
+}
+
+.user-info-box {
+  margin-top: 32px;
+  padding: 20px;
+  background: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.2);
+  border-radius: 8px;
+  text-align: left;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--text-dim);
+}
+
+.user-info-box p {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.user-info-box ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-muted);
+}
+
+.user-info-box li {
   margin: 4px 0;
 }
 

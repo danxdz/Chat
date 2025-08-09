@@ -38,21 +38,7 @@ function Login({ sodium, onLogin, showToast }) {
       }
       
       // Verify PIN by comparing hashes
-      let hashedPIN
-      try {
-        const result = hashPIN(pin, sodium)
-        // Check if result is a Promise (async fallback)
-        if (result && typeof result.then === 'function') {
-          hashedPIN = await result
-        } else {
-          hashedPIN = result
-        }
-      } catch (error) {
-        console.error('hashPIN error during login:', error)
-        showToast('Failed to verify PIN: ' + error.message, 'error')
-        setLoading(false)
-        return
-      }
+      const hashedPIN = hashPIN(pin, sodium)
       
       if (hashedPIN !== storedPIN) {
         showToast('Invalid PIN', 'error')
@@ -62,6 +48,8 @@ function Login({ sodium, onLogin, showToast }) {
       
       // Load user data from encrypted storage
       const nickname = encryptedGetItem('userNickname')
+      const isAdmin = encryptedGetItem('isAdmin')
+      const invitedBy = encryptedGetItem('invitedBy')
       
       if (!nickname) {
         showToast('Failed to load user data', 'error')
@@ -71,8 +59,12 @@ function Login({ sodium, onLogin, showToast }) {
       
       const userData = {
         nickname,
+        isAdmin: !!isAdmin,
+        invitedBy,
         pin // Keep for session
       }
+      
+      console.log('✅ Login successful:', { nickname, isAdmin: !!isAdmin, invitedBy })
       
       onLogin(userData)
       
