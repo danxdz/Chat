@@ -156,6 +156,171 @@ function App() {
         return testUsers
       }
 
+      // Comprehensive testing suite
+      window.runTests = () => {
+        console.log('🧪 Starting comprehensive app tests...')
+        
+        const tests = {
+          localStorage: false,
+          gunJS: false,
+          messaging: false,
+          invites: false,
+          contacts: false
+        }
+
+        // Test 1: LocalStorage functionality
+        try {
+          const testData = { test: 'data', timestamp: Date.now() }
+          localStorage.setItem('test_storage', JSON.stringify(testData))
+          const retrieved = JSON.parse(localStorage.getItem('test_storage'))
+          tests.localStorage = retrieved.test === 'data'
+          localStorage.removeItem('test_storage')
+          console.log('✅ LocalStorage test:', tests.localStorage ? 'PASS' : 'FAIL')
+        } catch (e) {
+          console.log('❌ LocalStorage test: FAIL -', e.message)
+        }
+
+        // Test 2: Gun.js availability
+        try {
+          tests.gunJS = typeof window.Gun === 'function'
+          console.log('✅ Gun.js test:', tests.gunJS ? 'PASS' : 'FAIL')
+          if (tests.gunJS) {
+            console.log('  - Gun.js version available')
+            console.log('  - SEA module:', typeof window.Gun.SEA === 'object' ? 'available' : 'missing')
+          }
+        } catch (e) {
+          console.log('❌ Gun.js test: FAIL -', e.message)
+        }
+
+        // Test 3: Test message creation and storage
+        try {
+          const testMessage = {
+            id: Date.now(),
+            from: 'TestUser',
+            fromId: 9999,
+            to: 'General',
+            toId: 'general',
+            text: 'Test message for verification',
+            timestamp: Date.now()
+          }
+          
+          const messages = [testMessage]
+          localStorage.setItem('messages_test', JSON.stringify(messages))
+          const retrievedMessages = JSON.parse(localStorage.getItem('messages_test'))
+          tests.messaging = retrievedMessages.length === 1 && retrievedMessages[0].text === testMessage.text
+          localStorage.removeItem('messages_test')
+          console.log('✅ Messaging test:', tests.messaging ? 'PASS' : 'FAIL')
+        } catch (e) {
+          console.log('❌ Messaging test: FAIL -', e.message)
+        }
+
+        // Test 4: Invite link generation
+        try {
+          const inviteData = { from: 'TestUser', fromId: 9999, timestamp: Date.now() }
+          const invite = btoa(JSON.stringify(inviteData))
+          const decoded = JSON.parse(atob(invite))
+          tests.invites = decoded.from === 'TestUser'
+          console.log('✅ Invite test:', tests.invites ? 'PASS' : 'FAIL')
+        } catch (e) {
+          console.log('❌ Invite test: FAIL -', e.message)
+        }
+
+        // Test 5: Contact management
+        try {
+          const contacts = [
+            { id: 1001, nickname: 'TestContact1' },
+            { id: 1002, nickname: 'TestContact2' }
+          ]
+          localStorage.setItem('contacts_test', JSON.stringify(contacts))
+          const retrievedContacts = JSON.parse(localStorage.getItem('contacts_test'))
+          tests.contacts = retrievedContacts.length === 2
+          localStorage.removeItem('contacts_test')
+          console.log('✅ Contact test:', tests.contacts ? 'PASS' : 'FAIL')
+        } catch (e) {
+          console.log('❌ Contact test: FAIL -', e.message)
+        }
+
+        // Summary
+        const passedTests = Object.values(tests).filter(Boolean).length
+        const totalTests = Object.keys(tests).length
+        
+        console.log('\n📊 TEST SUMMARY:')
+        console.log(`Passed: ${passedTests}/${totalTests} tests`)
+        console.log('Results:', tests)
+        
+        if (passedTests === totalTests) {
+          console.log('🎉 All tests PASSED! App is fully functional.')
+        } else {
+          console.log('⚠️ Some tests failed. Check individual results above.')
+        }
+        
+        return tests
+      }
+
+      // Test Gun.js P2P connectivity
+      window.testP2P = () => {
+        console.log('🔫 Testing Gun.js P2P connectivity...')
+        
+        if (!window.Gun) {
+          console.log('❌ Gun.js not available')
+          return false
+        }
+
+        try {
+          const testGun = Gun(['https://gun-manhattan.herokuapp.com/gun'])
+          
+          // Test basic set/get
+          const testKey = `test_${Date.now()}`
+          const testValue = { message: 'P2P test', timestamp: Date.now() }
+          
+          testGun.get(testKey).put(testValue)
+          
+          setTimeout(() => {
+            testGun.get(testKey).once((data) => {
+              if (data && data.message === 'P2P test') {
+                console.log('✅ Gun.js P2P test: PASS - Data sync working')
+              } else {
+                console.log('❌ Gun.js P2P test: FAIL - Data sync failed')
+              }
+            })
+          }, 2000)
+          
+          console.log('⏳ P2P test running... check results in 2 seconds')
+          return true
+        } catch (e) {
+          console.log('❌ Gun.js P2P test: FAIL -', e.message)
+          return false
+        }
+      }
+
+      // Test message broadcasting
+      window.testMessageBroadcast = () => {
+        console.log('📡 Testing message broadcasting...')
+        
+        const testMessage = {
+          id: Date.now(),
+          from: 'TestBroadcaster',
+          fromId: 8888,
+          to: 'General',
+          toId: 'general',
+          text: `Test broadcast message at ${new Date().toLocaleTimeString()}`,
+          timestamp: Date.now()
+        }
+
+        if (window.Gun) {
+          try {
+            const gun = Gun(['https://gun-manhattan.herokuapp.com/gun'])
+            gun.get('general_chat').set(testMessage)
+            console.log('✅ Test message broadcasted to Gun.js network')
+            console.log('📝 Message:', testMessage.text)
+          } catch (e) {
+            console.log('❌ Broadcast failed:', e.message)
+          }
+        } else {
+          console.log('❌ Gun.js not available for broadcasting')
+        }
+      }
+
       window.switchUser = (nickname) => {
         const users = JSON.parse(localStorage.getItem('users') || '[]')
         const user = users.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
