@@ -48,7 +48,6 @@ function Login({ sodium, onLogin, showToast }) {
       
       // Load user data from encrypted storage
       const nickname = encryptedGetItem('userNickname')
-      const isAdmin = encryptedGetItem('isAdmin')
       const invitedBy = encryptedGetItem('invitedBy')
       
       if (!nickname) {
@@ -59,12 +58,11 @@ function Login({ sodium, onLogin, showToast }) {
       
       const userData = {
         nickname,
-        isAdmin: !!isAdmin,
         invitedBy,
         pin // Keep for session
       }
       
-      console.log('✅ Login successful:', { nickname, isAdmin: !!isAdmin, invitedBy })
+      console.log('✅ Login successful:', { nickname, invitedBy })
       
       onLogin(userData)
       
@@ -109,6 +107,15 @@ function Login({ sodium, onLogin, showToast }) {
             {loading ? 'Signing in...' : 'Login'}
           </button>
         </form>
+        
+        <div className="info-box">
+          <p>🔐 Secure Login:</p>
+          <ul>
+            <li>PIN decrypts your local data</li>
+            <li>No passwords sent to servers</li>
+            <li>All data encrypted at rest</li>
+          </ul>
+        </div>
       </div>
     </div>
   )

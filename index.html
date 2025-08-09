@@ -26,19 +26,6 @@
         color: #0066cc;
         font-size: 14px;
       }
-      .dev-nav a {
-        display: block;
-        color: #fff;
-        text-decoration: none;
-        padding: 8px 0;
-        border-bottom: 1px solid #333;
-      }
-      .dev-nav a:hover {
-        color: #0066cc;
-      }
-      .dev-nav a:last-child {
-        border-bottom: none;
-      }
       .magic-link-section {
         background: rgba(0, 102, 204, 0.1);
         border: 1px solid rgba(0, 102, 204, 0.3);
@@ -55,6 +42,7 @@
         margin: 8px 0;
         border: 1px solid #444;
         cursor: pointer;
+        min-height: 20px;
       }
       .magic-link:hover {
         background: #333;
@@ -67,7 +55,7 @@
         border-radius: 3px;
         font-size: 11px;
         cursor: pointer;
-        margin: 5px 0;
+        margin: 5px 5px 5px 0;
       }
       .copy-btn:hover {
         background: #0052a3;
@@ -96,16 +84,29 @@
         margin: 10px 0;
         font-size: 11px;
       }
+      .clear-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 3px;
+        font-size: 11px;
+        cursor: pointer;
+        margin: 10px 0;
+      }
+      .clear-btn:hover {
+        background: #c82333;
+      }
     </style>
   </head>
   <body>
     <!-- Development Navigation -->
     <button class="toggle-nav" onclick="toggleNav()">🛠️ DEV</button>
     <div id="dev-nav" class="dev-nav">
-      <h3>🔧 Development Tools</h3>
+      <h3>🔧 Magic Link Access</h3>
       
       <div class="magic-link-section">
-        <div style="color: #0066cc; font-weight: bold; margin-bottom: 8px;">🎫 Magic Link (Join Chat):</div>
+        <div style="color: #0066cc; font-weight: bold; margin-bottom: 8px;">🎫 Join Chat Link:</div>
         <div id="magic-link-display" class="magic-link" onclick="copyMagicLink()">Loading...</div>
         <button class="copy-btn" onclick="copyMagicLink()">📋 Copy Link</button>
         <button class="copy-btn" onclick="openMagicLink()">🔗 Open Link</button>
@@ -115,14 +116,12 @@
         <div>👥 Users: <span id="user-count">0</span></div>
         <div>🔗 Link Status: <span id="link-status">Ready</span></div>
       </div>
-      
+
       <div style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
-        <div style="color: #888; margin-bottom: 8px;">📊 Test Pages:</div>
-        <a href="/">🏠 Main App (React)</a>
-        <a href="/complete-verification.html">🧪 Complete System Test</a>
-        <a href="/demo.html">📱 User Experience Demo</a>
-        <a href="/test-flows.html">🔄 Test Flows</a>
-        <a href="/quick-sodium-test.html">⚡ Quick Sodium Test</a>
+        <div style="color: #888; margin-bottom: 8px; font-size: 10px;">
+          Use this link to create your account or invite others
+        </div>
+        <button class="clear-btn" onclick="clearAllData()">🗑️ Clear All Data</button>
       </div>
     </div>
 
@@ -152,9 +151,11 @@
           const shortLink = link.length > 80 ? link.substring(0, 80) + '...' : link;
           display.textContent = shortLink;
           linkStatus.textContent = 'Ready';
+          linkStatus.style.color = '#28a745';
         } else {
-          display.textContent = 'Generating... (refresh in a moment)';
-          linkStatus.textContent = 'Generating';
+          display.textContent = 'Generating... (refresh page if this persists)';
+          linkStatus.textContent = 'Loading';
+          linkStatus.style.color = '#ffc107';
         }
 
         // Update user count
@@ -167,7 +168,7 @@
       function copyMagicLink() {
         if (currentMagicLink) {
           navigator.clipboard.writeText(currentMagicLink).then(() => {
-            alert('✅ Magic link copied to clipboard!\n\nShare this link with someone to invite them to the chat.');
+            alert('✅ Magic link copied!\n\nOpen this link to join the chat or share it with others.');
           }).catch(() => {
             prompt('Copy this magic link:', currentMagicLink);
           });
@@ -183,6 +184,14 @@
           alert('❌ Magic link not ready yet. Refresh the page.');
         }
       }
+
+      function clearAllData() {
+        if (confirm('⚠️ This will delete all users and data. Are you sure?')) {
+          localStorage.clear();
+          alert('✅ All data cleared. Refreshing page...');
+          window.location.reload();
+        }
+      }
       
       // Auto-load magic link when page loads
       setTimeout(() => {
@@ -196,8 +205,8 @@
         }, 3000);
       }
 
-      // Auto-refresh magic link every 5 seconds
-      setInterval(loadMagicLink, 5000);
+      // Auto-refresh magic link every 10 seconds
+      setInterval(loadMagicLink, 10000);
     </script>
   </body>
 </html>

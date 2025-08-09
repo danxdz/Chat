@@ -98,23 +98,21 @@ function InviteSetup({ sodium, onComplete, showToast }) {
       // Save user data encrypted
       encryptedSetItem('userPIN', hashedPIN)
       encryptedSetItem('userNickname', nickname.trim())
-      encryptedSetItem('isAdmin', false)
       encryptedSetItem('userAccountCreated', true)
       encryptedSetItem('invitedBy', inviteData.createdBy)
       encryptedSetItem('inviteToken', inviteData.id)
       encryptedSetItem('inviteUsedAt', Date.now())
       
-      console.log('💾 Invited user data saved encrypted')
+      console.log('💾 User data saved encrypted')
       
       // Return user data
       const userData = {
         nickname: nickname.trim(),
-        isAdmin: false,
         invitedBy: inviteData.createdBy,
         pin: pin // Keep for session
       }
       
-      console.log('🎉 INVITED USER ACCOUNT CREATED SUCCESSFULLY!')
+      console.log('🎉 USER ACCOUNT CREATED SUCCESSFULLY!')
       showToast('Account created successfully!', 'success')
       
       // Clear invite from URL
@@ -123,7 +121,7 @@ function InviteSetup({ sodium, onComplete, showToast }) {
       onComplete(userData)
       
     } catch (error) {
-      console.error('❌ Failed to create invited user account:', error)
+      console.error('❌ Failed to create user account:', error)
       showToast('Failed to create account: ' + error.message, 'error')
       setLoading(false)
     }
@@ -160,8 +158,8 @@ function InviteSetup({ sodium, onComplete, showToast }) {
               <p>🚫 Common Issues:</p>
               <ul>
                 <li>This invitation may have already been used</li>
-                <li>The invitation may have expired (24 hours)</li>
-                <li>The link may have been tampered with</li>
+                <li>The invitation may have expired</li>
+                <li>The link may have been corrupted</li>
                 <li>You may need a fresh invitation link</li>
               </ul>
             </div>
@@ -182,7 +180,7 @@ function InviteSetup({ sodium, onComplete, showToast }) {
       <div className="container">
         <div className="header">
           <h1>🎉 Welcome!</h1>
-          <p>You've been invited by <strong>{inviteData.createdBy}</strong></p>
+          <p>Join the secure chat</p>
         </div>
         
         <form className="form" onSubmit={handleSubmit}>
@@ -234,13 +232,12 @@ function InviteSetup({ sodium, onComplete, showToast }) {
         </form>
         
         <div className="info-box">
-          <p>🔒 Single-Use Invitation:</p>
+          <p>🔒 Secure Account:</p>
           <ul>
-            <li>Invited by: {inviteData.createdBy}</li>
-            <li>Created: {new Date(inviteData.createdAt).toLocaleDateString()}</li>
-            <li>Expires: {new Date(inviteData.expiresAt).toLocaleDateString()}</li>
-            <li>⚠️ This link can only be used once</li>
-            <li>🔐 Your data will be encrypted locally</li>
+            <li>Your data will be encrypted locally</li>
+            <li>PIN protects your account</li>
+            <li>All messages end-to-end encrypted</li>
+            <li>No data stored on servers</li>
           </ul>
         </div>
       </div>

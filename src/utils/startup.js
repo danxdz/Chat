@@ -1,6 +1,4 @@
 // Generate one magic link at startup for initial access
-import { initSodium } from './crypto.js'
-
 let startupMagicLink = null
 
 export const generateStartupMagicLink = async () => {
@@ -15,11 +13,9 @@ export const generateStartupMagicLink = async () => {
 
     console.log('🚀 Generating first-time magic link...')
     
-    // Initialize sodium
-    const sodium = await initSodium()
-    
-    // Generate cryptographically secure random ID
-    const linkId = sodium.to_hex(sodium.randombytes_buf(16))
+    // Generate simple random ID without crypto
+    const linkId = Math.random().toString(36).substring(2, 15) + 
+                   Math.random().toString(36).substring(2, 15)
     const timestamp = Date.now()
     const expiresIn = 365 * 24 * 60 * 60 * 1000 // 1 year (never expires really)
     const expiresAt = timestamp + expiresIn
