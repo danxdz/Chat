@@ -79,6 +79,12 @@
     </div>
 
     <div class="test-section">
+        <h2>5. Single-Use Magic Link Test</h2>
+        <button onclick="testMagicLinks()">Test Magic Link System</button>
+        <div id="magic-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
         <h2>6. Application Status</h2>
         <button onclick="checkAppStatus()">Check Current Status</button>
         <div id="status-result" class="result"></div>
@@ -94,6 +100,7 @@
         // Import crypto and storage functions
         import { initSodium, hashPIN } from './src/utils/crypto.js'
         import { initStorage, encryptedSetItem, encryptedGetItem, clearEncryptedStorage } from './src/utils/storage.js'
+        import { createMagicLink, validateMagicLink, consumeMagicLink, getInviteHistory } from './src/utils/magicLinks.js'
 
         let sodium = null
 
@@ -245,6 +252,76 @@
             } catch (error) {
                 result.innerHTML = `<div class="error">❌ Admin flow test failed: ${error.message}</div>`
                 console.error('Admin flow test error:', error)
+            }
+        }
+
+        window.testMagicLinks = async function() {
+            const result = document.getElementById('magic-result')
+            result.innerHTML = 'Testing single-use magic links...'
+            
+            try {
+                if (!sodium) {
+                    await window.testSodium()
+                }
+                
+                const testAdmin = 'TestAdmin'
+                const testUser = 'TestUser'
+                
+                console.log('🔗 Testing magic link system...')
+                
+                // Initialize storage for testing
+                initStorage(sodium, '1234')
+                
+                // 1. Create magic link
+                const magicLink = createMagicLink(testAdmin, sodium)
+                console.log('Created magic link:', magicLink)
+                
+                // 2. Extract token from URL
+                const url = new URL(magicLink.url)
+                const token = url.searchParams.get('invite')
+                
+                // 3. Validate magic link (first time)
+                const validation1 = validateMagicLink(token)
+                if (!validation1.valid) {
+                    throw new Error('First validation failed: ' + validation1.error)
+                }
+                
+                // 4. Consume magic link
+                const consumed = consumeMagicLink(validation1.linkId, testUser)
+                if (!consumed) {
+                    throw new Error('Failed to consume magic link')
+                }
+                
+                // 5. Try to validate again (should fail - single use)
+                const validation2 = validateMagicLink(token)
+                if (validation2.valid) {
+                    throw new Error('Magic link should be invalid after use!')
+                }
+                
+                // 6. Check invite history
+                const history = getInviteHistory()
+                const usedInvite = history.find(inv => inv.id === validation1.linkId)
+                
+                if (!usedInvite || !usedInvite.used || usedInvite.usedBy !== testUser) {
+                    throw new Error('Invite history not updated correctly')
+                }
+                
+                result.innerHTML = `
+                    <div class="success">
+                        ✅ Single-use magic links working perfectly!<br>
+                        - Link creation: PASS<br>
+                        - Initial validation: PASS<br>
+                        - Link consumption: PASS<br>
+                        - Single-use enforcement: PASS<br>
+                        - History tracking: PASS<br>
+                        - Link ID: ${validation1.linkId.substring(0, 8)}...<br>
+                        - Used by: ${usedInvite.usedBy}<br>
+                        - Expires in: ${magicLink.expiresIn} hours
+                    </div>
+                `
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Magic link test failed: ${error.message}</div>`
+                console.error('Magic link test error:', error)
             }
         }
 
