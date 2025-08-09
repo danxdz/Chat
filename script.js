@@ -11,11 +11,147 @@ let app = {
     storageKey: null,
     retryTimers: {},
     lockoutUntil: 0,
-    adminPinUsed: false
+    adminPinUsed: false,
+    nickname: null
 };
 
 // One-time admin PIN - change this for your deployment
 const ADMIN_PIN = "123456"; // This will work only once, then gets disabled
+
+// Random nickname generator
+function generateRandomNickname() {
+    const adjectives = [
+        'Swift', 'Brave', 'Clever', 'Bright', 'Silent', 'Quick', 'Bold', 'Wise',
+        'Sharp', 'Cool', 'Fast', 'Smart', 'Elite', 'Prime', 'Tech', 'Neo',
+        'Cyber', 'Alpha', 'Beta', 'Zen', 'Fire', 'Ice', 'Storm', 'Star'
+    ];
+    
+    const nouns = [
+        'Wolf', 'Eagle', 'Fox', 'Tiger', 'Lion', 'Bear', 'Hawk', 'Raven',
+        'Phoenix', 'Dragon', 'Hunter', 'Warrior', 'Knight', 'Sage', 'Ninja',
+        'Ghost', 'Shadow', 'Blade', 'Arrow', 'Thunder', 'Lightning', 'Comet',
+        'Rocket', 'Falcon', 'Viper', 'Cobra', 'Panther', 'Jaguar'
+    ];
+    
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const num = Math.floor(Math.random() * 999) + 1;
+    
+    return `${adj}${noun}${num}`;
+}
+
+// Setup screen functions
+function showSetupScreen() {
+    // Hide login screen and show setup screen
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('setupScreen').style.display = 'block';
+    
+    // Generate and set random nickname
+    const randomNickname = generateRandomNickname();
+    document.getElementById('nicknameInput').value = randomNickname;
+    
+    // Setup event listeners for setup screen
+    setupScreenEventListeners();
+}
+
+function setupScreenEventListeners() {
+    // Random nickname button
+    const randomBtn = document.getElementById('randomNicknameBtn');
+    if (randomBtn) {
+        randomBtn.addEventListener('click', () => {
+            document.getElementById('nicknameInput').value = generateRandomNickname();
+        });
+    }
+    
+    // Complete setup button
+    const setupBtn = document.getElementById('completeSetupBtn');
+    if (setupBtn) {
+        setupBtn.addEventListener('click', completeSetup);
+    }
+    
+    // Enter key on PIN input
+    const setupPinInput = document.getElementById('setupPinInput');
+    if (setupPinInput) {
+        setupPinInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                completeSetup();
+            }
+        });
+    }
+}
+
+function completeSetup() {
+    const nickname = document.getElementById('nicknameInput').value.trim();
+    const pin = document.getElementById('setupPinInput').value;
+    
+    // Validate PIN
+    if (pin.length < 4 || pin.length > 6) {
+        showSetupError('PIN must be 4-6 digits');
+        return;
+    }
+    
+    if (!/^\d+$/.test(pin)) {
+        showSetupError('PIN must contain only numbers');
+        return;
+    }
+    
+    // Validate nickname (optional)
+    if (nickname && nickname.length > 20) {
+        showSetupError('Nickname must be 20 characters or less');
+        return;
+    }
+    
+    try {
+        // Set the PIN
+        const derived = hashPIN(pin);
+        const hashedPIN = app.sodium.to_hex(derived);
+        localStorage.setItem('userPIN', hashedPIN);
+        
+        // Set the nickname
+        const finalNickname = nickname || generateRandomNickname();
+        localStorage.setItem('userNickname', finalNickname);
+        app.nickname = finalNickname;
+        
+        // Mark setup as complete
+        localStorage.setItem('setupComplete', 'true');
+        
+        showSetupSuccess('Setup complete! Logging you in...');
+        
+        setTimeout(() => {
+            // Hide setup screen and authenticate
+            document.getElementById('setupScreen').style.display = 'none';
+            authenticateUser(pin);
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Setup error:', error);
+        showSetupError('Setup failed. Please try again.');
+    }
+}
+
+function showSetupError(message) {
+    const errorDiv = document.getElementById('setupError');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function showSetupSuccess(message) {
+    const errorDiv = document.getElementById('setupError');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        errorDiv.style.color = '#2ECC40';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+            errorDiv.style.color = '';
+        }, 3000);
+    }
+}
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
@@ -301,18 +437,21 @@ function updateLoginPrompt(message) {
 }
 
 function enableLoginForm() {
+    const hasUserPIN = localStorage.getItem('userPIN') !== null;
+    const adminPinUsed = localStorage.getItem('adminPinUsed') === 'true';
+    
+    // Check if we should show setup screen instead
+    if (!hasUserPIN && !adminPinUsed) {
+        showSetupScreen();
+        return;
+    }
+    
     const loginPrompt = document.getElementById('loginPrompt');
     const pinInput = document.getElementById('pinInput');
     const loginBtn = document.getElementById('loginBtn');
     
     if (loginPrompt && pinInput && loginBtn) {
-        // Check if user already has a PIN set or if they should use admin PIN
-        const hasUserPIN = localStorage.getItem('userPIN') !== null;
-        const adminPinUsed = localStorage.getItem('adminPinUsed') === 'true';
-        
-        if (!hasUserPIN && !adminPinUsed) {
-            loginPrompt.textContent = '✅ First time? Use admin PIN: 123456';
-        } else if (!hasUserPIN && adminPinUsed) {
+        if (!hasUserPIN && adminPinUsed) {
             loginPrompt.textContent = '✅ Enter your new 4-6 digit PIN';
         } else {
             loginPrompt.textContent = '✅ Enter your 4-6 digit PIN';
@@ -321,7 +460,6 @@ function enableLoginForm() {
         
         setTimeout(() => {
             loginPrompt.style.color = '';
-            loginPrompt.textContent = 'Enter your 4-digit PIN';
             pinInput.disabled = false;
             loginBtn.disabled = false;
             pinInput.focus();
@@ -431,12 +569,29 @@ function login() {
         localStorage.removeItem('userPIN'); // Clear any existing PIN
         localStorage.removeItem('failedAttempts');
         localStorage.removeItem('lockoutUntil');
+        
+        // Set a flag to indicate we're in PIN setup mode
+        sessionStorage.setItem('settingNewPIN', 'true');
+        
         showLoginSuccess('Admin access granted! Set your new PIN.');
         setTimeout(() => {
             // Reset form for new PIN entry
             document.getElementById('pinInput').value = '';
             updateLoginPrompt('Enter your new 4-6 digit PIN');
         }, 1000);
+        return;
+    }
+    
+    // Check if we're in PIN setup mode (after admin PIN)
+    const settingNewPIN = sessionStorage.getItem('settingNewPIN') === 'true';
+    if (settingNewPIN) {
+        // User is setting their new PIN after admin access
+        const derived = hashPIN(pin);
+        const hashedPIN = app.sodium.to_hex(derived);
+        localStorage.setItem('userPIN', hashedPIN);
+        sessionStorage.removeItem('settingNewPIN');
+        showLoginSuccess('PIN set successfully!');
+        setTimeout(() => authenticateUser(pin), 300);
         return;
     }
 
@@ -487,15 +642,19 @@ function authenticateUser(pin) {
     app.userId = app.sodium.to_hex(app.keyPair.publicKey).substring(0, 8);
     app.isAuthenticated = true;
 
+    // Load nickname
+    app.nickname = localStorage.getItem('userNickname') || generateRandomNickname();
+
     // Derive storage encryption key for at-rest encryption of messages
     app.storageKey = deriveKeyFromPIN(pin);
     
     // Show main app
     document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('setupScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'grid';
     
-    // Update user info
-    document.getElementById('userInfo').textContent = `ID: ${app.userId}`;
+    // Update user info with nickname
+    document.getElementById('userInfo').textContent = `${app.nickname} (ID: ${app.userId})`;
     
     // Load and display contacts
     loadEncryptedContacts();
@@ -504,7 +663,7 @@ function authenticateUser(pin) {
     // Process any pending invites
     processPendingInvite();
     
-    showSystemMessage('Welcome to P2P Secure Chat');
+    showSystemMessage(`Welcome back, ${app.nickname}!`);
 }
 
 function generateKeypair() {

@@ -10,6 +10,26 @@
     <script src="sodium.js"></script>
 </head>
 <body>
+    <!-- Setup Screen (for new users) -->
+    <div id="setupScreen" class="login-screen" style="display: none;">
+        <h1 class="login-title terminal-glow">Welcome to P2P Secure Chat</h1>
+        <div class="login-form box-glow">
+            <p>Set up your profile to get started</p>
+            
+            <label for="nicknameInput">Choose a nickname (optional):</label>
+            <input type="text" id="nicknameInput" class="pin-input" maxlength="20" placeholder="Or keep the random one">
+            <button id="randomNicknameBtn" class="btn secondary-btn">🎲 Generate Random</button>
+            
+            <br><br>
+            <label for="setupPinInput">Create a 4-6 digit PIN:</label>
+            <input type="password" id="setupPinInput" class="pin-input" minlength="4" maxlength="6" placeholder="Enter 4-6 digit PIN">
+            
+            <br><br>
+            <button id="completeSetupBtn" class="btn">Complete Setup</button>
+        </div>
+        <div id="setupError" class="error-message"></div>
+    </div>
+
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
         <h1 class="login-title terminal-glow">P2P Secure Chat</h1>
