@@ -1,28 +1,26 @@
 {
-  "name": "p2p-secure-chat",
+  "name": "secure-chat",
   "version": "1.0.0",
-  "description": "A peer-to-peer secure chat application with end-to-end encryption",
-  "main": "index.html",
+  "type": "module",
   "scripts": {
-    "start": "python3 -m http.server 8000",
-    "serve": "python3 -m http.server 8000",
-    "dev": "python3 -m http.server 8000"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [
-    "p2p",
-    "chat",
-    "encryption",
-    "webrtc",
-    "secure",
-    "messaging"
-  ],
-  "author": "",
-  "license": "MIT",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4"
+  },
   "repository": {
     "type": "git",
-    "url": "."
+    "url": "git+https://github.com/danxdz/Chat.git"
   },
-  "engines": {
-    "node": ">=14.0.0"
-  }
+  "description": "Modern P2P secure chat with React",
+  "keywords": ["p2p", "chat", "encryption", "react", "webrtc"],
+  "author": "",
+  "license": "ISC"
 }
