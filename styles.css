@@ -387,3 +387,176 @@ body {
         z-index: 999;
     }
 }
+
+/* Pro hacker theme overrides: toned down colors, no glow, minimal animations */
+:root {
+    --bg: #0D1117;
+    --bg2: #161B22;
+    --text: #E6EDF3;
+    --muted: #8B949E;
+    --border: #30363D;
+    --accent: #22C55E; /* muted green */
+    --accent-weak: rgba(34, 197, 94, 0.2);
+    --accent-weak2: rgba(34, 197, 94, 0.08);
+    --warning: #EAB308;
+    --warning-weak: rgba(234, 179, 8, 0.1);
+    --error: #F87171;
+}
+
+body {
+    color: var(--text);
+}
+
+.terminal-glow {
+    text-shadow: none;
+}
+
+.box-glow {
+    box-shadow: none;
+    border: 1px solid var(--border);
+}
+
+.login-title {
+    animation: none;
+    font-size: 2rem;
+}
+
+.pin-input {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.pin-input:focus {
+    box-shadow: none;
+    border-color: var(--accent);
+}
+
+.sidebar {
+    border-right: 1px solid var(--border);
+}
+
+.sidebar-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.contacts-list {
+    scrollbar-color: var(--border) transparent;
+}
+
+.contact-item {
+    background: #0D1117;
+    border-color: var(--border);
+    box-shadow: none;
+}
+
+.contact-item:hover {
+    background: #161B22;
+    box-shadow: none;
+}
+
+.contact-item.active {
+    background: #161B22;
+    border-color: var(--accent);
+}
+
+.contact-status.online {
+    background: var(--accent);
+    box-shadow: none;
+}
+
+.contact-status.connecting {
+    background: #F59E0B;
+    animation: none;
+}
+
+.add-contact-btn {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.add-contact-btn:hover {
+    border-color: var(--accent);
+    box-shadow: none;
+}
+
+.chat-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.chat-area {
+    background: var(--bg);
+}
+
+.input-area {
+    border-top: 1px solid var(--border);
+}
+
+.message-input {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.message-input:focus {
+    box-shadow: none;
+    border-color: var(--accent);
+}
+
+.send-btn,
+.btn {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.send-btn:hover,
+.btn:hover {
+    background: #0D1117;
+    border-color: var(--accent);
+    box-shadow: none;
+}
+
+.btn:disabled:hover {
+    background: #0D1117;
+    box-shadow: none;
+}
+
+.modal-content {
+    border-color: var(--border);
+}
+
+.modal-input {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.invite-link {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.error-message {
+    color: var(--error);
+}
+
+.success-message {
+    color: var(--accent);
+}
+
+.message.sent {
+    background: var(--accent-weak2);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+}
+
+.message.received {
+    background: #11151A;
+    border: 1px solid var(--border);
+}
+
+.message.system {
+    background: var(--warning-weak);
+    border: 1px solid var(--warning);
+    color: var(--warning);
+}
+
+.message-time {
+    opacity: 0.6;
+}
