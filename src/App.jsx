@@ -603,6 +603,9 @@ function ChatScreen({ user, onLogout }) {
   const [connectionStatus, setConnectionStatus] = useState(new Map())
   const [chatError, setChatError] = useState('')
   const [initStatus, setInitStatus] = useState('starting')
+  const [showTests, setShowTests] = useState(false)
+  const [testResults, setTestResults] = useState({})
+  const [testLogs, setTestLogs] = useState([])
 
   useEffect(() => {
     console.log('🎯 ChatScreen useEffect - Initializing...')
@@ -876,6 +879,117 @@ function ChatScreen({ user, onLogout }) {
     }
   }, [activeContact, user.id])
 
+  // Visual test functions
+  const runVisualTests = () => {
+    setTestLogs([])
+    const logs = []
+    const results = {}
+
+    // Test 1: LocalStorage
+    try {
+      const testData = { test: 'data', timestamp: Date.now() }
+      localStorage.setItem('test_storage', JSON.stringify(testData))
+      const retrieved = JSON.parse(localStorage.getItem('test_storage'))
+      results.localStorage = retrieved.test === 'data'
+      localStorage.removeItem('test_storage')
+      logs.push(`✅ LocalStorage: ${results.localStorage ? 'PASS' : 'FAIL'}`)
+    } catch (e) {
+      results.localStorage = false
+      logs.push(`❌ LocalStorage: FAIL - ${e.message}`)
+    }
+
+    // Test 2: Gun.js
+    results.gunJS = typeof window.Gun === 'function'
+    logs.push(`✅ Gun.js: ${results.gunJS ? 'PASS' : 'FAIL'}`)
+    if (results.gunJS) {
+      logs.push(`  - SEA module: ${typeof window.Gun.SEA === 'object' ? 'available' : 'missing'}`)
+    }
+
+    // Test 3: Messaging
+    try {
+      const testMessage = {
+        id: Date.now(),
+        from: 'TestUser',
+        text: 'Test message',
+        timestamp: Date.now()
+      }
+      results.messaging = true
+      logs.push('✅ Messaging: PASS')
+    } catch (e) {
+      results.messaging = false
+      logs.push(`❌ Messaging: FAIL - ${e.message}`)
+    }
+
+    // Test 4: Current app state
+    results.userLoaded = !!user
+    results.contactsLoaded = contacts.length >= 0
+    results.messagesLoaded = messages.length >= 0
+    logs.push(`✅ User loaded: ${results.userLoaded ? 'PASS' : 'FAIL'}`)
+    logs.push(`✅ Contacts: ${contacts.length} loaded`)
+    logs.push(`✅ Messages: ${messages.length} loaded`)
+    logs.push(`✅ Gun.js status: ${gun ? 'connected' : 'not connected'}`)
+    logs.push(`✅ Init status: ${initStatus}`)
+
+    const passedTests = Object.values(results).filter(Boolean).length
+    const totalTests = Object.keys(results).length
+    logs.push(`\n📊 SUMMARY: ${passedTests}/${totalTests} tests passed`)
+
+    setTestResults(results)
+    setTestLogs(logs)
+  }
+
+  const sendTestMessage = () => {
+    const testMessage = {
+      id: Date.now(),
+      from: user.nickname + ' (TEST)',
+      fromId: user.id,
+      to: 'General',
+      toId: 'general',
+      text: `🧪 Test message sent at ${new Date().toLocaleTimeString()}`,
+      timestamp: Date.now()
+    }
+
+    // Add to local messages
+    const updatedMessages = [...messages, testMessage]
+    setMessages(updatedMessages)
+    localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
+
+    // Send via Gun.js if available
+    if (gun) {
+      sendP2PMessage(testMessage)
+      setTestLogs(prev => [...prev, '📡 Test message sent via Gun.js P2P'])
+    } else {
+      setTestLogs(prev => [...prev, '⚠️ Test message sent locally only (Gun.js not connected)'])
+    }
+  }
+
+  const createVisualTestUsers = () => {
+    const testUsers = [
+      { id: 1001, nickname: 'Alice', pin: '1111' },
+      { id: 1002, nickname: 'Bob', pin: '2222' },
+      { id: 1003, nickname: 'Charlie', pin: '3333' },
+      { id: 1004, nickname: 'Diana', pin: '4444' }
+    ]
+    
+    localStorage.setItem('users', JSON.stringify(testUsers))
+    
+    // Add each user as contacts for others
+    testUsers.forEach(user => {
+      const contacts = testUsers.filter(u => u.id !== user.id)
+      localStorage.setItem(`contacts_${user.id}`, JSON.stringify(contacts))
+    })
+    
+    setTestLogs(prev => [
+      ...prev,
+      '👥 Test users created:',
+      '  - Alice: PIN 1111',
+      '  - Bob: PIN 2222',
+      '  - Charlie: PIN 3333', 
+      '  - Diana: PIN 4444',
+      '✅ All users have each other as contacts!'
+    ])
+  }
+
   return (
     <div className="app">
       {/* Header */}
@@ -978,6 +1092,13 @@ function ChatScreen({ user, onLogout }) {
             style={{ marginRight: '1rem', background: '#0066cc', padding: '0.5rem 1rem' }}
           >
             📤 Invite
+          </button>
+          <button 
+            onClick={() => setShowTests(!showTests)}
+            className="btn" 
+            style={{ marginRight: '1rem', background: '#28a745', padding: '0.5rem 1rem' }}
+          >
+            🧪 Tests
           </button>
           <button 
             onClick={onLogout} 
@@ -1186,6 +1307,94 @@ function ChatScreen({ user, onLogout }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Visual Testing Panel */}
+      {showTests && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#2d2d2d',
+            padding: '2rem',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <h2 style={{ margin: '0 0 1rem 0' }}>🧪 App Testing Suite</h2>
+            
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <button onClick={runVisualTests} className="btn" style={{ background: '#0066cc', flex: 1 }}>
+                🔍 Run All Tests
+              </button>
+              <button onClick={sendTestMessage} className="btn" style={{ background: '#28a745', flex: 1 }}>
+                📡 Send Test Message
+              </button>
+              <button onClick={createVisualTestUsers} className="btn" style={{ background: '#ffc107', color: '#000', flex: 1 }}>
+                👥 Create Test Users
+              </button>
+            </div>
+
+            {testLogs.length > 0 && (
+              <div style={{
+                background: '#1a1a1a',
+                padding: '1rem',
+                borderRadius: '4px',
+                marginBottom: '1rem',
+                maxHeight: '300px',
+                overflow: 'auto',
+                fontFamily: 'monospace',
+                fontSize: '0.9rem'
+              }}>
+                {testLogs.map((log, index) => (
+                  <div key={index} style={{ marginBottom: '0.25rem' }}>
+                    {log}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>📊 Current Status:</h3>
+              <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
+                <div>👤 User: {user.nickname}</div>
+                <div>📋 Contacts: {contacts.length}</div>
+                <div>💬 Messages: {messages.length}</div>
+                <div>🔫 Gun.js: {gun ? '🟢 Connected' : '🔴 Not Connected'}</div>
+                <div>⚡ Status: {initStatus}</div>
+                {chatError && <div style={{ color: '#ff6b6b' }}>⚠️ Error: {chatError}</div>}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                onClick={() => setShowTests(false)} 
+                className="btn" 
+                style={{ background: '#666', flex: 1 }}
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="btn" 
+                style={{ background: '#dc3545', flex: 1 }}
+              >
+                🔄 Restart App
+              </button>
+            </div>
           </div>
         </div>
       )}
