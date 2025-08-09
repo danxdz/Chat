@@ -10,18 +10,19 @@
         position: fixed;
         top: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.9);
+        background: rgba(0, 0, 0, 0.95);
         color: white;
-        padding: 15px;
+        padding: 20px;
         border-radius: 8px;
         font-family: monospace;
         font-size: 12px;
         z-index: 10000;
         border: 1px solid #333;
-        min-width: 200px;
+        min-width: 300px;
+        max-width: 400px;
       }
       .dev-nav h3 {
-        margin: 0 0 10px 0;
+        margin: 0 0 15px 0;
         color: #0066cc;
         font-size: 14px;
       }
@@ -29,7 +30,7 @@
         display: block;
         color: #fff;
         text-decoration: none;
-        padding: 5px 0;
+        padding: 8px 0;
         border-bottom: 1px solid #333;
       }
       .dev-nav a:hover {
@@ -37,6 +38,39 @@
       }
       .dev-nav a:last-child {
         border-bottom: none;
+      }
+      .magic-link-section {
+        background: rgba(0, 102, 204, 0.1);
+        border: 1px solid rgba(0, 102, 204, 0.3);
+        padding: 12px;
+        border-radius: 4px;
+        margin: 15px 0;
+      }
+      .magic-link {
+        background: #222;
+        padding: 8px;
+        border-radius: 4px;
+        word-break: break-all;
+        font-size: 10px;
+        margin: 8px 0;
+        border: 1px solid #444;
+        cursor: pointer;
+      }
+      .magic-link:hover {
+        background: #333;
+      }
+      .copy-btn {
+        background: #0066cc;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 3px;
+        font-size: 11px;
+        cursor: pointer;
+        margin: 5px 0;
+      }
+      .copy-btn:hover {
+        background: #0052a3;
       }
       .toggle-nav {
         position: fixed;
@@ -54,6 +88,14 @@
       .dev-nav.hidden {
         display: none;
       }
+      .status-info {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        padding: 8px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-size: 11px;
+      }
     </style>
   </head>
   <body>
@@ -61,12 +103,27 @@
     <button class="toggle-nav" onclick="toggleNav()">🛠️ DEV</button>
     <div id="dev-nav" class="dev-nav">
       <h3>🔧 Development Tools</h3>
-      <a href="/">🏠 Main App (React)</a>
-      <a href="/complete-verification.html">🧪 Complete System Test</a>
-      <a href="/demo.html">📱 User Experience Demo</a>
-      <a href="/test-flows.html">🔄 Test Flows</a>
-      <a href="/quick-sodium-test.html">⚡ Quick Sodium Test</a>
-      <a href="/sodium-test.html">🔐 Sodium Function Test</a>
+      
+      <div class="magic-link-section">
+        <div style="color: #0066cc; font-weight: bold; margin-bottom: 8px;">🎫 Magic Link (Join Chat):</div>
+        <div id="magic-link-display" class="magic-link" onclick="copyMagicLink()">Loading...</div>
+        <button class="copy-btn" onclick="copyMagicLink()">📋 Copy Link</button>
+        <button class="copy-btn" onclick="openMagicLink()">🔗 Open Link</button>
+      </div>
+
+      <div class="status-info">
+        <div>👥 Users: <span id="user-count">0</span></div>
+        <div>🔗 Link Status: <span id="link-status">Ready</span></div>
+      </div>
+      
+      <div style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
+        <div style="color: #888; margin-bottom: 8px;">📊 Test Pages:</div>
+        <a href="/">🏠 Main App (React)</a>
+        <a href="/complete-verification.html">🧪 Complete System Test</a>
+        <a href="/demo.html">📱 User Experience Demo</a>
+        <a href="/test-flows.html">🔄 Test Flows</a>
+        <a href="/quick-sodium-test.html">⚡ Quick Sodium Test</a>
+      </div>
     </div>
 
     <!-- React App Root -->
@@ -74,17 +131,73 @@
     <script type="module" src="/src/main.jsx"></script>
 
     <script>
+      let currentMagicLink = null;
+
       function toggleNav() {
         const nav = document.getElementById('dev-nav');
         nav.classList.toggle('hidden');
+        if (!nav.classList.contains('hidden')) {
+          loadMagicLink();
+        }
       }
       
+      function loadMagicLink() {
+        const link = localStorage.getItem('startupMagicLink');
+        const display = document.getElementById('magic-link-display');
+        const linkStatus = document.getElementById('link-status');
+        
+        if (link) {
+          currentMagicLink = link;
+          // Show shortened version for display
+          const shortLink = link.length > 80 ? link.substring(0, 80) + '...' : link;
+          display.textContent = shortLink;
+          linkStatus.textContent = 'Ready';
+        } else {
+          display.textContent = 'Generating... (refresh in a moment)';
+          linkStatus.textContent = 'Generating';
+        }
+
+        // Update user count
+        const userCount = document.getElementById('user-count');
+        const keys = Object.keys(localStorage);
+        const users = keys.filter(key => key.startsWith('encrypted_userNickname')).length;
+        userCount.textContent = users;
+      }
+
+      function copyMagicLink() {
+        if (currentMagicLink) {
+          navigator.clipboard.writeText(currentMagicLink).then(() => {
+            alert('✅ Magic link copied to clipboard!\n\nShare this link with someone to invite them to the chat.');
+          }).catch(() => {
+            prompt('Copy this magic link:', currentMagicLink);
+          });
+        } else {
+          alert('❌ Magic link not ready yet. Refresh the page.');
+        }
+      }
+
+      function openMagicLink() {
+        if (currentMagicLink) {
+          window.open(currentMagicLink, '_blank');
+        } else {
+          alert('❌ Magic link not ready yet. Refresh the page.');
+        }
+      }
+      
+      // Auto-load magic link when page loads
+      setTimeout(() => {
+        loadMagicLink();
+      }, 2000);
+
       // Hide nav by default if we're in the main app
       if (window.location.pathname === '/' && !window.location.search) {
         setTimeout(() => {
           document.getElementById('dev-nav').classList.add('hidden');
-        }, 2000);
+        }, 3000);
       }
+
+      // Auto-refresh magic link every 5 seconds
+      setInterval(loadMagicLink, 5000);
     </script>
   </body>
 </html>

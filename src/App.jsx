@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { initSodium } from './utils/crypto'
-import AdminSetup from './components/AdminSetup'
+import { generateStartupMagicLink, hasAnyUsers } from './utils/startup'
 import Login from './components/Login'
 import InviteSetup from './components/InviteSetup'
 import Chat from './components/Chat'
@@ -8,7 +8,7 @@ import Toast from './components/Toast'
 import './App.css'
 
 function App() {
-  const [currentView, setCurrentView] = useState('loading') // loading, adminSetup, login, inviteSetup, chat
+  const [currentView, setCurrentView] = useState('loading') // loading, login, inviteSetup, chat
   const [user, setUser] = useState(null)
   const [toast, setToast] = useState(null)
   const [sodium, setSodium] = useState(null)
@@ -19,12 +19,13 @@ function App() {
 
   const initializeApp = async () => {
     try {
-      console.log('🔧 Initializing app...')
-      
-      // Initialize libsodium
+      console.log('🔧 Initializing simplified app...')
       const sodiumInstance = await initSodium()
       console.log('Sodium instance received:', !!sodiumInstance)
       setSodium(sodiumInstance)
+      
+      // Generate startup magic link if needed
+      await generateStartupMagicLink()
       
       // Check URL for invitation magic link
       const urlParams = new URLSearchParams(window.location.search)
@@ -36,15 +37,13 @@ function App() {
         return
       }
       
-      // Check if admin account exists (only flag in plaintext)
-      const adminExists = localStorage.getItem('adminAccountCreated') === 'true'
-      
-      if (!adminExists) {
-        console.log('🔧 No admin exists - showing admin creation')
-        setCurrentView('adminSetup')
-      } else {
-        console.log('✅ Admin exists - showing login')
+      // Check if any users exist
+      if (hasAnyUsers()) {
+        console.log('✅ Users exist - showing login')
         setCurrentView('login')
+      } else {
+        console.log('ℹ️ No users yet - need to use magic link')
+        setCurrentView('waiting')
       }
       
     } catch (error) {
@@ -56,12 +55,6 @@ function App() {
   const showToast = (message, type = 'info') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
-  }
-
-  const handleAdminCreated = (userData) => {
-    setUser(userData)
-    setCurrentView('chat')
-    showToast(`Welcome ${userData.nickname}! You are the admin.`, 'success')
   }
 
   const handleLogin = (userData) => {
@@ -94,16 +87,28 @@ function App() {
     )
   }
 
+  if (currentView === 'waiting') {
+    return (
+      <div className="loading-screen">
+        <div className="loading-content">
+          <h1>🔒 Secure Chat</h1>
+          <p>No users registered yet</p>
+          <div className="info-box">
+            <p><strong>🔗 How to join:</strong></p>
+            <ul>
+              <li>Click the <strong>🛠️ DEV</strong> button (top-right)</li>
+              <li>Copy the <strong>🎫 Magic Link</strong></li>
+              <li>Open that link to create your account</li>
+              <li>Or share it with others to invite them</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
-      {currentView === 'adminSetup' && (
-        <AdminSetup 
-          sodium={sodium}
-          onAdminCreated={handleAdminCreated}
-          showToast={showToast}
-        />
-      )}
-      
       {currentView === 'login' && (
         <Login 
           sodium={sodium}

@@ -3,7 +3,9 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: var(--bg);
+  font-family: var(--font-system);
+  color: var(--text);
 }
 
 /* Header */
@@ -13,8 +15,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: var(--bg2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .user-info {
@@ -26,6 +28,11 @@
 .user-display {
   font-weight: 600;
   color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.user-display:hover {
+  color: var(--accent);
 }
 
 /* Main Content */
@@ -38,14 +45,14 @@
 
 /* Sidebar */
 .sidebar {
-  background: var(--background);
+  background: var(--bg2);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-header {
-  padding: 24px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
@@ -55,6 +62,7 @@
 .sidebar-header h3 {
   font-weight: 600;
   margin: 0;
+  font-size: 1.1rem;
 }
 
 .actions {
@@ -70,7 +78,7 @@
   color: var(--text);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
   width: 32px;
   height: 32px;
   display: flex;
@@ -79,9 +87,8 @@
 }
 
 .btn-icon:hover {
-  background: var(--primary);
+  background: var(--accent);
   color: white;
-  transform: translateY(-1px);
 }
 
 .contacts {
@@ -92,11 +99,12 @@
 .empty-state {
   padding: 40px 24px;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .empty-state p {
-  margin: 4px 0;
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 /* Chat Area */
@@ -115,7 +123,7 @@
 .welcome {
   text-align: center;
   padding: 40px 20px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .welcome h3 {
@@ -128,35 +136,6 @@
   margin: 8px 0;
 }
 
-.admin-info {
-  margin-top: 32px;
-  padding: 20px;
-  background: rgba(0, 102, 204, 0.1);
-  border: 1px solid rgba(0, 102, 204, 0.2);
-  border-radius: 8px;
-  text-align: left;
-  max-width: 300px;
-  margin-left: auto;
-  margin-right: auto;
-  color: var(--text-dim);
-}
-
-.admin-info p {
-  margin: 0 0 8px 0;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.admin-info ul {
-  margin: 0;
-  padding-left: 20px;
-  color: var(--text-muted);
-}
-
-.admin-info li {
-  margin: 4px 0;
-}
-
 .user-info-box {
   margin-top: 32px;
   padding: 20px;
@@ -164,7 +143,7 @@
   border: 1px solid rgba(40, 167, 69, 0.2);
   border-radius: 8px;
   text-align: left;
-  max-width: 300px;
+  max-width: 400px;
   margin-left: auto;
   margin-right: auto;
   color: var(--text-dim);
@@ -186,22 +165,6 @@
   margin: 4px 0;
 }
 
-/* Button Styles */
-.btn.small {
-  padding: 8px 16px;
-  font-size: 14px;
-}
-
-.btn.secondary.small {
-  background: var(--border);
-  color: var(--text);
-}
-
-.btn.secondary.small:hover {
-  background: var(--secondary);
-  color: white;
-}
-
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -221,7 +184,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   width: 90%;
-  max-width: 600px;
+  max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -272,134 +235,51 @@
   gap: 12px;
 }
 
-/* Invite History Styles */
-.invite-list {
+/* User Details */
+.user-details {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.invite-item {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 16px;
-  transition: all 0.2s ease;
-}
-
-.invite-item:hover {
-  border-color: var(--accent);
-}
-
-.invite-item.used {
-  border-left: 4px solid var(--success);
-}
-
-.invite-item.expired {
-  border-left: 4px solid var(--error);
-  opacity: 0.7;
-}
-
-.invite-item.active {
-  border-left: 4px solid var(--accent);
-}
-
-.invite-header {
+.detail-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
 }
 
-.invite-id {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 13px;
-  color: var(--text-dim);
-  background: var(--border);
-  padding: 4px 8px;
-  border-radius: 4px;
+.detail-row:last-child {
+  border-bottom: none;
 }
 
-.invite-status {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 4px 8px;
-  border-radius: 12px;
-}
-
-.invite-status.active {
-  background: rgba(0, 102, 204, 0.2);
-  color: var(--accent);
-}
-
-.invite-status.used {
-  background: rgba(40, 167, 69, 0.2);
-  color: var(--success);
-}
-
-.invite-status.expired {
-  background: rgba(220, 53, 69, 0.2);
-  color: var(--error);
-}
-
-.invite-details {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.invite-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-
-.invite-row span:first-child {
+.detail-row span:first-child {
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.invite-row span:last-child {
-  color: var(--text-dim);
+.detail-row span:last-child {
+  color: var(--text);
+  font-weight: 600;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
 }
 
-/* Empty State in Modal */
-.modal-body .empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
+/* Button Styles */
+.btn.small {
+  padding: 8px 16px;
+  font-size: 14px;
 }
 
-.modal-body .empty-state p {
-  margin: 8px 0;
+.btn.secondary.small {
+  background: var(--border);
+  color: var(--text);
 }
 
-/* Responsive Modal */
-@media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    margin: 20px;
-  }
-  
-  .modal-header,
-  .modal-body,
-  .modal-footer {
-    padding: 16px;
-  }
-  
-  .invite-item {
-    padding: 12px;
-  }
-  
-  .invite-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
+.btn.secondary.small:hover {
+  background: var(--text-muted);
+  color: white;
 }
 
 /* Responsive */
@@ -420,8 +300,26 @@
     padding: 20px 10px;
   }
   
-  .admin-info {
+  .user-info-box {
     margin-top: 20px;
     padding: 16px;
+    max-width: none;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 16px;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
