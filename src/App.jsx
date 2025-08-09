@@ -218,6 +218,19 @@ function RegisterScreen({ onRegister, sodium }) {
         return
       }
 
+      // Get invite data
+      const urlParams = new URLSearchParams(window.location.search)
+      const inviteParam = urlParams.get('invite')
+      let inviteData = null
+      
+      if (inviteParam) {
+        try {
+          inviteData = JSON.parse(atob(inviteParam))
+        } catch (e) {
+          console.log('Invalid invite format')
+        }
+      }
+
       // Save user
       const users = JSON.parse(localStorage.getItem('users') || '[]')
       const newUser = {
@@ -228,6 +241,32 @@ function RegisterScreen({ onRegister, sodium }) {
 
       users.push(newUser)
       localStorage.setItem('users', JSON.stringify(users))
+
+      // If this was an invite, automatically add the inviter as a contact
+      if (inviteData && inviteData.from && inviteData.fromId) {
+        const contacts = [{
+          id: inviteData.fromId,
+          nickname: inviteData.from,
+          addedAt: Date.now()
+        }]
+        localStorage.setItem(`contacts_${newUser.id}`, JSON.stringify(contacts))
+        
+        // Also add this new user to the inviter's contacts (if we can find them)
+        const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        const inviter = allUsers.find(u => u.id === inviteData.fromId)
+        if (inviter) {
+          const inviterContacts = JSON.parse(localStorage.getItem(`contacts_${inviteData.fromId}`) || '[]')
+          const existingContact = inviterContacts.find(c => c.nickname === newUser.nickname)
+          if (!existingContact) {
+            inviterContacts.push({
+              id: newUser.id,
+              nickname: newUser.nickname,
+              addedAt: Date.now()
+            })
+            localStorage.setItem(`contacts_${inviteData.fromId}`, JSON.stringify(inviterContacts))
+          }
+        }
+      }
 
       onRegister(newUser)
     } catch (err) {
@@ -327,9 +366,34 @@ function ChatScreen({ user, onLogout }) {
       timestamp: Date.now()
     }
 
+    // Save to current user's messages
     const updatedMessages = [...messages, message]
     setMessages(updatedMessages)
     localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
+
+    // If it's a general message, save to all users
+    if (!activeContact) {
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      allUsers.forEach(u => {
+        if (u.id !== user.id) {
+          const otherUserMessages = JSON.parse(localStorage.getItem(`messages_${u.id}`) || '[]')
+          const messageExists = otherUserMessages.find(m => m.id === message.id)
+          if (!messageExists) {
+            otherUserMessages.push(message)
+            localStorage.setItem(`messages_${u.id}`, JSON.stringify(otherUserMessages))
+          }
+        }
+      })
+    } else {
+      // For private messages, save to the contact's messages too
+      const contactMessages = JSON.parse(localStorage.getItem(`messages_${activeContact.id}`) || '[]')
+      const messageExists = contactMessages.find(m => m.id === message.id)
+      if (!messageExists) {
+        contactMessages.push(message)
+        localStorage.setItem(`messages_${activeContact.id}`, JSON.stringify(contactMessages))
+      }
+    }
+
     setNewMessage('')
   }
 
@@ -353,6 +417,31 @@ function ChatScreen({ user, onLogout }) {
         (m.fromId === activeContact.id && m.toId === user.id)
       )
     : messages.filter(m => m.toId === 'general')
+
+  useEffect(() => {
+    // Load messages from all users for general chat
+    if (!activeContact) {
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      let allGeneralMessages = []
+      
+      allUsers.forEach(u => {
+        const userMessages = JSON.parse(localStorage.getItem(`messages_${u.id}`) || '[]')
+        const generalMessages = userMessages.filter(m => m.toId === 'general')
+        allGeneralMessages = [...allGeneralMessages, ...generalMessages]
+      })
+      
+      // Sort by timestamp and remove duplicates
+      allGeneralMessages.sort((a, b) => a.timestamp - b.timestamp)
+      const uniqueMessages = allGeneralMessages.filter((msg, index, arr) => 
+        index === arr.findIndex(m => m.id === msg.id)
+      )
+      
+      setMessages(prev => {
+        const combined = [...prev.filter(m => m.toId !== 'general'), ...uniqueMessages]
+        return combined.sort((a, b) => a.timestamp - b.timestamp)
+      })
+    }
+  }, [activeContact, user.id])
 
   return (
     <div className="app">
