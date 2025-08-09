@@ -40,51 +40,43 @@ async function initSodium() {
     try {
         // Wait for sodium to be available
         let attempts = 0;
-        const maxAttempts = 100; // 10 seconds
+        const maxAttempts = 50; // 5 seconds should be enough for local file
         
         while (!window.sodium && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
             
-            if (attempts % 20 === 0) {
+            if (attempts % 10 === 0) {
                 console.log(`Waiting for sodium... ${attempts}/${maxAttempts}`);
                 updateLoginPrompt(`⏳ Loading encryption... ${Math.round((attempts/maxAttempts)*100)}%`);
             }
         }
         
         if (!window.sodium) {
-            throw new Error('Sodium library not loaded after 10 seconds');
+            throw new Error('Sodium library not loaded from local file');
         }
         
         console.log('Sodium found, initializing...');
         updateLoginPrompt('🔧 Initializing encryption...');
         
-        // Handle sodium ready
+        // Handle sodium ready - this should be immediate with the local file
         if (window.sodium.ready) {
-            if (typeof window.sodium.ready === 'function') {
-                await new Promise((resolve) => {
-                    window.sodium.ready(resolve);
-                });
-            } else if (typeof window.sodium.ready.then === 'function') {
-                await window.sodium.ready;
-            }
+            await window.sodium.ready;
         }
         
         app.sodium = window.sodium;
         console.log('Sodium initialized successfully');
         
         // Test basic functionality
-        try {
-            const testBytes = app.sodium.randombytes_buf(32);
-            console.log('Sodium test passed - generated', testBytes.length, 'bytes');
-        } catch (testError) {
-            console.warn('Sodium basic test failed:', testError);
-        }
+        const testBytes = app.sodium.randombytes_buf(32);
+        console.log('Sodium test passed - generated', testBytes.length, 'bytes');
         
         enableLoginForm();
         
     } catch (error) {
         console.error('Sodium initialization failed:', error);
+        showLoginError('Encryption library failed to load. Please refresh the page.');
+        updateLoginPrompt('❌ Encryption failed to load');
         throw error;
     }
 }
