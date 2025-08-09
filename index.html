@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Secure Chat</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/libsodium-js/0.7.11/sodium.js"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <h1 class="login-title terminal-glow">⬢ P2P SECURE CHAT ⬢</h1>
+        <div class="login-form box-glow">
+            <p id="loginPrompt">Enter your 4-digit PIN</p>
+            <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••">
+            <br>
+            <button id="loginBtn" class="btn">LOGIN</button>
+        </div>
+        <div id="loginError" class="error-message"></div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appContainer" class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="terminal-glow">CONTACTS</div>
+                <div id="userInfo" style="font-size: 0.8rem; margin-top: 0.5rem;"></div>
+            </div>
+            <div class="contacts-list" id="contactsList"></div>
+            <button class="add-contact-btn" id="addContactBtn">+ ADD CONTACT</button>
+        </div>
+
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div>
+                <span id="currentContact">Select a contact</span>
+                <span id="connectionStatus" style="margin-left: 1rem; font-size: 0.8rem;"></span>
+            </div>
+            <button id="mobileMenuBtn" class="btn" style="display: none;">☰</button>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea"></div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <input type="text" id="messageInput" class="message-input" placeholder="Type a message... (or use /help for commands)" disabled>
+            <button id="sendBtn" class="send-btn" disabled>SEND</button>
+        </div>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div id="addContactModal" class="modal">
+        <div class="modal-content box-glow">
+            <div class="modal-header terminal-glow">ADD CONTACT</div>
+            <input type="text" id="contactNameInput" class="modal-input" placeholder="Enter contact nickname">
+            <div class="modal-buttons">
+                <button id="createContactBtn" class="btn">CREATE</button>
+                <button id="cancelAddBtn" class="btn secondary">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invite Link Modal -->
+    <div id="inviteLinkModal" class="modal">
+        <div class="modal-content box-glow">
+            <div class="modal-header terminal-glow">INVITATION LINK</div>
+            <p>Share this link with your contact:</p>
+            <div id="inviteLink" class="invite-link"></div>
+            <div class="modal-buttons">
+                <button id="copyInviteBtn" class="btn">COPY LINK</button>
+                <button id="closeInviteBtn" class="btn secondary">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
