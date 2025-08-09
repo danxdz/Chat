@@ -16,11 +16,19 @@ let app = {
 // Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded, initializing app...');
-    await initSodium();
-    loadContacts();
-    setupEventListeners();
-    checkInviteInURL();
-    console.log('App initialization complete');
+    console.log('SimplePeer available:', typeof SimplePeer !== 'undefined');
+    console.log('Sodium initially available:', typeof window.sodium !== 'undefined');
+    
+    try {
+        await initSodium();
+        loadContacts();
+        setupEventListeners();
+        checkInviteInURL();
+        console.log('App initialization complete');
+    } catch (error) {
+        console.error('App initialization failed:', error);
+        showLoginError('Application failed to initialize. Please refresh the page.');
+    }
 });
 
 // Initialize libsodium with better error handling
@@ -30,40 +38,74 @@ async function initSodium() {
         
         // Wait for sodium to be available
         let attempts = 0;
-        while (!window.sodium && attempts < 50) {
+        const maxAttempts = 100; // Increased timeout
+        
+        while (!window.sodium && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
+            
+            // Show progress every 20 attempts
+            if (attempts % 20 === 0) {
+                console.log(`Still waiting for sodium... attempt ${attempts}/${maxAttempts}`);
+                updateLoginPrompt(`Loading encryption... ${Math.round((attempts/maxAttempts)*100)}%`);
+            }
         }
         
         if (!window.sodium) {
-            throw new Error('Sodium library not loaded after 5 seconds');
+            throw new Error(`Sodium library not loaded after ${maxAttempts/10} seconds`);
         }
         
-        await window.sodium.ready;
+        console.log('Sodium object found, waiting for ready...');
+        updateLoginPrompt('Initializing encryption...');
+        
+        // Handle both ready callback and promise patterns
+        if (typeof window.sodium.ready === 'function') {
+            await window.sodium.ready;
+        } else if (window.sodium.ready && typeof window.sodium.ready.then === 'function') {
+            await window.sodium.ready;
+        } else {
+            // Assume it's already ready
+            console.log('Sodium appears to be ready immediately');
+        }
+        
         app.sodium = window.sodium;
         console.log('Sodium initialized successfully');
         
         // Enable login form
-        const loginPrompt = document.getElementById('loginPrompt');
-        const pinInput = document.getElementById('pinInput');
-        const loginBtn = document.getElementById('loginBtn');
-        
-        if (loginPrompt && pinInput && loginBtn) {
-            loginPrompt.textContent = 'Encryption ready! Enter your 4-digit PIN';
-            loginPrompt.style.color = '#2ECC40';
-            
-            setTimeout(() => {
-                loginPrompt.style.color = '';
-                loginPrompt.textContent = 'Enter your 4-digit PIN';
-                pinInput.disabled = false;
-                loginBtn.disabled = false;
-                pinInput.focus();
-            }, 1500);
-        }
+        enableLoginForm();
         
     } catch (error) {
         console.error('Failed to initialize sodium:', error);
         showLoginError('Failed to initialize encryption library. Please refresh the page.');
+        
+        // Show fallback message
+        updateLoginPrompt('Encryption initialization failed');
+    }
+}
+
+function updateLoginPrompt(message) {
+    const loginPrompt = document.getElementById('loginPrompt');
+    if (loginPrompt) {
+        loginPrompt.textContent = message;
+    }
+}
+
+function enableLoginForm() {
+    const loginPrompt = document.getElementById('loginPrompt');
+    const pinInput = document.getElementById('pinInput');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    if (loginPrompt && pinInput && loginBtn) {
+        loginPrompt.textContent = 'Encryption ready! Enter your 4-digit PIN';
+        loginPrompt.style.color = '#2ECC40';
+        
+        setTimeout(() => {
+            loginPrompt.style.color = '';
+            loginPrompt.textContent = 'Enter your 4-digit PIN';
+            pinInput.disabled = false;
+            loginBtn.disabled = false;
+            pinInput.focus();
+        }, 1500);
     }
 }
 
