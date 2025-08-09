@@ -142,7 +142,13 @@ function validateInvitation(token) {
             return null; // Expired
         }
         
-        // Multi-use invitations: do not block based on prior usage
+        // Check if invitation was already used (check against stored invitations)
+        const storedInvitations = JSON.parse(localStorage.getItem('invitations') || '{}');
+        const storedInvite = storedInvitations[invitation.id];
+        if (storedInvite && storedInvite.used) {
+            return null; // Already used
+        }
+        
         return invitation;
     } catch (error) {
         return null; // Invalid token
@@ -154,13 +160,9 @@ function markInvitationAsUsed(inviteId, usedBy) {
         // Mark invitation as used in localStorage
         const invitations = JSON.parse(localStorage.getItem('invitations') || '{}');
         if (invitations[inviteId]) {
-            // Multi-use invitations: track usage, but do not disable
-            const inv = invitations[inviteId];
-            inv.used = true;
-            inv.usedBy = usedBy;
-            inv.usedAt = Date.now();
-            inv.uses = (inv.uses || 0) + 1;
-            invitations[inviteId] = inv;
+            invitations[inviteId].used = true;
+            invitations[inviteId].usedBy = usedBy;
+            invitations[inviteId].usedAt = Date.now();
             localStorage.setItem('invitations', JSON.stringify(invitations));
         }
         
@@ -506,12 +508,12 @@ function viewInvitations() {
         .sort((a, b) => b.createdAt - a.createdAt)
         .map(inv => {
             const isExpired = inv.expiresAt < Date.now();
-            const status = isExpired ? '⏰ Expired' : '🟢 Active';
+            const status = inv.used ? '✅ Used' : (isExpired ? '⏰ Expired' : '🟢 Active');
             const date = new Date(inv.createdAt).toLocaleDateString();
-            const usesInfo = inv.uses ? ` · Uses: ${inv.uses}` : '';
+            const usedInfo = inv.used && inv.usedBy ? ` by ${inv.usedBy}` : '';
             return `<div class="invite-item">
-                <span>${status} - Created ${date}${usesInfo}</span>
-                ${!isExpired ? 
+                <span>${status} - Created ${date}${usedInfo}</span>
+                ${!inv.used && !isExpired ? 
                     `<button onclick="revokeInvitation('${inv.id}')" class="btn-small danger">Revoke</button>` : 
                     ''
                 }
@@ -534,8 +536,8 @@ function viewInvitations() {
                     <p><strong>Statistics:</strong></p>
                     <ul>
                         <li>Total created: ${Object.keys(invitations).length}</li>
-                        <li>Total uses: ${Object.values(invitations).reduce((sum, i) => sum + (i.uses || 0), 0)}</li>
-                        <li>Active: ${Object.values(invitations).filter(i => i.expiresAt > Date.now()).length}</li>
+                        <li>Used: ${Object.values(invitations).filter(i => i.used).length}</li>
+                        <li>Active: ${Object.values(invitations).filter(i => !i.used && i.expiresAt > Date.now()).length}</li>
                     </ul>
                 </div>
             </div>
