@@ -1,0 +1,28 @@
+{
+  "name": "p2p-secure-chat",
+  "version": "1.0.0",
+  "description": "A peer-to-peer secure chat application with end-to-end encryption",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "p2p",
+    "chat",
+    "encryption",
+    "webrtc",
+    "secure",
+    "messaging"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

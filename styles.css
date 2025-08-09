@@ -67,6 +67,11 @@ body {
     box-shadow: 0 0 10px #00FF41;
 }
 
+.pin-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Main App Layout */
 .app-container {
     display: none;
@@ -311,6 +316,16 @@ body {
 .btn:hover {
     background: rgba(0, 255, 65, 0.1);
     box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+    background: #0D1117;
+    box-shadow: none;
 }
 
 .btn.secondary {

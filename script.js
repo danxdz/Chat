@@ -12,21 +12,55 @@ let app = {
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('DOM loaded, initializing app...');
     await initSodium();
     loadContacts();
     setupEventListeners();
     checkInviteInURL();
+    console.log('App initialization complete');
 });
 
-// Initialize libsodium
+// Initialize libsodium with better error handling
 async function initSodium() {
     try {
+        console.log('Waiting for sodium to be ready...');
+        
+        // Wait for sodium to be available
+        let attempts = 0;
+        while (!window.sodium && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!window.sodium) {
+            throw new Error('Sodium library not loaded after 5 seconds');
+        }
+        
         await window.sodium.ready;
         app.sodium = window.sodium;
         console.log('Sodium initialized successfully');
+        
+        // Enable login form
+        const loginPrompt = document.getElementById('loginPrompt');
+        const pinInput = document.getElementById('pinInput');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        if (loginPrompt && pinInput && loginBtn) {
+            loginPrompt.textContent = 'Encryption ready! Enter your 4-digit PIN';
+            loginPrompt.style.color = '#2ECC40';
+            
+            setTimeout(() => {
+                loginPrompt.style.color = '';
+                loginPrompt.textContent = 'Enter your 4-digit PIN';
+                pinInput.disabled = false;
+                loginBtn.disabled = false;
+                pinInput.focus();
+            }, 1500);
+        }
+        
     } catch (error) {
         console.error('Failed to initialize sodium:', error);
-        showError('Failed to initialize encryption library');
+        showLoginError('Failed to initialize encryption library. Please refresh the page.');
     }
 }
 
@@ -51,19 +85,29 @@ function login() {
         return;
     }
 
-    const hashedPIN = app.sodium.to_hex(hashPIN(pin));
-    const storedPIN = localStorage.getItem('userPIN');
+    if (!app.sodium) {
+        showLoginError('Encryption library not ready. Please wait and try again.');
+        return;
+    }
 
-    if (storedPIN === null) {
-        // First time user - set PIN
-        localStorage.setItem('userPIN', hashedPIN);
-        showSuccess('PIN set successfully!');
-        setTimeout(() => authenticateUser(pin), 1000);
-    } else if (storedPIN === hashedPIN) {
-        // Returning user - authenticate
-        authenticateUser(pin);
-    } else {
-        showLoginError('Invalid PIN');
+    try {
+        const hashedPIN = app.sodium.to_hex(hashPIN(pin));
+        const storedPIN = localStorage.getItem('userPIN');
+
+        if (storedPIN === null) {
+            // First time user - set PIN
+            localStorage.setItem('userPIN', hashedPIN);
+            showLoginSuccess('PIN set successfully!');
+            setTimeout(() => authenticateUser(pin), 1000);
+        } else if (storedPIN === hashedPIN) {
+            // Returning user - authenticate
+            authenticateUser(pin);
+        } else {
+            showLoginError('Invalid PIN');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginError('Login failed. Please try again.');
     }
 }
 
@@ -82,6 +126,9 @@ function authenticateUser(pin) {
     
     // Load and display contacts
     displayContacts();
+    
+    // Process any pending invites
+    processPendingInvite();
     
     showSystemMessage('Welcome to P2P Secure Chat');
 }
@@ -494,8 +541,32 @@ function checkInviteInURL() {
         const inviteData = hash.substring(8);
         const invite = parseInvitation(inviteData);
         
-        if (invite && app.isAuthenticated) {
-            // Auto-add contact from invitation
+        if (invite) {
+            if (app.isAuthenticated) {
+                // Auto-add contact from invitation
+                const contactName = `User_${invite.userId}`;
+                const contactId = addContact(contactName);
+                app.contacts[contactId].publicKey = invite.publicKey;
+                saveContacts();
+                displayContacts();
+                showSystemMessage(`Contact ${contactName} added from invitation`);
+                
+                // Clear the invite from URL
+                window.location.hash = '';
+            } else {
+                // Store invite for later processing
+                localStorage.setItem('pendingInvite', JSON.stringify(invite));
+                console.log('Invite stored for after authentication');
+            }
+        }
+    }
+}
+
+function processPendingInvite() {
+    const pendingInvite = localStorage.getItem('pendingInvite');
+    if (pendingInvite) {
+        try {
+            const invite = JSON.parse(pendingInvite);
             const contactName = `User_${invite.userId}`;
             const contactId = addContact(contactName);
             app.contacts[contactId].publicKey = invite.publicKey;
@@ -503,8 +574,12 @@ function checkInviteInURL() {
             displayContacts();
             showSystemMessage(`Contact ${contactName} added from invitation`);
             
-            // Clear the invite from URL
+            // Clear pending invite
+            localStorage.removeItem('pendingInvite');
             window.location.hash = '';
+        } catch (error) {
+            console.error('Error processing pending invite:', error);
+            localStorage.removeItem('pendingInvite');
         }
     }
 }
@@ -580,9 +655,21 @@ function showError(message) {
 }
 
 function showLoginError(message) {
-    document.getElementById('loginError').textContent = message;
+    const errorEl = document.getElementById('loginError');
+    errorEl.textContent = message;
+    errorEl.className = 'error-message';
     setTimeout(() => {
-        document.getElementById('loginError').textContent = '';
+        errorEl.textContent = '';
+    }, 3000);
+}
+
+function showLoginSuccess(message) {
+    const errorEl = document.getElementById('loginError');
+    errorEl.textContent = message;
+    errorEl.className = 'success-message';
+    setTimeout(() => {
+        errorEl.textContent = '';
+        errorEl.className = 'error-message';
     }, 3000);
 }
 
