@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "libsodium-wrappers": "^0.7.15",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -20,7 +21,13 @@
     "url": "git+https://github.com/danxdz/Chat.git"
   },
   "description": "Modern P2P secure chat with React",
-  "keywords": ["p2p", "chat", "encryption", "react", "webrtc"],
+  "keywords": [
+    "p2p",
+    "chat",
+    "encryption",
+    "react",
+    "webrtc"
+  ],
   "author": "",
   "license": "ISC"
 }
