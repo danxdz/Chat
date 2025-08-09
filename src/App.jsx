@@ -437,90 +437,104 @@ function ChatScreen({ user, onLogout }) {
   const [gun, setGun] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
   const [chatError, setChatError] = useState('')
+  const [initStatus, setInitStatus] = useState('starting')
 
   useEffect(() => {
     console.log('🎯 ChatScreen useEffect - Initializing...')
+    setInitStatus('loading_basic_data')
     
-    // Initialize Gun.js for decentralized P2P
-    if (window.Gun) {
-      console.log('🔫 Initializing Gun.js P2P network...')
-      
-      try {
-        const gunInstance = Gun({
-          peers: [
-            'https://gun-manhattan.herokuapp.com/gun',
-            'https://gun-us.herokuapp.com/gun'
-          ],
-          localStorage: false, // Use Gun's storage instead
-          radisk: true,
-          WebRTC: {
-            off: false
-          }
-        })
-        
-        setGun(gunInstance)
-        console.log('✅ Gun.js P2P network initialized')
-      } catch (error) {
-        console.error('❌ Failed to initialize Gun.js:', error)
-        setChatError('Failed to initialize P2P network: ' + error.message)
-      }
-    } else {
-      console.error('❌ Gun.js not available')
-      setChatError('Gun.js library not loaded')
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!gun) {
-      console.log('⏳ Waiting for Gun.js to initialize...')
-      return
-    }
-
-    console.log('🔄 Setting up chat data and listeners...')
-
+    // First, load basic data without Gun.js
     try {
-      // Load contacts and messages
       const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
       const users = JSON.parse(localStorage.getItem('users') || '[]')
+      const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+      
       setContacts(savedContacts)
       setAllUsers(users)
-      console.log('📋 Loaded contacts:', savedContacts.length)
-      console.log('👥 All users:', users.length)
+      setMessages(savedMessages)
+      
+      console.log('📋 Basic data loaded successfully')
+      console.log('- Contacts:', savedContacts.length)
+      console.log('- Users:', users.length) 
+      console.log('- Messages:', savedMessages.length)
+      
+      setInitStatus('basic_data_loaded')
+      
+      // Now try to initialize Gun.js
+      setTimeout(() => {
+        setInitStatus('initializing_gun')
+        
+        if (window.Gun) {
+          console.log('🔫 Gun.js available, initializing P2P network...')
+          
+          try {
+            const gunInstance = Gun({
+              peers: [
+                'https://gun-manhattan.herokuapp.com/gun',
+                'https://gun-us.herokuapp.com/gun'
+              ],
+              localStorage: false,
+              radisk: true,
+              WebRTC: {
+                off: false
+              }
+            })
+            
+            setGun(gunInstance)
+            setInitStatus('gun_initialized')
+            console.log('✅ Gun.js P2P network initialized')
+          } catch (error) {
+            console.error('❌ Failed to initialize Gun.js:', error)
+            setChatError('P2P network initialization failed: ' + error.message)
+            setInitStatus('gun_failed')
+          }
+        } else {
+          console.warn('⚠️ Gun.js not available, using localStorage only')
+          setChatError('P2P features unavailable - Gun.js not loaded')
+          setInitStatus('gun_unavailable')
+        }
+      }, 1000) // Delay Gun.js init to ensure basic UI loads first
+      
+    } catch (error) {
+      console.error('❌ Error loading basic data:', error)
+      setChatError('Failed to load basic data: ' + error.message)
+      setInitStatus('basic_data_failed')
+    }
+  }, [user.id])
 
-      // Subscribe to real-time messages for this user
+  // Gun.js message listener (only if Gun is available)
+  useEffect(() => {
+    if (!gun) return
+
+    console.log('🔄 Setting up Gun.js message listeners...')
+
+    try {
       gun.get(`chat_${user.id}`).map().on((messageData, messageKey) => {
         if (messageData && messageData.id && messageData.text) {
           console.log('📨 Received P2P message:', messageData)
           
           setMessages(prev => {
-            // Avoid duplicates
             const exists = prev.find(m => m.id === messageData.id)
             if (exists) return prev
             
             const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
-            // Also save to localStorage as backup
             localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
             return updated
           })
         }
       })
 
-      // Load existing messages from localStorage
-      const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
-      setMessages(savedMessages)
-      console.log('💬 Loaded messages:', savedMessages.length)
-
-      // Initialize connections with contacts
-      savedContacts.forEach(contact => {
+      // Set connection status for contacts
+      contacts.forEach(contact => {
         setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
         console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
       })
 
     } catch (error) {
-      console.error('❌ Error setting up chat:', error)
-      setChatError('Failed to setup chat: ' + error.message)
+      console.error('❌ Error setting up Gun.js listeners:', error)
+      setChatError('Failed to setup P2P listeners: ' + error.message)
     }
-  }, [gun, user.id])
+  }, [gun, user.id, contacts])
 
   const sendP2PMessage = async (message) => {
     if (!gun) {
@@ -756,6 +770,9 @@ function ChatScreen({ user, onLogout }) {
           
           <span style={{ color: '#888' }}>
             {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
+          </span>
+          <span style={{ fontSize: '0.8rem', color: '#666', marginLeft: '1rem' }}>
+            Status: {initStatus}
           </span>
         </div>
         <div>
