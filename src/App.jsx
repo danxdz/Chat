@@ -67,6 +67,19 @@ function App() {
         return magicLink
       }
 
+      // Add WebRTC debugging helpers
+      window.webrtcDebug = () => {
+        console.log('🔍 WebRTC Debug Info:')
+        console.log('Offers:', JSON.parse(localStorage.getItem('webrtc_offers') || '{}'))
+        console.log('Answers:', JSON.parse(localStorage.getItem('webrtc_answers') || '{}'))
+      }
+
+      window.clearWebRTC = () => {
+        localStorage.removeItem('webrtc_offers')
+        localStorage.removeItem('webrtc_answers')
+        console.log('🧹 WebRTC data cleared')
+      }
+
       // Check if user is logged in
       const savedUser = localStorage.getItem('currentUser')
       if (savedUser) {
@@ -319,6 +332,9 @@ function ChatScreen({ user, onLogout }) {
   const [contacts, setContacts] = useState([])
   const [activeContact, setActiveContact] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
+  const [peers, setPeers] = useState(new Map()) // WebRTC peer connections
+  const [dataChannels, setDataChannels] = useState(new Map()) // Data channels for messaging
+  const [connectionStatus, setConnectionStatus] = useState(new Map()) // Connection statuses
 
   useEffect(() => {
     // Load contacts and messages
@@ -326,7 +342,120 @@ function ChatScreen({ user, onLogout }) {
     const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
     setContacts(savedContacts)
     setMessages(savedMessages)
+
+    // Initialize WebRTC for existing contacts
+    initializeWebRTC(savedContacts)
   }, [user.id])
+
+  const initializeWebRTC = async (contactList) => {
+    // Create peer connections for all contacts
+    for (const contact of contactList) {
+      await createPeerConnection(contact.id, contact.nickname)
+    }
+  }
+
+  const createPeerConnection = async (contactId, contactNickname) => {
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      })
+
+      // Create data channel for messaging
+      const dataChannel = pc.createDataChannel('messages', { ordered: true })
+      
+      dataChannel.onopen = () => {
+        console.log(`📡 Data channel opened with ${contactNickname}`)
+        setConnectionStatus(prev => new Map(prev.set(contactId, 'connected')))
+        setDataChannels(prev => new Map(prev.set(contactId, dataChannel)))
+      }
+
+      dataChannel.onclose = () => {
+        console.log(`📡 Data channel closed with ${contactNickname}`)
+        setConnectionStatus(prev => new Map(prev.set(contactId, 'disconnected')))
+      }
+
+      dataChannel.onmessage = (event) => {
+        try {
+          const messageData = JSON.parse(event.data)
+          handleReceivedMessage(messageData)
+        } catch (e) {
+          console.error('Failed to parse received message:', e)
+        }
+      }
+
+      // Handle incoming data channels
+      pc.ondatachannel = (event) => {
+        const channel = event.channel
+        channel.onmessage = (event) => {
+          try {
+            const messageData = JSON.parse(event.data)
+            handleReceivedMessage(messageData)
+          } catch (e) {
+            console.error('Failed to parse received message:', e)
+          }
+        }
+        setDataChannels(prev => new Map(prev.set(contactId, channel)))
+      }
+
+      pc.oniceconnectionstatechange = () => {
+        console.log(`🧊 ICE connection state: ${pc.iceConnectionState} with ${contactNickname}`)
+        setConnectionStatus(prev => new Map(prev.set(contactId, pc.iceConnectionState)))
+      }
+
+      setPeers(prev => new Map(prev.set(contactId, pc)))
+
+      // Generate and display offer for manual exchange (simplified for demo)
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+
+      // Store offer for manual exchange
+      const offers = JSON.parse(localStorage.getItem('webrtc_offers') || '{}')
+      offers[`${user.id}_to_${contactId}`] = {
+        from: user.id,
+        fromNickname: user.nickname,
+        to: contactId,
+        toNickname: contactNickname,
+        offer: offer,
+        timestamp: Date.now()
+      }
+      localStorage.setItem('webrtc_offers', JSON.stringify(offers))
+
+    } catch (error) {
+      console.error('Error creating peer connection:', error)
+    }
+  }
+
+  const handleReceivedMessage = (messageData) => {
+    const newMessage = {
+      ...messageData,
+      id: `received_${Date.now()}_${Math.random()}`,
+      received: true
+    }
+
+    setMessages(prev => {
+      const updated = [...prev, newMessage]
+      localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const sendP2PMessage = (message, targetContactId) => {
+    const dataChannel = dataChannels.get(targetContactId)
+    if (dataChannel && dataChannel.readyState === 'open') {
+      try {
+        dataChannel.send(JSON.stringify(message))
+        console.log('📤 P2P message sent via WebRTC')
+        return true
+      } catch (error) {
+        console.error('Failed to send P2P message:', error)
+        return false
+      }
+    }
+    return false
+  }
 
   useEffect(() => {
     // Auto-scroll to bottom when messages change
@@ -335,6 +464,75 @@ function ChatScreen({ user, onLogout }) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight
     }
   }, [messages, activeContact])
+
+  useEffect(() => {
+    // Check for WebRTC offers from other users
+    const checkOffers = () => {
+      const offers = JSON.parse(localStorage.getItem('webrtc_offers') || '{}')
+      Object.keys(offers).forEach(async (key) => {
+        const offerData = offers[key]
+        if (offerData.to === user.id && !peers.has(offerData.from)) {
+          // This is an offer for us, create answer
+          await handleWebRTCOffer(offerData)
+        }
+      })
+    }
+
+    const interval = setInterval(checkOffers, 3000) // Check every 3 seconds
+    return () => clearInterval(interval)
+  }, [user.id, peers])
+
+  const handleWebRTCOffer = async (offerData) => {
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      })
+
+      // Handle incoming data channels
+      pc.ondatachannel = (event) => {
+        const channel = event.channel
+        channel.onopen = () => {
+          console.log(`📡 Incoming data channel opened from ${offerData.fromNickname}`)
+          setConnectionStatus(prev => new Map(prev.set(offerData.from, 'connected')))
+          setDataChannels(prev => new Map(prev.set(offerData.from, channel)))
+        }
+        
+        channel.onmessage = (event) => {
+          try {
+            const messageData = JSON.parse(event.data)
+            handleReceivedMessage(messageData)
+          } catch (e) {
+            console.error('Failed to parse received message:', e)
+          }
+        }
+      }
+
+      await pc.setRemoteDescription(offerData.offer)
+      const answer = await pc.createAnswer()
+      await pc.setLocalDescription(answer)
+
+      // Store answer for manual exchange
+      const answers = JSON.parse(localStorage.getItem('webrtc_answers') || '{}')
+      answers[`${user.id}_to_${offerData.from}`] = {
+        from: user.id,
+        fromNickname: user.nickname,
+        to: offerData.from,
+        toNickname: offerData.fromNickname,
+        answer: answer,
+        timestamp: Date.now()
+      }
+      localStorage.setItem('webrtc_answers', JSON.stringify(answers))
+
+      setPeers(prev => new Map(prev.set(offerData.from, pc)))
+
+      console.log(`🤝 WebRTC answer created for ${offerData.fromNickname}`)
+    } catch (error) {
+      console.error('Error handling WebRTC offer:', error)
+    }
+  }
 
   const generateInvite = () => {
     const invite = btoa(JSON.stringify({ 
@@ -371,8 +569,23 @@ function ChatScreen({ user, onLogout }) {
     setMessages(updatedMessages)
     localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
 
-    // If it's a general message, save to all users
-    if (!activeContact) {
+    // Try to send via WebRTC P2P first
+    if (activeContact) {
+      const p2pSent = sendP2PMessage(message, activeContact.id)
+      if (p2pSent) {
+        console.log('✅ Message sent via WebRTC P2P')
+      } else {
+        console.log('⚠️ WebRTC not available, falling back to localStorage')
+        // Fallback to localStorage sharing
+        const contactMessages = JSON.parse(localStorage.getItem(`messages_${activeContact.id}`) || '[]')
+        const messageExists = contactMessages.find(m => m.id === message.id)
+        if (!messageExists) {
+          contactMessages.push(message)
+          localStorage.setItem(`messages_${activeContact.id}`, JSON.stringify(contactMessages))
+        }
+      }
+    } else {
+      // General chat - still use localStorage for now
       const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
       allUsers.forEach(u => {
         if (u.id !== user.id) {
@@ -384,14 +597,6 @@ function ChatScreen({ user, onLogout }) {
           }
         }
       })
-    } else {
-      // For private messages, save to the contact's messages too
-      const contactMessages = JSON.parse(localStorage.getItem(`messages_${activeContact.id}`) || '[]')
-      const messageExists = contactMessages.find(m => m.id === message.id)
-      if (!messageExists) {
-        contactMessages.push(message)
-        localStorage.setItem(`messages_${activeContact.id}`, JSON.stringify(contactMessages))
-      }
     }
 
     setNewMessage('')
@@ -502,22 +707,31 @@ function ChatScreen({ user, onLogout }) {
             💬 General Chat
           </div>
 
-          {contacts.map(contact => (
-            <div 
-              key={contact.id}
-              onClick={() => setActiveContact(contact)}
-              style={{
-                padding: '0.75rem',
-                background: activeContact?.id === contact.id ? '#0066cc' : '#444',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginBottom: '0.5rem',
-                color: '#fff'
-              }}
-            >
-              👤 {contact.nickname}
-            </div>
-          ))}
+          {contacts.map(contact => {
+            const status = connectionStatus.get(contact.id) || 'disconnected'
+            const statusIcon = status === 'connected' ? '🟢' : status === 'connecting' ? '🟡' : '🔴'
+            
+            return (
+              <div 
+                key={contact.id}
+                onClick={() => setActiveContact(contact)}
+                style={{
+                  padding: '0.75rem',
+                  background: activeContact?.id === contact.id ? '#0066cc' : '#444',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  marginBottom: '0.5rem',
+                  color: '#fff',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>👤 {contact.nickname}</span>
+                <span title={`WebRTC: ${status}`}>{statusIcon}</span>
+              </div>
+            )
+          })}
 
           <button 
             onClick={addContact}
