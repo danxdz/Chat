@@ -11,24 +11,6 @@
   align-items: center;
   justify-content: center;
   background: var(--bg);
-  position: relative;
-}
-
-.loading-screen::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 255, 65, 0.03) 2px,
-    rgba(0, 255, 65, 0.03) 4px
-  );
-  pointer-events: none;
 }
 
 .loading-content {
@@ -37,17 +19,14 @@
   background: var(--bg2);
   border: 1px solid var(--border);
   box-shadow: var(--box-glow);
-  position: relative;
-  z-index: 1;
 }
 
 .loading-content h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   margin-bottom: 16px;
   color: var(--text);
   text-shadow: var(--glow);
-  animation: pulse 2s infinite;
 }
 
 .loading-content p {
@@ -55,7 +34,7 @@
   margin-bottom: 24px;
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 
 .loading-spinner {
@@ -72,26 +51,4 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-/* Matrix rain effect */
-.loading-screen::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    linear-gradient(0deg, transparent 24%, rgba(0, 255, 65, 0.05) 25%, rgba(0, 255, 65, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 65, 0.05) 75%, rgba(0, 255, 65, 0.05) 76%, transparent 77%, transparent),
-    linear-gradient(90deg, transparent 24%, rgba(0, 255, 65, 0.05) 25%, rgba(0, 255, 65, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 65, 0.05) 75%, rgba(0, 255, 65, 0.05) 76%, transparent 77%, transparent);
-  background-size: 25px 25px;
-  animation: matrix-move 20s linear infinite;
-  pointer-events: none;
-  opacity: 0.3;
-}
-
-@keyframes matrix-move {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(25px, 25px); }
 }

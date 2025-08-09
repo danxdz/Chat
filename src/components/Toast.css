@@ -16,7 +16,6 @@
   word-wrap: break-word;
   text-transform: uppercase;
   letter-spacing: 1px;
-  animation: terminal-flicker 0.1s ease-in-out infinite alternate;
 }
 
 .toast.show {
@@ -26,36 +25,23 @@
 .toast.success {
   border-color: var(--success);
   color: var(--success);
-  box-shadow: 
-    var(--box-glow),
-    0 0 20px rgba(0, 255, 65, 0.5);
+  box-shadow: var(--box-glow);
 }
 
 .toast.error {
   border-color: var(--error);
   color: var(--error);
-  box-shadow: 
-    0 0 10px rgba(255, 59, 48, 0.3),
-    inset 0 0 10px rgba(255, 59, 48, 0.1);
+  box-shadow: 0 0 10px rgba(255, 59, 48, 0.2);
 }
 
 .toast.warning {
   border-color: var(--warning);
   color: var(--warning);
-  box-shadow: 
-    0 0 10px rgba(255, 193, 7, 0.3),
-    inset 0 0 10px rgba(255, 193, 7, 0.1);
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.2);
 }
 
 .toast.info {
   border-color: var(--text-dim);
   color: var(--text-dim);
-  box-shadow: 
-    0 0 10px rgba(57, 255, 20, 0.3),
-    inset 0 0 10px rgba(57, 255, 20, 0.1);
-}
-
-@keyframes terminal-flicker {
-  0% { opacity: 1; }
-  100% { opacity: 0.95; }
+  box-shadow: var(--box-glow);
 }
