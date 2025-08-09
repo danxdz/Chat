@@ -382,6 +382,14 @@ function ChatScreen({ user, onLogout }) {
   const [showUserSwitcher, setShowUserSwitcher] = useState(false)
   const [gun, setGun] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
+  // --- Manual WebRTC DataChannel (serverless) state ---
+  const [rtcPeerConnection, setRtcPeerConnection] = useState(null)
+  const [rtcDataChannel, setRtcDataChannel] = useState(null)
+  const [p2pModalOpen, setP2pModalOpen] = useState(false)
+  const [p2pOfferText, setP2pOfferText] = useState('')
+  const [p2pAnswerText, setP2pAnswerText] = useState('')
+  const [p2pStatus, setP2pStatus] = useState('idle')
+  const [collectedIceCandidates, setCollectedIceCandidates] = useState([])
 
   useEffect(() => {
     // Initialize Gun.js for decentralized P2P
@@ -444,6 +452,149 @@ function ChatScreen({ user, onLogout }) {
 
   }, [gun, user.id])
 
+  // --- Manual WebRTC helpers ---
+  const waitForIceGatheringComplete = (peer) => {
+    if (peer.iceGatheringState === 'complete') {
+      return Promise.resolve()
+    }
+    return new Promise(resolve => {
+      const check = () => {
+        if (peer.iceGatheringState === 'complete') {
+          peer.removeEventListener('icegatheringstatechange', check)
+          resolve()
+        }
+      }
+      peer.addEventListener('icegatheringstatechange', check)
+    })
+  }
+
+  const createPeerConnection = (usePublicStun = false) => {
+    const configuration = usePublicStun
+      ? { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+      : { iceServers: [] } // no servers: works on the same LAN without internet
+
+    const peer = new RTCPeerConnection(configuration)
+
+    const localCandidates = []
+    setCollectedIceCandidates([])
+
+    peer.onicecandidate = (event) => {
+      if (event.candidate) {
+        localCandidates.push(event.candidate)
+        setCollectedIceCandidates(prev => [...prev, event.candidate])
+      } else {
+        // Gathering complete
+      }
+    }
+
+    peer.onconnectionstatechange = () => {
+      setP2pStatus(peer.connectionState)
+    }
+
+    peer.ondatachannel = (event) => {
+      const channel = event.channel
+      setupDataChannel(channel)
+      setRtcDataChannel(channel)
+    }
+
+    setRtcPeerConnection(peer)
+    return { peer, getCandidates: () => localCandidates }
+  }
+
+  const setupDataChannel = (channel) => {
+    channel.onopen = () => {
+      setP2pStatus('open')
+    }
+    channel.onclose = () => {
+      setP2pStatus('closed')
+    }
+    channel.onerror = () => {
+      setP2pStatus('error')
+    }
+    channel.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data)
+        if (parsed.type === 'chat' && parsed.payload) {
+          const inbound = parsed.payload
+          setMessages(prev => {
+            const exists = prev.find(m => m.id === inbound.id)
+            if (exists) return prev
+            const next = [...prev, inbound].sort((a, b) => a.timestamp - b.timestamp)
+            localStorage.setItem(`messages_${user.id}`, JSON.stringify(next))
+            return next
+          })
+        }
+      } catch {
+        // Treat as plain text fallback
+        const inbound = {
+          id: Date.now(),
+          from: 'P2P',
+          fromId: 'p2p',
+          to: activeContact?.nickname || 'General',
+          toId: activeContact?.id || 'general',
+          text: String(event.data),
+          timestamp: Date.now()
+        }
+        setMessages(prev => [...prev, inbound])
+      }
+    }
+  }
+
+  const createManualOffer = async (usePublicStun = false) => {
+    setP2pStatus('creating-offer')
+    const { peer, getCandidates } = createPeerConnection(usePublicStun)
+    const channel = peer.createDataChannel('chat')
+    setupDataChannel(channel)
+    setRtcDataChannel(channel)
+
+    const offer = await peer.createOffer()
+    await peer.setLocalDescription(offer)
+    await waitForIceGatheringComplete(peer)
+
+    const packageToShare = {
+      sdp: peer.localDescription,
+      candidates: getCandidates()
+    }
+    setP2pOfferText(JSON.stringify(packageToShare))
+    setP2pStatus('offer-ready')
+  }
+
+  const acceptRemoteOfferAndCreateAnswer = async (offerJson, usePublicStun = false) => {
+    const payload = JSON.parse(offerJson)
+    const { peer, getCandidates } = createPeerConnection(usePublicStun)
+
+    await peer.setRemoteDescription(payload.sdp)
+    if (Array.isArray(payload.candidates)) {
+      for (const c of payload.candidates) {
+        try { await peer.addIceCandidate(c) } catch {}
+      }
+    }
+
+    const answer = await peer.createAnswer()
+    await peer.setLocalDescription(answer)
+    await waitForIceGatheringComplete(peer)
+
+    const packageToShare = {
+      sdp: peer.localDescription,
+      candidates: getCandidates()
+    }
+    setP2pAnswerText(JSON.stringify(packageToShare))
+    setP2pStatus('answer-ready')
+  }
+
+  const acceptRemoteAnswer = async (answerJson) => {
+    const payload = JSON.parse(answerJson)
+    if (!rtcPeerConnection) return
+    await rtcPeerConnection.setRemoteDescription(payload.sdp)
+    if (Array.isArray(payload.candidates)) {
+      for (const c of payload.candidates) {
+        try { await rtcPeerConnection.addIceCandidate(c) } catch {}
+      }
+    }
+    setP2pStatus('connecting')
+  }
+
+  // Gun-based messaging fallback and broadcast
   const sendP2PMessage = async (message) => {
     if (!gun) {
       console.log('❌ Gun.js not initialized')
@@ -533,8 +684,19 @@ function ChatScreen({ user, onLogout }) {
     setMessages(updatedMessages)
     localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
 
-    // Send via Gun.js P2P network
-    sendP2PMessage(message)
+    // Prefer direct P2P data channel for 1:1 chats if available
+    if (activeContact && rtcDataChannel && rtcDataChannel.readyState === 'open') {
+      try {
+        rtcDataChannel.send(JSON.stringify({ type: 'chat', payload: message }))
+        console.log('📤 P2P DataChannel message sent')
+      } catch (err) {
+        console.warn('Failed to send over DataChannel, falling back to Gun:', err)
+        sendP2PMessage(message)
+      }
+    } else {
+      // Send via Gun.js P2P network (general chat or fallback)
+      sendP2PMessage(message)
+    }
 
     setNewMessage('')
   }
@@ -687,6 +849,13 @@ function ChatScreen({ user, onLogout }) {
             style={{ marginRight: '1rem', background: '#0066cc', padding: '0.5rem 1rem' }}
           >
             📤 Invite
+          </button>
+          <button
+            onClick={() => setP2pModalOpen(true)}
+            className="btn"
+            style={{ marginRight: '1rem', background: '#28a745', padding: '0.5rem 1rem' }}
+          >
+            🔌 P2P Connect
           </button>
           <button 
             onClick={onLogout} 
@@ -881,6 +1050,73 @@ function ChatScreen({ user, onLogout }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Manual P2P Connect Modal */}
+      {p2pModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#2d2d2d',
+            padding: '1.25rem',
+            borderRadius: '8px',
+            width: '95%',
+            maxWidth: '900px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0 }}>🔌 Manual P2P (no server)</h2>
+              <button className="btn" style={{ background: '#666' }} onClick={() => setP2pModalOpen(false)}>✖</button>
+            </div>
+
+            <div style={{ color: '#aaa', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              Exchange the text blocks below with your peer via any channel (QR, chat, etc). This creates a direct WebRTC DataChannel without any signaling server. Works best on the same network with no STUN.
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ background: '#1f1f1f', padding: '1rem', borderRadius: '6px' }}>
+                <h3 style={{ marginTop: 0 }}>1) If you are the caller</h3>
+                <button className="btn" style={{ background: '#28a745' }} onClick={() => createManualOffer(false)}>Create Offer (LAN only)</button>
+                <button className="btn" style={{ background: '#0b5ed7', marginLeft: '0.5rem' }} onClick={() => createManualOffer(true)}>Create Offer (use public STUN)</button>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#bbb' }}>Share this offer with peer:</label>
+                  <textarea readOnly value={p2pOfferText} style={{ width: '100%', height: '160px', background: '#111', color: '#0f0', padding: '0.5rem', borderRadius: '4px' }} />
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <button className="btn" onClick={() => { navigator.clipboard.writeText(p2pOfferText) }}>Copy Offer</button>
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#bbb' }}>Paste peer's answer:</label>
+                  <textarea placeholder="Paste answer JSON here" style={{ width: '100%', height: '120px', background: '#111', color: 'white', padding: '0.5rem', borderRadius: '4px' }} onBlur={(e) => { if (e.target.value.trim()) { acceptRemoteAnswer(e.target.value.trim()) } }} />
+                </div>
+                <div style={{ marginTop: '0.5rem', color: '#bbb', fontSize: '0.85rem' }}>Status: {p2pStatus}</div>
+              </div>
+
+              <div style={{ background: '#1f1f1f', padding: '1rem', borderRadius: '6px' }}>
+                <h3 style={{ marginTop: 0 }}>2) If you are the answerer</h3>
+                <label style={{ fontSize: '0.85rem', color: '#bbb' }}>Paste caller's offer:</label>
+                <textarea placeholder="Paste offer JSON here" style={{ width: '100%', height: '140px', background: '#111', color: 'white', padding: '0.5rem', borderRadius: '4px' }} onBlur={(e) => { if (e.target.value.trim()) { acceptRemoteOfferAndCreateAnswer(e.target.value.trim(), false) } }} />
+                <div style={{ marginTop: '0.5rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#bbb' }}>Send this answer back:</label>
+                  <textarea readOnly value={p2pAnswerText} style={{ width: '100%', height: '160px', background: '#111', color: '#0f0', padding: '0.5rem', borderRadius: '4px' }} />
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <button className="btn" onClick={() => { navigator.clipboard.writeText(p2pAnswerText) }}>Copy Answer</button>
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.5rem', color: '#bbb', fontSize: '0.85rem' }}>Status: {p2pStatus}</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
