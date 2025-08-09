@@ -1,212 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🔒 Secure Chat</title>
-    <script src="/sodium.js"></script>
-    <style>
-      .dev-nav {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.95);
-        color: white;
-        padding: 20px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 12px;
-        z-index: 10000;
-        border: 1px solid #333;
-        min-width: 300px;
-        max-width: 400px;
-      }
-      .dev-nav h3 {
-        margin: 0 0 15px 0;
-        color: #0066cc;
-        font-size: 14px;
-      }
-      .magic-link-section {
-        background: rgba(0, 102, 204, 0.1);
-        border: 1px solid rgba(0, 102, 204, 0.3);
-        padding: 12px;
-        border-radius: 4px;
-        margin: 15px 0;
-      }
-      .magic-link {
-        background: #222;
-        padding: 8px;
-        border-radius: 4px;
-        word-break: break-all;
-        font-size: 10px;
-        margin: 8px 0;
-        border: 1px solid #444;
-        cursor: pointer;
-        min-height: 20px;
-      }
-      .magic-link:hover {
-        background: #333;
-      }
-      .copy-btn {
-        background: #0066cc;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 3px;
-        font-size: 11px;
-        cursor: pointer;
-        margin: 5px 5px 5px 0;
-      }
-      .copy-btn:hover {
-        background: #0052a3;
-      }
-      .toggle-nav {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: #0066cc;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        z-index: 10001;
-      }
-      .dev-nav.hidden {
-        display: none;
-      }
-      .status-info {
-        background: rgba(40, 167, 69, 0.1);
-        border: 1px solid rgba(40, 167, 69, 0.3);
-        padding: 8px;
-        border-radius: 4px;
-        margin: 10px 0;
-        font-size: 11px;
-      }
-      .clear-btn {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 3px;
-        font-size: 11px;
-        cursor: pointer;
-        margin: 10px 0;
-      }
-      .clear-btn:hover {
-        background: #c82333;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Development Navigation -->
-    <button class="toggle-nav" onclick="toggleNav()">🛠️ DEV</button>
-    <div id="dev-nav" class="dev-nav">
-      <h3>🔧 Magic Link Access</h3>
-      
-      <div class="magic-link-section">
-        <div style="color: #0066cc; font-weight: bold; margin-bottom: 8px;">🎫 Join Chat Link:</div>
-        <div id="magic-link-display" class="magic-link" onclick="copyMagicLink()">Loading...</div>
-        <button class="copy-btn" onclick="copyMagicLink()">📋 Copy Link</button>
-        <button class="copy-btn" onclick="openMagicLink()">🔗 Open Link</button>
-      </div>
-
-      <div class="status-info">
-        <div>👥 Users: <span id="user-count">0</span></div>
-        <div>🔗 Link Status: <span id="link-status">Ready</span></div>
-      </div>
-
-      <div style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
-        <div style="color: #888; margin-bottom: 8px; font-size: 10px;">
-          Use this link to create your account or invite others
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Secure Chat</title>
+    <!-- Vercel deployment trigger -->
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha384-MZ3ciGjiWCKKLGxi6Gf7uIU8N5/QSyhpZHhvn2TdHP0ofkCkbCGW1j3ZMzYhocpu" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/libsodium-wrappers/0.7.11/libsodium-wrappers.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- Master Setup Screen (first time only) -->
+    <div id="masterSetupScreen" class="login-screen" style="display: none;">
+        <h1 class="login-title terminal-glow">🔐 P2P Secure Chat</h1>
+        <div class="login-form box-glow">
+            <p>First time setup - Create the admin account</p>
+            
+            <label for="masterKeyInput">Enter master setup key:</label>
+            <input type="password" id="masterKeyInput" class="pin-input" placeholder="Master setup key">
+            <br><br>
+            <button id="verifyMasterBtn" class="btn">Create Admin Account</button>
+            
+            <div class="info-box">
+                <p><strong>ℹ️ Admin privileges:</strong></p>
+                <ul>
+                    <li>Create invitation links</li>
+                    <li>Manage contacts</li>
+                    <li>Secure P2P communication</li>
+                </ul>
+            </div>
         </div>
-        <button class="clear-btn" onclick="clearAllData()">🗑️ Clear All Data</button>
-      </div>
+        <div id="masterError" class="error-message"></div>
     </div>
 
-    <!-- React App Root -->
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <!-- Setup Screen (for invited users) -->
+    <div id="setupScreen" class="login-screen" style="display: none;">
+        <h1 class="login-title terminal-glow">Welcome to P2P Secure Chat</h1>
+        <div class="login-form box-glow">
+            <p id="setupMessage">Set up your profile to get started</p>
+            
+            <label for="nicknameInput">Choose a nickname (optional):</label>
+            <input type="text" id="nicknameInput" class="pin-input" maxlength="20" placeholder="Or keep the random one">
+            <button id="randomNicknameBtn" class="btn secondary-btn">🎲 Generate Random</button>
+            
+            <br><br>
+            <label for="setupPinInput">Create a 4-6 digit PIN:</label>
+            <input type="password" id="setupPinInput" class="pin-input" minlength="4" maxlength="6" placeholder="Enter 4-6 digit PIN">
+            
+            <br><br>
+            <button id="completeSetupBtn" class="btn">Complete Setup</button>
+        </div>
+        <div id="setupError" class="error-message"></div>
+    </div>
 
-    <script>
-      let currentMagicLink = null;
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <h1 class="login-title terminal-glow">P2P Secure Chat</h1>
+        <div class="login-form box-glow">
+            <p id="loginPrompt">Loading encryption library...</p>
+            <input type="password" id="pinInput" class="pin-input" minlength="4" maxlength="6" placeholder="Enter 4-6 digit PIN" disabled>
+            <br>
+            <button id="loginBtn" class="btn" disabled>Login</button>
+        </div>
+        <div id="loginError" class="error-message"></div>
+    </div>
 
-      function toggleNav() {
-        const nav = document.getElementById('dev-nav');
-        nav.classList.toggle('hidden');
-        if (!nav.classList.contains('hidden')) {
-          loadMagicLink();
-        }
-      }
-      
-      function loadMagicLink() {
-        const link = localStorage.getItem('startupMagicLink');
-        const display = document.getElementById('magic-link-display');
-        const linkStatus = document.getElementById('link-status');
-        
-        if (link) {
-          currentMagicLink = link;
-          // Show shortened version for display
-          const shortLink = link.length > 80 ? link.substring(0, 80) + '...' : link;
-          display.textContent = shortLink;
-          linkStatus.textContent = 'Ready';
-          linkStatus.style.color = '#28a745';
-        } else {
-          display.textContent = 'Generating... (refresh page if this persists)';
-          linkStatus.textContent = 'Loading';
-          linkStatus.style.color = '#ffc107';
-        }
+    <!-- Main App -->
+    <div id="appContainer" class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="terminal-glow">Contacts</div>
+                <div id="userInfo" style="font-size: 0.8rem; margin-top: 0.5rem;"></div>
+            </div>
+            <div class="contacts-list" id="contactsList"></div>
+            <button class="add-contact-btn" id="addContactBtn">+ Add Contact</button>
+            <button class="add-contact-btn" id="createInviteBtn" style="display: none;">📧 Create Invite</button>
+        </div>
 
-        // Update user count
-        const userCount = document.getElementById('user-count');
-        const keys = Object.keys(localStorage);
-        const users = keys.filter(key => key.startsWith('encrypted_userNickname')).length;
-        userCount.textContent = users;
-      }
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div>
+                <span id="currentContact">Select a contact</span>
+                <span id="connectionStatus" style="margin-left: 1rem; font-size: 0.8rem;"></span>
+            </div>
+            <button id="mobileMenuBtn" class="btn" style="display: none;">☰</button>
+        </div>
 
-      function copyMagicLink() {
-        if (currentMagicLink) {
-          navigator.clipboard.writeText(currentMagicLink).then(() => {
-            alert('✅ Magic link copied!\n\nOpen this link to join the chat or share it with others.');
-          }).catch(() => {
-            prompt('Copy this magic link:', currentMagicLink);
-          });
-        } else {
-          alert('❌ Magic link not ready yet. Refresh the page.');
-        }
-      }
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea"></div>
 
-      function openMagicLink() {
-        if (currentMagicLink) {
-          window.open(currentMagicLink, '_blank');
-        } else {
-          alert('❌ Magic link not ready yet. Refresh the page.');
-        }
-      }
+        <!-- Input Area -->
+        <div class="input-area">
+            <input type="text" id="messageInput" class="message-input" placeholder="Type a message... (or use /help for commands)" disabled>
+            <button id="sendBtn" class="send-btn" disabled>SEND</button>
+        </div>
+    </div>
 
-      function clearAllData() {
-        if (confirm('⚠️ This will delete all users and data. Are you sure?')) {
-          localStorage.clear();
-          alert('✅ All data cleared. Refreshing page...');
-          window.location.reload();
-        }
-      }
-      
-      // Auto-load magic link when page loads
-      setTimeout(() => {
-        loadMagicLink();
-      }, 2000);
+    <!-- Add Contact Modal -->
+    <div id="addContactModal" class="modal">
+        <div class="modal-content box-glow">
+            <div class="modal-header terminal-glow">Add Contact</div>
+            <input type="text" id="contactNameInput" class="modal-input" placeholder="Enter contact nickname">
+            <div class="modal-buttons">
+                <button id="createContactBtn" class="btn">CREATE</button>
+                <button id="cancelAddBtn" class="btn secondary">CANCEL</button>
+            </div>
+        </div>
+    </div>
 
-      // Hide nav by default if we're in the main app
-      if (window.location.pathname === '/' && !window.location.search) {
-        setTimeout(() => {
-          document.getElementById('dev-nav').classList.add('hidden');
-        }, 3000);
-      }
+    <!-- Invite Link Modal -->
+    <div id="inviteLinkModal" class="modal">
+        <div class="modal-content box-glow">
+            <div class="modal-header terminal-glow">Invitation Link</div>
+            <p>Share this link with your contact:</p>
+            <div id="inviteLink" class="invite-link"></div>
+            <div class="modal-buttons">
+                <button id="copyInviteBtn" class="btn">COPY LINK</button>
+                <button id="closeInviteBtn" class="btn secondary">CLOSE</button>
+            </div>
+        </div>
+    </div>
 
-      // Auto-refresh magic link every 10 seconds
-      setInterval(loadMagicLink, 10000);
-    </script>
-  </body>
+    <script src="script.js"></script>
+</body>
 </html>
