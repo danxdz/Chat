@@ -12,9 +12,15 @@ function App() {
 
   const initApp = async () => {
     try {
-      // Wait for sodium to load
+      // Wait for sodium to load - libsodium-wrappers might need more time
+      let attempts = 0
+      while (!window.sodium && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+
       if (!window.sodium) {
-        setError('Sodium not loaded')
+        setError('Sodium not loaded after 5 seconds')
         return
       }
 
