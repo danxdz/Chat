@@ -1,55 +1,24 @@
 import { useState, useEffect } from 'react'
 import { hashPIN, generateRandomNickname } from '../utils/crypto'
 import { initStorage, encryptedSetItem } from '../utils/storage'
-import { validateMagicLink, consumeMagicLink } from '../utils/magicLinks'
 import './Screen.css'
 
 function InviteSetup({ sodium, onComplete, showToast }) {
   const [nickname, setNickname] = useState('')
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
-  const [inviteData, setInviteData] = useState(null)
-  const [validationResult, setValidationResult] = useState(null)
 
   useEffect(() => {
-    // Set random nickname on load
+    // Set random nickname only once on mount
     setNickname(generateRandomNickname())
-    
-    // Validate magic link from URL
-    const urlParams = new URLSearchParams(window.location.search)
-    const inviteToken = urlParams.get('invite')
-    
-    if (inviteToken) {
-      console.log('📧 Validating magic link...')
-      
-      const result = validateMagicLink(inviteToken)
-      setValidationResult(result)
-      
-      if (result.valid) {
-        setInviteData(result.inviteData)
-        console.log('✅ Magic link is valid:', result.inviteData)
-        showToast('Valid invitation found!', 'success')
-      } else {
-        console.error('❌ Magic link validation failed:', result.error)
-        showToast(`Invalid invitation: ${result.error}`, 'error')
-      }
-    } else {
-      setValidationResult({ valid: false, error: 'No invitation token in URL' })
-      showToast('No invitation found in URL', 'error')
-    }
-  }, [showToast])
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
     if (loading) return
     
-    if (!validationResult?.valid || !inviteData) {
-      showToast('Invalid or expired invitation', 'error')
-      return
-    }
-    
-    console.log('Creating invited user account...')
+    console.log('Creating user account...')
     console.log('Sodium available:', !!sodium)
     
     // Validate
@@ -86,29 +55,21 @@ function InviteSetup({ sodium, onComplete, showToast }) {
       // Initialize encrypted storage with the user's PIN
       initStorage(sodium, pin)
       
-      // Consume the magic link (mark as used)
-      const consumed = consumeMagicLink(validationResult.linkId, nickname.trim())
-      
-      if (!consumed) {
-        throw new Error('Failed to consume magic link - may already be used')
-      }
-      
-      console.log('🔒 Magic link consumed successfully')
+      console.log('🔒 Storage initialized successfully')
       
       // Save user data encrypted
       encryptedSetItem('userPIN', hashedPIN)
       encryptedSetItem('userNickname', nickname.trim())
       encryptedSetItem('userAccountCreated', true)
-      encryptedSetItem('invitedBy', inviteData.createdBy)
-      encryptedSetItem('inviteToken', inviteData.id)
-      encryptedSetItem('inviteUsedAt', Date.now())
+      encryptedSetItem('invitedBy', 'Magic Link')
+      encryptedSetItem('accountCreatedAt', Date.now())
       
       console.log('💾 User data saved encrypted')
       
       // Return user data
       const userData = {
         nickname: nickname.trim(),
-        invitedBy: inviteData.createdBy,
+        invitedBy: 'Magic Link',
         pin: pin // Keep for session
       }
       
@@ -129,50 +90,6 @@ function InviteSetup({ sodium, onComplete, showToast }) {
 
   const generateNewNickname = () => {
     setNickname(generateRandomNickname())
-  }
-
-  if (!validationResult) {
-    return (
-      <div className="screen">
-        <div className="container">
-          <div className="header">
-            <h1>🔄 Validating Invitation</h1>
-            <p>Checking magic link...</p>
-          </div>
-          <div className="loading-spinner"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!validationResult.valid) {
-    return (
-      <div className="screen">
-        <div className="container">
-          <div className="header">
-            <h1>❌ Invalid Invitation</h1>
-            <p>{validationResult.error}</p>
-          </div>
-          <div className="form">
-            <div className="info-box error">
-              <p>🚫 Common Issues:</p>
-              <ul>
-                <li>This invitation may have already been used</li>
-                <li>The invitation may have expired</li>
-                <li>The link may have been corrupted</li>
-                <li>You may need a fresh invitation link</li>
-              </ul>
-            </div>
-            <button 
-              className="btn primary"
-              onClick={() => window.location.href = '/'}
-            >
-              Go to Home
-            </button>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (

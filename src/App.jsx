@@ -32,7 +32,7 @@ function App() {
       const inviteToken = urlParams.get('invite')
       
       if (inviteToken) {
-        console.log('🎊 Magic link detected')
+        console.log('🎊 Magic link detected - showing account creation')
         setCurrentView('inviteSetup')
         return
       }
@@ -42,8 +42,8 @@ function App() {
         console.log('✅ Users exist - showing login')
         setCurrentView('login')
       } else {
-        console.log('ℹ️ No users yet - need to use magic link')
-        setCurrentView('waiting')
+        console.log('ℹ️ No users yet - showing account creation directly')
+        setCurrentView('inviteSetup') // Show account creation directly instead of waiting
       }
       
     } catch (error) {
