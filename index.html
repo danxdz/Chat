@@ -3,124 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Secure Chat</title>
-    <!-- Vercel deployment trigger -->
+    <title>Secure Chat</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha384-MZ3ciGjiWCKKLGxi6Gf7uIU8N5/QSyhpZHhvn2TdHP0ofkCkbCGW1j3ZMzYhocpu" crossorigin="anonymous"></script>
     <script src="sodium.js"></script>
 </head>
 <body>
-    <!-- Master Setup Screen (first time only) -->
-    <div id="masterSetupScreen" class="login-screen" style="display: none;">
-        <h1 class="login-title terminal-glow">🔐 P2P Secure Chat</h1>
-        <div class="login-form box-glow">
-            <p>First time setup - Create the admin account</p>
-            
-            <label for="masterKeyInput">Enter master setup key:</label>
-            <input type="password" id="masterKeyInput" class="pin-input" placeholder="Master setup key">
-            <br><br>
-            <button id="verifyMasterBtn" class="btn">Create Admin Account</button>
-            
-            <div class="info-box">
-                <p><strong>ℹ️ Admin privileges:</strong></p>
-                <ul>
-                    <li>Create invitation links</li>
-                    <li>Manage contacts</li>
-                    <li>Secure P2P communication</li>
-                </ul>
+    <!-- Admin Creation Screen (one-time only) -->
+    <div id="adminSetupScreen" class="screen" style="display: none;">
+        <div class="container">
+            <div class="header">
+                <h1>🔒 Secure Chat</h1>
+                <p>Create admin account</p>
             </div>
-        </div>
-        <div id="masterError" class="error-message"></div>
-    </div>
-
-    <!-- Setup Screen (for invited users) -->
-    <div id="setupScreen" class="login-screen" style="display: none;">
-        <h1 class="login-title terminal-glow">Welcome to P2P Secure Chat</h1>
-        <div class="login-form box-glow">
-            <p id="setupMessage">Set up your profile to get started</p>
             
-            <label for="nicknameInput">Choose a nickname (optional):</label>
-            <input type="text" id="nicknameInput" class="pin-input" maxlength="20" placeholder="Or keep the random one">
-            <button id="randomNicknameBtn" class="btn secondary-btn">🎲 Generate Random</button>
-            
-            <br><br>
-            <label for="setupPinInput">Create a 4-6 digit PIN:</label>
-            <input type="password" id="setupPinInput" class="pin-input" minlength="4" maxlength="6" placeholder="Enter 4-6 digit PIN">
-            
-            <br><br>
-            <button id="completeSetupBtn" class="btn">Complete Setup</button>
-        </div>
-        <div id="setupError" class="error-message"></div>
-    </div>
-
-    <!-- Login Screen -->
-    <div id="loginScreen" class="login-screen">
-        <h1 class="login-title terminal-glow">P2P Secure Chat</h1>
-        <div class="login-form box-glow">
-            <p id="loginPrompt">Loading encryption library...</p>
-            <input type="password" id="pinInput" class="pin-input" minlength="4" maxlength="6" placeholder="Enter 4-6 digit PIN" disabled>
-            <br>
-            <button id="loginBtn" class="btn" disabled>Login</button>
-        </div>
-        <div id="loginError" class="error-message"></div>
-    </div>
-
-    <!-- Main App -->
-    <div id="appContainer" class="app-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <div class="terminal-glow">Contacts</div>
-                <div id="userInfo" style="font-size: 0.8rem; margin-top: 0.5rem;"></div>
-            </div>
-            <div class="contacts-list" id="contactsList"></div>
-            <button class="add-contact-btn" id="addContactBtn">+ Add Contact</button>
-            <button class="add-contact-btn" id="createInviteBtn" style="display: none;">📧 Create Invite</button>
-        </div>
-
-        <!-- Chat Header -->
-        <div class="chat-header">
-            <div>
-                <span id="currentContact">Select a contact</span>
-                <span id="connectionStatus" style="margin-left: 1rem; font-size: 0.8rem;"></span>
-            </div>
-            <button id="mobileMenuBtn" class="btn" style="display: none;">☰</button>
-        </div>
-
-        <!-- Chat Area -->
-        <div class="chat-area" id="chatArea"></div>
-
-        <!-- Input Area -->
-        <div class="input-area">
-            <input type="text" id="messageInput" class="message-input" placeholder="Type a message... (or use /help for commands)" disabled>
-            <button id="sendBtn" class="send-btn" disabled>SEND</button>
-        </div>
-    </div>
-
-    <!-- Add Contact Modal -->
-    <div id="addContactModal" class="modal">
-        <div class="modal-content box-glow">
-            <div class="modal-header terminal-glow">Add Contact</div>
-            <input type="text" id="contactNameInput" class="modal-input" placeholder="Enter contact nickname">
-            <div class="modal-buttons">
-                <button id="createContactBtn" class="btn">CREATE</button>
-                <button id="cancelAddBtn" class="btn secondary">CANCEL</button>
+            <div class="form">
+                <input type="text" id="adminNickname" placeholder="Your nickname" maxlength="20">
+                <input type="password" id="adminPin" placeholder="Create 4-6 digit PIN" minlength="4" maxlength="6">
+                <button id="createAdminBtn" class="btn primary">Create Admin Account</button>
             </div>
         </div>
     </div>
 
-    <!-- Invite Link Modal -->
-    <div id="inviteLinkModal" class="modal">
-        <div class="modal-content box-glow">
-            <div class="modal-header terminal-glow">Invitation Link</div>
-            <p>Share this link with your contact:</p>
-            <div id="inviteLink" class="invite-link"></div>
-            <div class="modal-buttons">
-                <button id="copyInviteBtn" class="btn">COPY LINK</button>
-                <button id="closeInviteBtn" class="btn secondary">CLOSE</button>
+    <!-- Login Screen (main landing page) -->
+    <div id="loginScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h1>🔒 Secure Chat</h1>
+                <p id="loginMessage">Enter your PIN</p>
+            </div>
+            
+            <div class="form">
+                <input type="password" id="pinInput" placeholder="PIN" minlength="4" maxlength="6" disabled>
+                <button id="loginBtn" class="btn primary" disabled>Login</button>
             </div>
         </div>
     </div>
+
+    <!-- Invitation Setup Screen (for magic link users) -->
+    <div id="inviteSetupScreen" class="screen" style="display: none;">
+        <div class="container">
+            <div class="header">
+                <h1>🎉 Welcome!</h1>
+                <p id="inviteMessage">You've been invited to join</p>
+            </div>
+            
+            <div class="form">
+                <input type="text" id="inviteNickname" placeholder="Your nickname" maxlength="20">
+                <input type="password" id="invitePin" placeholder="Create 4-6 digit PIN" minlength="4" maxlength="6">
+                <button id="completeInviteBtn" class="btn primary">Join Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat App -->
+    <div id="chatApp" class="app" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="user-info">
+                <span id="userDisplay"></span>
+                <button id="logoutBtn" class="btn secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h3>Contacts</h3>
+                    <div class="actions">
+                        <button id="createInviteBtn" class="btn icon" title="Create Invitation" style="display: none;">📧</button>
+                        <button id="addContactBtn" class="btn icon" title="Add Contact">➕</button>
+                    </div>
+                </div>
+                <div id="contactsList" class="contacts"></div>
+            </aside>
+
+            <!-- Chat Area -->
+            <section class="chat">
+                <div class="chat-header" id="chatHeader" style="display: none;">
+                    <h3 id="chatTitle">Select a contact</h3>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome">
+                        <h3>🔒 Secure Chat</h3>
+                        <p>End-to-end encrypted messaging</p>
+                        <p>Select a contact to start chatting</p>
+                    </div>
+                </div>
+                <div class="chat-input" id="chatInput" style="display: none;">
+                    <input type="text" id="messageInput" placeholder="Type a message...">
+                    <button id="sendBtn" class="btn primary">Send</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addContactModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Add Contact</h3>
+            <input type="text" id="contactNameInput" placeholder="Contact name">
+            <div class="modal-actions">
+                <button id="createContactBtn" class="btn primary">Add</button>
+                <button onclick="document.getElementById('addContactModal').style.display='none'" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast"></div>
 
     <script src="script.js"></script>
 </body>

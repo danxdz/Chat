@@ -34,6 +34,20 @@ function resetAllData() {
     console.log('✅ All data cleared. Refresh page to start fresh.');
 }
 
+// Toast notification system
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    
+    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
 // Random nickname generator
 function generateRandomNickname() {
     const adjectives = [
@@ -61,27 +75,87 @@ function showAdminCreation() {
     console.log('=== showAdminCreation() called ===');
     hideAllScreens();
     
-    const setupScreen = document.getElementById('setupScreen');
-    if (setupScreen) {
-        setupScreen.style.display = 'block';
-        
-        // Set admin creation message
-        const setupMessage = document.getElementById('setupMessage');
-        if (setupMessage) {
-            setupMessage.innerHTML = `
-                <h2>🔧 Create Admin Account</h2>
-                <p>Set up the first admin account to manage this secure chat system.</p>
-            `;
-        }
+    const adminScreen = document.getElementById('adminSetupScreen');
+    if (adminScreen) {
+        adminScreen.style.display = 'flex';
         
         // Set random nickname
         const randomNickname = generateRandomNickname();
-        document.getElementById('nicknameInput').value = randomNickname;
+        document.getElementById('adminNickname').value = randomNickname;
         
-        setupScreenEventListeners();
+        setupAdminEventListeners();
         console.log('Admin creation screen displayed');
     } else {
-        console.error('Setup screen not found!');
+        console.error('Admin setup screen not found!');
+    }
+}
+
+function setupAdminEventListeners() {
+    const createBtn = document.getElementById('createAdminBtn');
+    const adminPin = document.getElementById('adminPin');
+    
+    if (createBtn) {
+        createBtn.onclick = () => {
+            console.log('Create admin button clicked');
+            createAdminAccount();
+        };
+    }
+    
+    if (adminPin) {
+        adminPin.onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                createAdminAccount();
+            }
+        };
+        adminPin.focus();
+    }
+}
+
+function createAdminAccount() {
+    console.log('Creating admin account...');
+    
+    const nickname = document.getElementById('adminNickname').value.trim();
+    const pin = document.getElementById('adminPin').value;
+    
+    // Validate
+    if (!nickname) {
+        showToast('Please enter a nickname', 'error');
+        return;
+    }
+    
+    if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
+        showToast('PIN must be 4-6 digits', 'error');
+        return;
+    }
+    
+    if (!app.sodium) {
+        showToast('Encryption not ready. Please refresh.', 'error');
+        return;
+    }
+    
+    try {
+        // Create admin account
+        const derived = hashPIN(pin);
+        const hashedPIN = app.sodium.to_hex(derived);
+        
+        // Save admin data
+        localStorage.setItem('userPIN', hashedPIN);
+        localStorage.setItem('userNickname', nickname);
+        localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('adminAccountCreated', 'true');
+        
+        console.log('Admin account created successfully');
+        showToast('Admin account created!', 'success');
+        
+        // Auto-login
+        setTimeout(() => {
+            hideAllScreens();
+            authenticateUser(pin);
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Failed to create admin account:', error);
+        showToast('Failed to create account', 'error');
     }
 }
 
@@ -237,19 +311,44 @@ function showInviteError(message) {
 
 // Helper function to hide all screens
 function hideAllScreens() {
-    console.log('Hiding all screens');
-    const screens = ['masterSetupScreen', 'setupScreen', 'loginScreen'];
+    console.log('=== hideAllScreens() called ===');
     
+    // Hide all main screens
+    const screens = ['adminSetupScreen', 'loginScreen', 'inviteSetupScreen', 'chatApp'];
     screens.forEach(screenId => {
         const screen = document.getElementById(screenId);
         if (screen) {
             screen.style.display = 'none';
-        } else {
-            console.warn(`Screen ${screenId} not found`);
+            console.log(`Hidden screen: ${screenId}`);
         }
     });
+}
+
+function showLoginScreen() {
+    console.log('=== showLoginScreen() called ===');
+    hideAllScreens();
     
-    // Keep appContainer as is
+    const loginScreen = document.getElementById('loginScreen');
+    if (loginScreen) {
+        loginScreen.style.display = 'flex';
+        
+        // Enable form and focus PIN input
+        const pinInput = document.getElementById('pinInput');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        if (pinInput) {
+            pinInput.disabled = false;
+            pinInput.focus();
+        }
+        
+        if (loginBtn) {
+            loginBtn.disabled = false;
+        }
+        
+        console.log('Login screen displayed');
+    } else {
+        console.error('Login screen not found!');
+    }
 }
 
 // Setup screen functions
