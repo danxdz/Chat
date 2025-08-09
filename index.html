@@ -3,11 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Secure P2P Chat Application" />
     <title>Secure Chat</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/sodium.js" as="script" />
+    
+    <!-- Load sodium first, synchronously -->
     <script src="/sodium.js"></script>
+    
+    <!-- Fallback styles for loading -->
+    <style>
+      body { 
+        margin: 0; 
+        padding: 0; 
+        font-family: Arial, sans-serif; 
+        background: #1a1a1a; 
+        color: white; 
+      }
+      .loading { 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100vh; 
+        font-size: 1.2rem; 
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading">Loading Secure Chat...</div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -12,20 +12,30 @@ function App() {
 
   const initApp = async () => {
     try {
-      // Wait for sodium to load - libsodium-wrappers might need more time
+      // Wait for libsodium to load and create sodium wrapper
       let attempts = 0
-      while (!window.sodium && attempts < 50) {
+      while (!window.libsodium && !window.sodium && attempts < 50) {
         await new Promise(resolve => setTimeout(resolve, 100))
         attempts++
       }
 
-      if (!window.sodium) {
-        setError('Sodium not loaded after 5 seconds')
+      let sodium = window.sodium || window.libsodium
+      if (!sodium) {
+        setError('Sodium library not loaded after 5 seconds')
         return
       }
 
-      await window.sodium.ready
-      setSodium(window.sodium)
+      // If we have libsodium, wait for it to be ready
+      if (sodium.ready) {
+        await sodium.ready
+      }
+      
+      // Create a simple wrapper if needed
+      if (!sodium.randombytes_buf && sodium.randomBytes) {
+        sodium.randombytes_buf = sodium.randomBytes
+      }
+      
+      setSodium(sodium)
 
       // Check if user is logged in
       const savedUser = localStorage.getItem('currentUser')
