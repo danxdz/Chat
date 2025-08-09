@@ -4,9 +4,6 @@ export const initSodium = async (maxAttempts = 30) => {
   // Check if sodium is already available and ready
   if (window.sodium && window.sodium.ready) {
     console.log('✅ Libsodium already ready!')
-    console.log('Available functions:', Object.keys(window.sodium).filter(key => 
-      typeof window.sodium[key] === 'function'
-    ).slice(0, 10))
     return window.sodium
   }
   
@@ -20,18 +17,12 @@ export const initSodium = async (maxAttempts = 30) => {
         // Wait for sodium to be ready
         if (window.sodium.ready) {
           console.log('✅ Libsodium ready!')
-          console.log('Available functions:', Object.keys(window.sodium).filter(key => 
-            typeof window.sodium[key] === 'function'
-          ).slice(0, 10))
           return window.sodium
         } else {
           // Wait for sodium.ready promise if it exists
           await window.sodium.ready
           if (window.sodium.ready) {
             console.log('✅ Libsodium ready after await!')
-            console.log('Available functions:', Object.keys(window.sodium).filter(key => 
-              typeof window.sodium[key] === 'function'
-            ).slice(0, 10))
             return window.sodium
           }
         }
@@ -55,35 +46,16 @@ export const hashPIN = (pin, sodium) => {
   }
   
   console.log('🔐 Checking sodium functions...')
-  console.log('Sodium object keys:', Object.keys(sodium).slice(0, 20))
   console.log('crypto_pwhash available:', typeof sodium.crypto_pwhash)
   console.log('to_hex available:', typeof sodium.to_hex)
   
-  // If crypto_pwhash is not available, use a simpler hash approach
+  // Require libsodium functions - no fallbacks for demo
   if (typeof sodium.crypto_pwhash !== 'function') {
-    console.log('🔐 Using simple hash instead of crypto_pwhash')
-    
-    // Use a simple but secure approach with crypto_hash
-    if (typeof sodium.crypto_hash === 'function') {
-      const pinBytes = new TextEncoder().encode(pin + 'securechat_salt_v1')
-      const hash = sodium.crypto_hash(pinBytes)
-      return sodium.to_hex ? sodium.to_hex(hash) : Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('')
-    }
-    
-    // Fallback to crypto_generichash if available
-    if (typeof sodium.crypto_generichash === 'function') {
-      const pinBytes = new TextEncoder().encode(pin + 'securechat_salt_v1')
-      const hash = sodium.crypto_generichash(32, pinBytes)
-      return sodium.to_hex ? sodium.to_hex(hash) : Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('')
-    }
-    
-    // If no sodium crypto functions work, use Web Crypto API as fallback
-    console.log('🔐 Falling back to Web Crypto API')
-    return hashPINWithWebCrypto(pin)
+    throw new Error('❌ Libsodium crypto_pwhash not available. Please ensure sodium.js is properly loaded.')
   }
   
   if (typeof sodium.to_hex !== 'function') {
-    throw new Error('Sodium to_hex function not available')
+    throw new Error('❌ Libsodium to_hex not available. Please ensure sodium.js is properly loaded.')
   }
   
   console.log('🔐 Hashing PIN with crypto_pwhash...')
@@ -105,21 +77,8 @@ export const hashPIN = (pin, sodium) => {
     return sodium.to_hex(result)
   } catch (error) {
     console.error('❌ PIN hashing failed:', error)
-    // Fallback to simple hash
-    return hashPINWithWebCrypto(pin)
+    throw new Error('Failed to hash PIN with libsodium: ' + error.message)
   }
-}
-
-// Fallback function using Web Crypto API
-const hashPINWithWebCrypto = async (pin) => {
-  console.log('🔐 Using Web Crypto API for PIN hashing')
-  
-  const encoder = new TextEncoder()
-  const data = encoder.encode(pin + 'securechat_salt_v1')
-  
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 export const generateRandomNickname = () => {

@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
 import { initSodium } from './utils/crypto'
-import AdminSetup from './components/AdminSetup'
+import UserSetup from './components/UserSetup'
 import Login from './components/Login'
-import InviteSetup from './components/InviteSetup'
 import Chat from './components/Chat'
 import Toast from './components/Toast'
 import './App.css'
 
 function App() {
-  const [currentView, setCurrentView] = useState('loading') // loading, adminSetup, login, inviteSetup, chat
+  const [currentView, setCurrentView] = useState('loading') // loading, userSetup, login, chat
   const [user, setUser] = useState(null)
   const [toast, setToast] = useState(null)
   const [sodium, setSodium] = useState(null)
@@ -20,42 +19,26 @@ function App() {
   const initializeApp = async () => {
     try {
       console.log('🔧 Initializing app...')
-      console.log('Window sodium available:', !!window.sodium)
-      
-      if (window.sodium) {
-        console.log('Sodium object keys:', Object.keys(window.sodium).slice(0, 20))
-        console.log('Sodium ready value:', window.sodium.ready)
-      }
       
       // Initialize libsodium
       const sodiumInstance = await initSodium()
       console.log('Sodium instance received:', !!sodiumInstance)
       setSodium(sodiumInstance)
       
-      // Check URL for invitation
-      const urlParams = new URLSearchParams(window.location.search)
-      const inviteToken = urlParams.get('invite')
+      // Check if user account exists (only flag in plaintext)
+      const userExists = localStorage.getItem('hasAccount') === 'true'
       
-      if (inviteToken) {
-        console.log('🎊 Magic link detected')
-        setCurrentView('inviteSetup')
-        return
-      }
-      
-      // Check if admin account exists
-      const adminExists = localStorage.getItem('adminAccountCreated') === 'true'
-      
-      if (!adminExists) {
-        console.log('🔧 No admin exists - showing admin creation')
-        setCurrentView('adminSetup')
+      if (!userExists) {
+        console.log('🔧 No user exists - showing user setup')
+        setCurrentView('userSetup')
       } else {
-        console.log('✅ Admin exists - showing login')
+        console.log('✅ User exists - showing login')
         setCurrentView('login')
       }
       
     } catch (error) {
       console.error('Failed to initialize app:', error)
-      showToast('Failed to initialize app: ' + error.message, 'error')
+      showToast('Failed to initialize app', 'error')
     }
   }
 
@@ -64,7 +47,7 @@ function App() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleAdminCreated = (userData) => {
+  const handleUserCreated = (userData) => {
     setUser(userData)
     setCurrentView('chat')
     showToast(`Welcome ${userData.nickname}!`, 'success')
@@ -74,12 +57,6 @@ function App() {
     setUser(userData)
     setCurrentView('chat')
     showToast(`Welcome back ${userData.nickname}!`, 'success')
-  }
-
-  const handleInviteComplete = (userData) => {
-    setUser(userData)
-    setCurrentView('chat')
-    showToast(`Welcome ${userData.nickname}!`, 'success')
   }
 
   const handleLogout = () => {
@@ -102,10 +79,10 @@ function App() {
 
   return (
     <div className="app">
-      {currentView === 'adminSetup' && (
-        <AdminSetup 
+      {currentView === 'userSetup' && (
+        <UserSetup 
           sodium={sodium}
-          onAdminCreated={handleAdminCreated}
+          onUserCreated={handleUserCreated}
           showToast={showToast}
         />
       )}
@@ -114,14 +91,6 @@ function App() {
         <Login 
           sodium={sodium}
           onLogin={handleLogin}
-          showToast={showToast}
-        />
-      )}
-      
-      {currentView === 'inviteSetup' && (
-        <InviteSetup 
-          sodium={sodium}
-          onComplete={handleInviteComplete}
           showToast={showToast}
         />
       )}

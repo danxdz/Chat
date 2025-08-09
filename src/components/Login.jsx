@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { hashPIN } from '../utils/crypto'
+import { initStorage, encryptedGetItem } from '../utils/storage'
 import './Screen.css'
 
 function Login({ sodium, onLogin, showToast }) {
@@ -24,7 +25,19 @@ function Login({ sodium, onLogin, showToast }) {
     setLoading(true)
     
     try {
-      // Verify PIN - handle both sync and async hashPIN
+      // Initialize storage with the PIN attempt
+      initStorage(sodium, pin)
+      
+      // Try to decrypt and verify PIN
+      const storedPIN = encryptedGetItem('userPIN')
+      
+      if (!storedPIN) {
+        showToast('Unable to decrypt user data. Check your PIN.', 'error')
+        setLoading(false)
+        return
+      }
+      
+      // Verify PIN by comparing hashes
       let hashedPIN
       try {
         const result = hashPIN(pin, sodium)
@@ -41,21 +54,23 @@ function Login({ sodium, onLogin, showToast }) {
         return
       }
       
-      const storedPIN = localStorage.getItem('userPIN')
-      
       if (hashedPIN !== storedPIN) {
         showToast('Invalid PIN', 'error')
         setLoading(false)
         return
       }
       
-      // Load user data
-      const nickname = localStorage.getItem('userNickname')
-      const isAdmin = localStorage.getItem('isAdmin') === 'true'
+      // Load user data from encrypted storage
+      const nickname = encryptedGetItem('userNickname')
+      
+      if (!nickname) {
+        showToast('Failed to load user data', 'error')
+        setLoading(false)
+        return
+      }
       
       const userData = {
         nickname,
-        isAdmin,
         pin // Keep for session
       }
       
@@ -63,7 +78,7 @@ function Login({ sodium, onLogin, showToast }) {
       
     } catch (error) {
       console.error('Login failed:', error)
-      showToast('Login failed', 'error')
+      showToast('Login failed. Check your PIN.', 'error')
       setLoading(false)
     }
   }
