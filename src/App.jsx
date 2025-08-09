@@ -289,6 +289,14 @@ function ChatScreen({ user, onLogout }) {
     setMessages(savedMessages)
   }, [user.id])
 
+  useEffect(() => {
+    // Auto-scroll to bottom when messages change
+    const messagesDiv = document.getElementById('messages-container')
+    if (messagesDiv) {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight
+    }
+  }, [messages, activeContact])
+
   const generateInvite = () => {
     const invite = btoa(JSON.stringify({ 
       from: user.nickname, 
@@ -434,12 +442,15 @@ function ChatScreen({ user, onLogout }) {
         {/* Chat Area */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Messages */}
-          <div style={{ 
-            flex: 1, 
-            padding: '1rem', 
-            overflowY: 'auto',
-            background: '#1a1a1a'
-          }}>
+          <div 
+            id="messages-container"
+            style={{ 
+              flex: 1, 
+              padding: '1rem', 
+              overflowY: 'auto',
+              background: '#1a1a1a'
+            }}
+          >
             {filteredMessages.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#888', marginTop: '2rem' }}>
                 No messages yet. Start the conversation!
