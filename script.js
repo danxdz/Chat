@@ -15,8 +15,11 @@ let app = {
     nickname: null
 };
 
-// One-time admin PIN - change this for your deployment
-const ADMIN_PIN = "123456"; // This will work only once, then gets disabled
+// Master admin setup key - only for the very first user (change this!)
+const MASTER_SETUP_KEY = "ADMIN-FIRST-USER-2024"; // This creates the first admin account
+
+// Invitation system configuration
+const INVITATION_EXPIRY_HOURS = 24; // Invitations expire after 24 hours
 
 // Random nickname generator
 function generateRandomNickname() {
@@ -40,11 +43,119 @@ function generateRandomNickname() {
     return `${adj}${noun}${num}`;
 }
 
-// Setup screen functions
-function showSetupScreen() {
-    // Hide login screen and show setup screen
+// Master setup functions
+function showMasterSetup() {
+    hideAllScreens();
+    document.getElementById('masterSetupScreen').style.display = 'block';
+    setupMasterEventListeners();
+}
+
+function setupMasterEventListeners() {
+    const verifyBtn = document.getElementById('verifyMasterBtn');
+    const masterKeyInput = document.getElementById('masterKeyInput');
+    
+    if (verifyBtn) {
+        verifyBtn.addEventListener('click', verifyMasterKey);
+    }
+    
+    if (masterKeyInput) {
+        masterKeyInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verifyMasterKey();
+            }
+        });
+    }
+}
+
+function verifyMasterKey() {
+    const masterKey = document.getElementById('masterKeyInput').value;
+    
+    if (masterKey !== MASTER_SETUP_KEY) {
+        showMasterError('Invalid master setup key');
+        return;
+    }
+    
+    // Mark as first user and proceed to setup
+    localStorage.setItem('isFirstUser', 'true');
+    showSetupScreen('🎉 Master key verified! Set up your admin account:');
+}
+
+function showMasterError(message) {
+    const errorDiv = document.getElementById('masterError');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Invitation system functions
+function handleInviteLink(inviteToken) {
+    try {
+        // Decode and validate invitation
+        const invitation = validateInvitation(inviteToken);
+        if (!invitation) {
+            showInviteError('Invalid or expired invitation link');
+            return;
+        }
+        
+        // Store invitation data temporarily
+        sessionStorage.setItem('pendingInvitation', JSON.stringify(invitation));
+        
+        // Show setup screen for invited user
+        showSetupScreen(`🎉 Welcome! You've been invited by ${invitation.inviterName}`);
+        
+    } catch (error) {
+        console.error('Invitation error:', error);
+        showInviteError('Failed to process invitation link');
+    }
+}
+
+function validateInvitation(token) {
+    try {
+        // Decode base64 token
+        const decoded = atob(token);
+        const invitation = JSON.parse(decoded);
+        
+        // Check expiration
+        const now = Date.now();
+        const expiresAt = invitation.expiresAt;
+        
+        if (now > expiresAt) {
+            return null; // Expired
+        }
+        
+        return invitation;
+    } catch (error) {
+        return null; // Invalid token
+    }
+}
+
+function showInviteError(message) {
+    // Create error display or redirect to main page with error
+    alert(message);
+    window.location.href = window.location.pathname; // Remove query params
+}
+
+// Helper function to hide all screens
+function hideAllScreens() {
+    document.getElementById('masterSetupScreen').style.display = 'none';
+    document.getElementById('setupScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'none';
+    // Keep appContainer as is
+}
+
+// Setup screen functions
+function showSetupScreen(customMessage = null) {
+    hideAllScreens();
     document.getElementById('setupScreen').style.display = 'block';
+    
+    // Set custom message if provided
+    if (customMessage) {
+        document.getElementById('setupMessage').textContent = customMessage;
+    }
     
     // Generate and set random nickname
     const randomNickname = generateRandomNickname();
@@ -112,20 +223,59 @@ function completeSetup() {
         localStorage.setItem('userNickname', finalNickname);
         app.nickname = finalNickname;
         
+        // Check if this is the first user (admin)
+        const isFirstUser = localStorage.getItem('isFirstUser') === 'true';
+        if (isFirstUser) {
+            localStorage.setItem('isAdmin', 'true');
+            localStorage.setItem('adminUserId', app.sodium.to_hex(app.sodium.randombytes_buf(4)));
+        }
+        
+        // Handle invitation if present
+        const pendingInvitation = sessionStorage.getItem('pendingInvitation');
+        if (pendingInvitation) {
+            const invitation = JSON.parse(pendingInvitation);
+            // Add inviter as contact automatically
+            addInviterAsContact(invitation);
+            sessionStorage.removeItem('pendingInvitation');
+        }
+        
         // Mark setup as complete
         localStorage.setItem('setupComplete', 'true');
         
-        showSetupSuccess('Setup complete! Logging you in...');
+        const welcomeMsg = isFirstUser ? 'Admin account created! Logging you in...' : 'Account created! Logging you in...';
+        showSetupSuccess(welcomeMsg);
         
         setTimeout(() => {
             // Hide setup screen and authenticate
-            document.getElementById('setupScreen').style.display = 'none';
+            hideAllScreens();
             authenticateUser(pin);
         }, 1000);
         
     } catch (error) {
         console.error('Setup error:', error);
         showSetupError('Setup failed. Please try again.');
+    }
+}
+
+function addInviterAsContact(invitation) {
+    try {
+        // Load existing contacts
+        const contacts = JSON.parse(localStorage.getItem('contacts') || '{}');
+        
+        // Add inviter as contact
+        contacts[invitation.inviterId] = {
+            name: invitation.inviterName,
+            publicKey: invitation.inviterPublicKey,
+            addedAt: Date.now(),
+            addedVia: 'invitation'
+        };
+        
+        // Save contacts
+        localStorage.setItem('contacts', JSON.stringify(contacts));
+        
+        console.log(`Added ${invitation.inviterName} as contact via invitation`);
+    } catch (error) {
+        console.error('Failed to add inviter as contact:', error);
     }
 }
 
@@ -437,25 +587,42 @@ function updateLoginPrompt(message) {
 }
 
 function enableLoginForm() {
-    const hasUserPIN = localStorage.getItem('userPIN') !== null;
-    const adminPinUsed = localStorage.getItem('adminPinUsed') === 'true';
+    const hasAnyUsers = localStorage.getItem('userPIN') !== null;
+    const isFirstUser = localStorage.getItem('isFirstUser') === 'true';
     
-    // Check if we should show setup screen instead
-    if (!hasUserPIN && !adminPinUsed) {
-        showSetupScreen();
+    // Check URL for invitation
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteToken = urlParams.get('invite');
+    
+    if (inviteToken) {
+        // User came via invitation link
+        handleInviteLink(inviteToken);
         return;
     }
     
+    if (!hasAnyUsers && !isFirstUser) {
+        // No users exist and not first user - show master setup
+        showMasterSetup();
+        return;
+    }
+    
+    if (!hasAnyUsers && isFirstUser) {
+        // First user needs to complete setup
+        showSetupScreen('Welcome! Complete your admin account setup.');
+        return;
+    }
+    
+    // Regular login for existing users
+    showLoginScreen();
+}
+
+function showLoginScreen() {
     const loginPrompt = document.getElementById('loginPrompt');
     const pinInput = document.getElementById('pinInput');
     const loginBtn = document.getElementById('loginBtn');
     
     if (loginPrompt && pinInput && loginBtn) {
-        if (!hasUserPIN && adminPinUsed) {
-            loginPrompt.textContent = '✅ Enter your new 4-6 digit PIN';
-        } else {
-            loginPrompt.textContent = '✅ Enter your 4-6 digit PIN';
-        }
+        loginPrompt.textContent = '✅ Enter your PIN to access secure chat';
         loginPrompt.style.color = '#2ECC40';
         
         setTimeout(() => {
@@ -463,14 +630,7 @@ function enableLoginForm() {
             pinInput.disabled = false;
             loginBtn.disabled = false;
             pinInput.focus();
-            console.log('=== LOGIN FORM ENABLED ===');
         }, 1500);
-    } else {
-        console.error('Could not find login form elements:', {
-            loginPrompt: !!loginPrompt,
-            pinInput: !!pinInput, 
-            loginBtn: !!loginBtn
-        });
     }
 }
 
@@ -561,40 +721,6 @@ function login() {
         return;
     }
 
-    // Check for admin PIN (one-time use)
-    const adminPinUsed = localStorage.getItem('adminPinUsed') === 'true';
-    if (pin === ADMIN_PIN && !adminPinUsed) {
-        console.log('Admin PIN used - setting up new user');
-        localStorage.setItem('adminPinUsed', 'true');
-        localStorage.removeItem('userPIN'); // Clear any existing PIN
-        localStorage.removeItem('failedAttempts');
-        localStorage.removeItem('lockoutUntil');
-        
-        // Set a flag to indicate we're in PIN setup mode
-        sessionStorage.setItem('settingNewPIN', 'true');
-        
-        showLoginSuccess('Admin access granted! Set your new PIN.');
-        setTimeout(() => {
-            // Reset form for new PIN entry
-            document.getElementById('pinInput').value = '';
-            updateLoginPrompt('Enter your new 4-6 digit PIN');
-        }, 1000);
-        return;
-    }
-    
-    // Check if we're in PIN setup mode (after admin PIN)
-    const settingNewPIN = sessionStorage.getItem('settingNewPIN') === 'true';
-    if (settingNewPIN) {
-        // User is setting their new PIN after admin access
-        const derived = hashPIN(pin);
-        const hashedPIN = app.sodium.to_hex(derived);
-        localStorage.setItem('userPIN', hashedPIN);
-        sessionStorage.removeItem('settingNewPIN');
-        showLoginSuccess('PIN set successfully!');
-        setTimeout(() => authenticateUser(pin), 300);
-        return;
-    }
-
     const now = Date.now();
     const lockoutUntil = parseInt(localStorage.getItem('lockoutUntil') || '0', 10);
     if (now < lockoutUntil) {
@@ -608,12 +734,7 @@ function login() {
         const hashedPIN = app.sodium.to_hex(derived);
         const storedPIN = localStorage.getItem('userPIN');
 
-        if (storedPIN === null) {
-            // Setting new PIN
-            localStorage.setItem('userPIN', hashedPIN);
-            showLoginSuccess('PIN set successfully!');
-            setTimeout(() => authenticateUser(pin), 300);
-        } else if (storedPIN === hashedPIN) {
+        if (storedPIN === hashedPIN) {
             // Correct PIN
             localStorage.removeItem('failedAttempts');
             authenticateUser(pin);
@@ -645,16 +766,25 @@ function authenticateUser(pin) {
     // Load nickname
     app.nickname = localStorage.getItem('userNickname') || generateRandomNickname();
 
+    // Check if user is admin
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    app.isAdmin = isAdmin;
+
     // Derive storage encryption key for at-rest encryption of messages
     app.storageKey = deriveKeyFromPIN(pin);
     
     // Show main app
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('setupScreen').style.display = 'none';
+    hideAllScreens();
     document.getElementById('appContainer').style.display = 'grid';
     
-    // Update user info with nickname
-    document.getElementById('userInfo').textContent = `${app.nickname} (ID: ${app.userId})`;
+    // Update user info with nickname and admin status
+    const adminBadge = isAdmin ? ' 👑' : '';
+    document.getElementById('userInfo').textContent = `${app.nickname}${adminBadge} (ID: ${app.userId})`;
+    
+    // Show admin features if user is admin
+    if (isAdmin) {
+        document.getElementById('createInviteBtn').style.display = 'inline-block';
+    }
     
     // Load and display contacts
     loadEncryptedContacts();
@@ -663,7 +793,8 @@ function authenticateUser(pin) {
     // Process any pending invites
     processPendingInvite();
     
-    showSystemMessage(`Welcome back, ${app.nickname}!`);
+    const welcomeMsg = isAdmin ? `Welcome back, Admin ${app.nickname}!` : `Welcome back, ${app.nickname}!`;
+    showSystemMessage(welcomeMsg);
 }
 
 function generateKeypair() {

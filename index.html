@@ -10,11 +10,34 @@
     <script src="sodium.js"></script>
 </head>
 <body>
-    <!-- Setup Screen (for new users) -->
+    <!-- Master Setup Screen (first time only) -->
+    <div id="masterSetupScreen" class="login-screen" style="display: none;">
+        <h1 class="login-title terminal-glow">🔐 P2P Secure Chat</h1>
+        <div class="login-form box-glow">
+            <p>First time setup - Create the admin account</p>
+            
+            <label for="masterKeyInput">Enter master setup key:</label>
+            <input type="password" id="masterKeyInput" class="pin-input" placeholder="Master setup key">
+            <br><br>
+            <button id="verifyMasterBtn" class="btn">Create Admin Account</button>
+            
+            <div class="info-box">
+                <p><strong>ℹ️ Admin privileges:</strong></p>
+                <ul>
+                    <li>Create invitation links</li>
+                    <li>Manage contacts</li>
+                    <li>Secure P2P communication</li>
+                </ul>
+            </div>
+        </div>
+        <div id="masterError" class="error-message"></div>
+    </div>
+
+    <!-- Setup Screen (for invited users) -->
     <div id="setupScreen" class="login-screen" style="display: none;">
         <h1 class="login-title terminal-glow">Welcome to P2P Secure Chat</h1>
         <div class="login-form box-glow">
-            <p>Set up your profile to get started</p>
+            <p id="setupMessage">Set up your profile to get started</p>
             
             <label for="nicknameInput">Choose a nickname (optional):</label>
             <input type="text" id="nicknameInput" class="pin-input" maxlength="20" placeholder="Or keep the random one">
@@ -52,6 +75,7 @@
             </div>
             <div class="contacts-list" id="contactsList"></div>
             <button class="add-contact-btn" id="addContactBtn">+ Add Contact</button>
+            <button class="add-contact-btn" id="createInviteBtn" style="display: none;">📧 Create Invite</button>
         </div>
 
         <!-- Chat Header -->
