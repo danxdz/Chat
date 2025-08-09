@@ -592,7 +592,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         await initSodium();
         loadContacts();
         setupEventListeners();
-        checkInviteInURL();
         console.log('App initialized successfully');
     } catch (error) {
         console.error('App initialization failed:', error);
