@@ -57,26 +57,36 @@ function setupMasterEventListeners() {
     const masterKeyInput = document.getElementById('masterKeyInput');
     
     if (verifyBtn) {
-        verifyBtn.addEventListener('click', verifyMasterKey);
+        verifyBtn.onclick = () => {
+            console.log('Master verify button clicked');
+            verifyMasterKey();
+        };
     }
     
     if (masterKeyInput) {
-        masterKeyInput.addEventListener('keypress', (e) => {
+        masterKeyInput.onkeypress = (e) => {
             if (e.key === 'Enter') {
+                console.log('Enter key pressed in master key input');
                 verifyMasterKey();
             }
-        });
+        };
+        // Focus the input
+        masterKeyInput.focus();
     }
 }
 
 function verifyMasterKey() {
+    console.log('verifyMasterKey() called');
     const masterKey = document.getElementById('masterKeyInput').value;
+    console.log('Master key entered:', masterKey ? 'provided' : 'empty');
     
     if (masterKey !== MASTER_SETUP_KEY) {
+        console.log('Master key invalid');
         showMasterError('Invalid master setup key');
         return;
     }
     
+    console.log('Master key verified, setting up first user');
     // Mark as first user and proceed to setup
     localStorage.setItem('isFirstUser', 'true');
     showSetupScreen('🎉 Master key verified! Set up your admin account:');
@@ -222,31 +232,43 @@ function setupScreenEventListeners() {
     // Random nickname button
     const randomBtn = document.getElementById('randomNicknameBtn');
     if (randomBtn) {
-        randomBtn.addEventListener('click', () => {
+        // Remove existing listeners to prevent duplicates
+        randomBtn.onclick = null;
+        randomBtn.onclick = () => {
             document.getElementById('nicknameInput').value = generateRandomNickname();
-        });
+        };
     }
     
     // Complete setup button
     const setupBtn = document.getElementById('completeSetupBtn');
     if (setupBtn) {
-        setupBtn.addEventListener('click', completeSetup);
+        // Remove existing listeners to prevent duplicates
+        setupBtn.onclick = null;
+        setupBtn.onclick = () => {
+            console.log('Setup button clicked');
+            completeSetup();
+        };
     }
     
     // Enter key on PIN input
     const setupPinInput = document.getElementById('setupPinInput');
     if (setupPinInput) {
-        setupPinInput.addEventListener('keypress', (e) => {
+        setupPinInput.onkeypress = (e) => {
             if (e.key === 'Enter') {
+                console.log('Enter key pressed in PIN input');
                 completeSetup();
             }
-        });
+        };
     }
 }
 
 function completeSetup() {
+    console.log('completeSetup() called');
+    
     const nickname = document.getElementById('nicknameInput').value.trim();
     const pin = document.getElementById('setupPinInput').value;
+    
+    console.log('Setup data:', { nickname, pin: pin ? `${pin.length} digits` : 'empty' });
     
     // Validate PIN
     if (pin.length < 4 || pin.length > 6) {
@@ -265,27 +287,45 @@ function completeSetup() {
         return;
     }
     
+    if (!app.sodium) {
+        showSetupError('Encryption library not ready. Please refresh and try again.');
+        console.error('app.sodium not available');
+        return;
+    }
+    
     try {
+        console.log('Starting setup process...');
+        
         // Set the PIN
         const derived = hashPIN(pin);
+        if (!derived) {
+            throw new Error('Failed to derive PIN hash');
+        }
+        
         const hashedPIN = app.sodium.to_hex(derived);
         localStorage.setItem('userPIN', hashedPIN);
+        console.log('PIN saved');
         
         // Set the nickname
         const finalNickname = nickname || generateRandomNickname();
         localStorage.setItem('userNickname', finalNickname);
         app.nickname = finalNickname;
+        console.log('Nickname set:', finalNickname);
         
         // Check if this is the first user (admin)
         const isFirstUser = localStorage.getItem('isFirstUser') === 'true';
+        console.log('Is first user:', isFirstUser);
+        
         if (isFirstUser) {
             localStorage.setItem('isAdmin', 'true');
             localStorage.setItem('adminUserId', app.sodium.to_hex(app.sodium.randombytes_buf(4)));
+            console.log('Admin privileges granted');
         }
         
         // Handle invitation if present
         const pendingInvitation = sessionStorage.getItem('pendingInvitation');
         if (pendingInvitation) {
+            console.log('Processing invitation...');
             const invitation = JSON.parse(pendingInvitation);
             // Add inviter as contact automatically
             addInviterAsContact(invitation);
@@ -296,11 +336,13 @@ function completeSetup() {
         
         // Mark setup as complete
         localStorage.setItem('setupComplete', 'true');
+        console.log('Setup marked as complete');
         
         const welcomeMsg = isFirstUser ? 'Admin account created! Logging you in...' : 'Account created! Logging you in...';
         showSetupSuccess(welcomeMsg);
         
         setTimeout(() => {
+            console.log('Authenticating user...');
             // Hide setup screen and authenticate
             hideAllScreens();
             authenticateUser(pin);
@@ -308,7 +350,7 @@ function completeSetup() {
         
     } catch (error) {
         console.error('Setup error:', error);
-        showSetupError('Setup failed. Please try again.');
+        showSetupError(`Setup failed: ${error.message}`);
     }
 }
 
