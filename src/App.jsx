@@ -467,18 +467,18 @@ function ChatScreen({ user, onLogout }) {
         if (window.Gun) {
           console.log('🔫 Gun.js available, initializing P2P network...')
           
-          try {
-            const gunInstance = Gun({
-              peers: [
-                'https://gun-manhattan.herokuapp.com/gun',
-                'https://gun-us.herokuapp.com/gun'
-              ],
-              localStorage: false,
-              radisk: true,
-              WebRTC: {
-                off: false
-              }
-            })
+                     try {
+             const gunInstance = Gun({
+               peers: [
+                 'https://gun-manhattan.herokuapp.com/gun',
+                 'https://gun-us.herokuapp.com/gun'
+               ],
+               localStorage: false,
+               radisk: false, // Disable radisk to avoid "dare" function issues
+               WebRTC: {
+                 off: false
+               }
+             })
             
             setGun(gunInstance)
             setInitStatus('gun_initialized')
@@ -509,26 +509,57 @@ function ChatScreen({ user, onLogout }) {
     console.log('🔄 Setting up Gun.js message listeners...')
 
     try {
-      gun.get(`chat_${user.id}`).map().on((messageData, messageKey) => {
-        if (messageData && messageData.id && messageData.text) {
-          console.log('📨 Received P2P message:', messageData)
+      // Wait a bit for Gun.js to fully initialize
+      setTimeout(() => {
+        try {
+          // Use a simpler approach to avoid the "dare is not a function" error
+          const chatRef = gun.get(`chat_${user.id}`)
           
-          setMessages(prev => {
-            const exists = prev.find(m => m.id === messageData.id)
-            if (exists) return prev
-            
-            const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
-            localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-            return updated
-          })
-        }
-      })
+          // Subscribe to new messages
+          chatRef.map().on((messageData, messageKey) => {
+            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
+              console.log('📨 Received P2P message:', messageData)
+              
+              setMessages(prev => {
+                const exists = prev.find(m => m.id === messageData.id)
+                if (exists) return prev
+                
+                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                return updated
+              })
+            }
+          }, { change: true })
 
-      // Set connection status for contacts
-      contacts.forEach(contact => {
-        setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
-        console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
-      })
+          // Also listen to general chat
+          gun.get('general_chat').map().on((messageData, messageKey) => {
+            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text && messageData.toId === 'general') {
+              console.log('📨 Received general P2P message:', messageData)
+              
+              setMessages(prev => {
+                const exists = prev.find(m => m.id === messageData.id)
+                if (exists) return prev
+                
+                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                return updated
+              })
+            }
+          }, { change: true })
+
+          console.log('✅ Gun.js listeners setup successfully')
+          
+          // Set connection status for contacts
+          contacts.forEach(contact => {
+            setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
+            console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
+          })
+
+        } catch (innerError) {
+          console.error('❌ Error in Gun.js listener setup:', innerError)
+          setChatError('P2P listener setup failed: ' + innerError.message)
+        }
+      }, 500) // Small delay to ensure Gun.js is fully ready
 
     } catch (error) {
       console.error('❌ Error setting up Gun.js listeners:', error)
