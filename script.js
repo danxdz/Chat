@@ -23,6 +23,17 @@ const MASTER_SETUP_KEY = "ADMIN-FIRST-USER-2024"; // This creates the first admi
 // Invitation system configuration
 const INVITATION_EXPIRY_HOURS = 24; // Invitations expire after 24 hours
 
+// Development helper - clear all data (call from console if needed)
+function resetAllData() {
+    console.log('🧹 Clearing all localStorage data...');
+    const keys = ['userPIN', 'isFirstUser', 'isAdmin', 'userNickname', 'setupComplete', 'invitations', 'contacts'];
+    keys.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`Cleared: ${key}`);
+    });
+    console.log('✅ All data cleared. Refresh page to start fresh.');
+}
+
 // Random nickname generator
 function generateRandomNickname() {
     const adjectives = [
@@ -47,8 +58,17 @@ function generateRandomNickname() {
 
 // Master setup functions
 function showMasterSetup() {
+    console.log('=== showMasterSetup() called ===');
     hideAllScreens();
-    document.getElementById('masterSetupScreen').style.display = 'block';
+    
+    const masterScreen = document.getElementById('masterSetupScreen');
+    if (masterScreen) {
+        masterScreen.style.display = 'block';
+        console.log('Master setup screen displayed');
+    } else {
+        console.error('Master setup screen not found!');
+    }
+    
     setupMasterEventListeners();
 }
 
@@ -204,9 +224,18 @@ function showInviteError(message) {
 
 // Helper function to hide all screens
 function hideAllScreens() {
-    document.getElementById('masterSetupScreen').style.display = 'none';
-    document.getElementById('setupScreen').style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'none';
+    console.log('Hiding all screens');
+    const screens = ['masterSetupScreen', 'setupScreen', 'loginScreen'];
+    
+    screens.forEach(screenId => {
+        const screen = document.getElementById(screenId);
+        if (screen) {
+            screen.style.display = 'none';
+        } else {
+            console.warn(`Screen ${screenId} not found`);
+        }
+    });
+    
     // Keep appContainer as is
 }
 
@@ -584,7 +613,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         await initSodium();
         loadContacts();
         setupEventListeners();
-        checkInviteInURL();
+        
+        console.log('About to call enableLoginForm...');
+        // THIS IS THE KEY - Call enableLoginForm to show the right screen
+        enableLoginForm();
+        
         console.log('App initialized successfully');
     } catch (error) {
         console.error('App initialization failed:', error);
@@ -632,7 +665,7 @@ async function initSodium() {
         const testBytes = app.sodium.randombytes_buf(32);
         console.log('Sodium test passed - generated', testBytes.length, 'bytes');
         
-        enableLoginForm();
+        // NOTE: enableLoginForm() will be called from main initialization
         
     } catch (error) {
         console.error('Sodium initialization failed:', error);
@@ -858,31 +891,44 @@ function updateLoginPrompt(message) {
 }
 
 function enableLoginForm() {
+    console.log('=== enableLoginForm() called ===');
+    
     const hasAnyUsers = localStorage.getItem('userPIN') !== null;
     const isFirstUser = localStorage.getItem('isFirstUser') === 'true';
+    
+    console.log('State check:', {
+        hasAnyUsers,
+        isFirstUser,
+        userPIN: localStorage.getItem('userPIN') ? 'exists' : 'null',
+        isFirstUserFlag: localStorage.getItem('isFirstUser')
+    });
     
     // Check URL for invitation
     const urlParams = new URLSearchParams(window.location.search);
     const inviteToken = urlParams.get('invite');
     
     if (inviteToken) {
+        console.log('Invitation detected, handling invite link');
         // User came via invitation link
         handleInviteLink(inviteToken);
         return;
     }
     
     if (!hasAnyUsers && !isFirstUser) {
+        console.log('First time visit - showing master setup');
         // No users exist and not first user - show master setup
         showMasterSetup();
         return;
     }
     
     if (!hasAnyUsers && isFirstUser) {
+        console.log('First user completing setup - showing setup screen');
         // First user needs to complete setup
         showSetupScreen('Welcome! Complete your admin account setup.');
         return;
     }
     
+    console.log('Existing user - showing login screen');
     // Regular login for existing users
     showLoginScreen();
 }
