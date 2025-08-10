@@ -635,22 +635,67 @@ function ChatScreen({ user, onLogout }) {
         if (window.Gun) {
           console.log('🔫 Gun.js available, initializing P2P network...')
           
-                     try {
-             const gunInstance = Gun({
-               peers: [
-                 'https://gun-manhattan.herokuapp.com/gun',
-                 'https://gun-us.herokuapp.com/gun'
-               ],
-               localStorage: false,
-               radisk: false, // Disable radisk to avoid "dare" function issues
-               WebRTC: {
-                 off: false
-               }
-             })
+          try {
+            // Multiple relay servers for better connectivity
+            const gunPeers = [
+              'https://gun-manhattan.herokuapp.com/gun',
+              'https://gun-us.herokuapp.com/gun',
+              'https://gunjs.herokuapp.com/gun',
+              'https://mvp-gun.herokuapp.com/gun',
+              'https://peer.gundb.io/gun',
+              'wss://gun-manhattan.herokuapp.com/gun',
+              'wss://gun-us.herokuapp.com/gun'
+            ]
+            
+            console.log('🌐 Attempting to connect to Gun.js peers:', gunPeers)
+            
+            const gunInstance = Gun({
+              peers: gunPeers,
+              localStorage: false,
+              radisk: false, // Disable radisk to avoid "dare" function issues
+              WebRTC: {
+                off: false
+              },
+              // Add connection timeout and retry settings
+              timeout: 10000,
+              retry: 3
+            })
+            
+            // Test connectivity
+            setTimeout(() => {
+              console.log('🔍 Testing Gun.js connectivity...')
+              const testKey = `connectivity_test_${Date.now()}`
+              const testData = { 
+                test: true, 
+                timestamp: Date.now(),
+                user: user.nickname 
+              }
+              
+              try {
+                gunInstance.get(testKey).put(testData)
+                console.log('✅ Gun.js write test successful')
+                
+                // Try to read back
+                gunInstance.get(testKey).once((data) => {
+                  if (data && data.test) {
+                    console.log('✅ Gun.js read test successful - P2P working!')
+                    setInitStatus('gun_connected_verified')
+                  } else {
+                    console.log('⚠️ Gun.js read test failed - connectivity issues')
+                    setInitStatus('gun_connected_partial')
+                    setChatError('P2P connectivity limited - some features may not work')
+                  }
+                })
+              } catch (testError) {
+                console.error('❌ Gun.js connectivity test failed:', testError)
+                setInitStatus('gun_connected_no_test')
+                setChatError('P2P connectivity test failed')
+              }
+            }, 2000)
             
             setGun(gunInstance)
             setInitStatus('gun_initialized')
-            console.log('✅ Gun.js P2P network initialized')
+            console.log('✅ Gun.js P2P network initialized with multiple peers')
           } catch (error) {
             console.error('❌ Failed to initialize Gun.js:', error)
             setChatError('P2P network initialization failed: ' + error.message)
@@ -1297,6 +1342,82 @@ function ChatScreen({ user, onLogout }) {
     ])
   }
 
+  const testGunConnectivity = () => {
+    setTestLogs(prev => [...prev, '🔍 Testing Gun.js server connectivity...'])
+    
+    if (!gun) {
+      setTestLogs(prev => [...prev, '❌ Gun.js not initialized'])
+      return
+    }
+
+    // Test each peer individually
+    const gunPeers = [
+      'https://gun-manhattan.herokuapp.com/gun',
+      'https://gun-us.herokuapp.com/gun',
+      'https://gunjs.herokuapp.com/gun',
+      'https://mvp-gun.herokuapp.com/gun',
+      'https://peer.gundb.io/gun'
+    ]
+
+    setTestLogs(prev => [...prev, `🌐 Testing ${gunPeers.length} Gun.js relay servers...`])
+
+    gunPeers.forEach((peer, index) => {
+      try {
+        // Create individual Gun instance to test each peer
+        const testGun = Gun([peer])
+        const testKey = `peer_test_${index}_${Date.now()}`
+        const testData = { 
+          peerIndex: index,
+          peer: peer,
+          timestamp: Date.now(),
+          user: user.nickname
+        }
+
+        testGun.get(testKey).put(testData)
+        
+        setTimeout(() => {
+          testGun.get(testKey).once((data) => {
+            if (data && data.peerIndex === index) {
+              setTestLogs(prev => [...prev, `✅ Peer ${index + 1} (${peer}): CONNECTED`])
+            } else {
+              setTestLogs(prev => [...prev, `❌ Peer ${index + 1} (${peer}): NO RESPONSE`])
+            }
+          })
+        }, 1000 * (index + 1)) // Stagger tests
+        
+      } catch (error) {
+        setTestLogs(prev => [...prev, `❌ Peer ${index + 1} (${peer}): ERROR - ${error.message}`])
+      }
+    })
+
+    // Overall connectivity test
+    setTimeout(() => {
+      const overallTestKey = `overall_test_${Date.now()}`
+      const overallTestData = {
+        test: 'overall_connectivity',
+        timestamp: Date.now(),
+        user: user.nickname
+      }
+
+      try {
+        gun.get(overallTestKey).put(overallTestData)
+        setTestLogs(prev => [...prev, '📡 Overall connectivity test sent'])
+
+        setTimeout(() => {
+          gun.get(overallTestKey).once((data) => {
+            if (data && data.test === 'overall_connectivity') {
+              setTestLogs(prev => [...prev, '✅ OVERALL CONNECTIVITY: WORKING'])
+            } else {
+              setTestLogs(prev => [...prev, '❌ OVERALL CONNECTIVITY: FAILED'])
+            }
+          })
+        }, 2000)
+      } catch (error) {
+        setTestLogs(prev => [...prev, `❌ Overall connectivity test failed: ${error.message}`])
+      }
+    }, 5000)
+  }
+
   return (
     <div className="app">
       {/* Header */}
@@ -1762,6 +1883,15 @@ function ChatScreen({ user, onLogout }) {
                 padding: '0.6rem'
               }}>
                 📡 Send Test Message
+              </button>
+              <button onClick={testGunConnectivity} className="btn" style={{ 
+                background: '#dc3545', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
+                🌐 Test Gun Servers
               </button>
               <button onClick={createVisualTestUsers} className="btn" style={{ 
                 background: '#ffc107', 
