@@ -1088,25 +1088,56 @@ function ChatScreen({ user, onLogout }) {
     // Test 5: REAL contact management
     try {
       const originalContactCount = contacts.length
+      logs.push(`📊 Contact test starting - current count: ${originalContactCount}`)
+      
       const testContact = {
         id: Date.now() + Math.random(),
         nickname: 'RealTestContact',
         addedAt: Date.now()
       }
 
-      // Actually add contact
+      logs.push(`🧪 Creating test contact: ${testContact.nickname}`)
+
+      // Actually add contact using the same method as the UI
       const updatedContacts = [...contacts, testContact]
+      
+      // Update state and localStorage atomically
       setContacts(updatedContacts)
       localStorage.setItem(`contacts_${user.id}`, JSON.stringify(updatedContacts))
+      
+      logs.push(`💾 Contact saved to localStorage key: contacts_${user.id}`)
 
-      // Verify it was added
-      const storedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
-      const contactAdded = storedContacts.some(c => c.nickname === 'RealTestContact')
+      // Wait a moment for state to update
+      setTimeout(() => {
+        try {
+          // Verify it was added
+          const storedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
+          const contactAdded = storedContacts.some(c => c.nickname === 'RealTestContact')
+          const newCount = storedContacts.length
 
-      results.contacts = contactAdded
-      logs.push(`✅ Contact management: ${results.contacts ? 'PASS' : 'FAIL'}`)
-      logs.push(`  - Original count: ${originalContactCount}`)
-      logs.push(`  - Contact added: ${contactAdded}`)
+          results.contacts = contactAdded && newCount > originalContactCount
+          
+          setTestLogs(prev => [...prev,
+            `✅ Contact management: ${results.contacts ? 'PASS' : 'FAIL'}`,
+            `  - Original count: ${originalContactCount}`,
+            `  - New count: ${newCount}`,
+            `  - Contact found: ${contactAdded}`,
+            `  - Contact ID: ${testContact.id}`
+          ])
+          
+          if (!results.contacts) {
+            setTestLogs(prev => [...prev,
+              `🔍 Debug info:`,
+              `  - Stored contacts: ${JSON.stringify(storedContacts.map(c => c.nickname))}`,
+              `  - Looking for: RealTestContact`
+            ])
+          }
+        } catch (verifyError) {
+          results.contacts = false
+          setTestLogs(prev => [...prev, `❌ Contact verification failed: ${verifyError.message}`])
+        }
+      }, 500)
+
     } catch (e) {
       results.contacts = false
       logs.push(`❌ Contact REAL test: FAIL - ${e.message}`)
