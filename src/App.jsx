@@ -685,13 +685,19 @@ function ChatScreen({ user, onLogout }) {
           personalChatRef.map().on((messageData, messageKey) => {
             if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
               console.log('📨 Received P2P message on personal channel:', messageData)
+              console.log('💾 Message structure:', JSON.stringify(messageData, null, 2))
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === messageData.id)
-                if (exists) return prev
+                if (exists) {
+                  console.log('⚠️ Duplicate message ignored:', messageData.id)
+                  return prev
+                }
                 
+                console.log('💾 Adding message to state - count before:', prev.length)
                 const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                console.log('💾 Added message to state - count after:', updated.length)
                 return updated
               })
             }
@@ -923,7 +929,15 @@ function ChatScreen({ user, onLogout }) {
         (m.fromId === user.id && m.toId === activeContact.id) ||
         (m.fromId === activeContact.id && m.toId === user.id)
       )
-    : messages.filter(m => m.toId === 'general')
+    : messages.filter(m => 
+        m.toId === 'general' || 
+        m.toId === 'General' || 
+        !m.toId || 
+        m.realTest || 
+        m.deviceTest || 
+        m.isPing ||
+        (m.to && (m.to === 'General' || m.to === 'general'))
+      )
 
   useEffect(() => {
     // Load messages from all users for general chat
@@ -1535,9 +1549,48 @@ function ChatScreen({ user, onLogout }) {
                 <small>Chat functionality may be limited</small>
               </div>
             )}
+            
+            {/* Debug info */}
+            <div style={{ 
+              background: '#333', 
+              padding: '0.5rem', 
+              margin: '0.5rem', 
+              borderRadius: '4px', 
+              fontSize: '0.7rem',
+              color: '#888',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>📊 Total: {messages.length} | Filtered: {filteredMessages.length} | Active: {activeContact?.nickname || 'General'}</span>
+              <button 
+                onClick={() => {
+                  console.log('🔍 ALL MESSAGES:', messages)
+                  console.log('🔍 FILTERED MESSAGES:', filteredMessages)
+                  console.log('🔍 ACTIVE CONTACT:', activeContact)
+                  alert(`Total messages: ${messages.length}\nFiltered: ${filteredMessages.length}\nCheck console for details`)
+                }}
+                style={{
+                  background: '#666',
+                  border: 'none',
+                  color: 'white',
+                  padding: '0.2rem 0.4rem',
+                  borderRadius: '3px',
+                  fontSize: '0.6rem',
+                  cursor: 'pointer'
+                }}
+              >
+                🔍 Debug
+              </button>
+            </div>
+            
             {filteredMessages.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#888', marginTop: '2rem', fontSize: '0.9rem' }}>
                 No messages yet. Start the conversation!
+                <br />
+                <small style={{ fontSize: '0.7rem' }}>
+                  Debug: {messages.length} total messages stored
+                </small>
               </div>
             ) : (
               filteredMessages.map(message => (
@@ -1553,6 +1606,9 @@ function ChatScreen({ user, onLogout }) {
                 }}>
                   <div style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.25rem' }}>
                     {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
+                    {message.realTest && <span style={{ color: '#ffc107' }}> [TEST]</span>}
+                    {message.deviceTest && <span style={{ color: '#28a745' }}> [DEVICE]</span>}
+                    {message.isPing && <span style={{ color: '#17a2b8' }}> [PING]</span>}
                   </div>
                   <div>{message.text}</div>
                 </div>
