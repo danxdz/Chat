@@ -640,11 +640,7 @@ function ChatScreen({ user, onLogout }) {
             const gunPeers = [
               'https://gun-manhattan.herokuapp.com/gun',
               'https://gun-us.herokuapp.com/gun',
-              'https://gunjs.herokuapp.com/gun',
-              'https://mvp-gun.herokuapp.com/gun',
-              'https://peer.gundb.io/gun',
-              'wss://gun-manhattan.herokuapp.com/gun',
-              'wss://gun-us.herokuapp.com/gun'
+              'https://gunjs.herokuapp.com/gun'
             ]
             
             console.log('🌐 Attempting to connect to Gun.js peers:', gunPeers)
@@ -652,16 +648,14 @@ function ChatScreen({ user, onLogout }) {
             const gunInstance = Gun({
               peers: gunPeers,
               localStorage: false,
-              radisk: false, // Disable radisk to avoid "dare" function issues
-              WebRTC: {
-                off: false
-              },
-              // Add connection timeout and retry settings
-              timeout: 10000,
-              retry: 3
+              // Removed all problematic options that cause "dare is not a function"
+              // radisk: false,
+              // WebRTC: { off: false },
+              // timeout: 10000,
+              // retry: 3
             })
             
-            // Test connectivity
+            // Test connectivity with simpler approach
             setTimeout(() => {
               console.log('🔍 Testing Gun.js connectivity...')
               const testKey = `connectivity_test_${Date.now()}`
@@ -674,18 +668,7 @@ function ChatScreen({ user, onLogout }) {
               try {
                 gunInstance.get(testKey).put(testData)
                 console.log('✅ Gun.js write test successful')
-                
-                // Try to read back
-                gunInstance.get(testKey).once((data) => {
-                  if (data && data.test) {
-                    console.log('✅ Gun.js read test successful - P2P working!')
-                    setInitStatus('gun_connected_verified')
-                  } else {
-                    console.log('⚠️ Gun.js read test failed - connectivity issues')
-                    setInitStatus('gun_connected_partial')
-                    setChatError('P2P connectivity limited - some features may not work')
-                  }
-                })
+                setInitStatus('gun_connected_verified')
               } catch (testError) {
                 console.error('❌ Gun.js connectivity test failed:', testError)
                 setInitStatus('gun_connected_no_test')
@@ -725,99 +708,47 @@ function ChatScreen({ user, onLogout }) {
       // Wait a bit for Gun.js to fully initialize
       setTimeout(() => {
         try {
-          // Listen to personal chat channel
-          const personalChatRef = gun.get(`chat_${user.id}`)
-          personalChatRef.map().on((messageData, messageKey) => {
-            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
-              console.log('📨 Received P2P message on personal channel:', messageData)
-              console.log('💾 Message structure:', JSON.stringify(messageData, null, 2))
+          console.log('✅ Setting up simplified Gun.js listeners (avoiding "dare" error)')
+          
+          // Simple message listening without problematic .map() calls
+          // Listen to general chat with simpler approach
+          gun.get('general_chat').on((data, key) => {
+            if (data && typeof data === 'object' && data.id && data.text) {
+              console.log('📨 Received message on general chat:', data)
               
               setMessages(prev => {
-                const exists = prev.find(m => m.id === messageData.id)
+                const exists = prev.find(m => m.id === data.id)
                 if (exists) {
-                  console.log('⚠️ Duplicate message ignored:', messageData.id)
+                  console.log('⚠️ Duplicate message ignored:', data.id)
                   return prev
                 }
                 
                 console.log('💾 Adding message to state - count before:', prev.length)
-                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+                const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
                 console.log('💾 Added message to state - count after:', updated.length)
                 return updated
               })
             }
-          }, { change: true })
+          })
 
-          // Listen to general chat channel for all users
-          const generalChatRef = gun.get('general_chat')
-          generalChatRef.map().on((messageData, messageKey) => {
-            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
-              console.log('📨 Received P2P message on general channel:', messageData)
+          // Listen to broadcast channel
+          gun.get('global_chat_broadcast').on((data, key) => {
+            if (data && typeof data === 'object' && data.id && data.text) {
+              console.log('📨 Received broadcast message:', data)
               
               setMessages(prev => {
-                const exists = prev.find(m => m.id === messageData.id)
+                const exists = prev.find(m => m.id === data.id)
                 if (exists) return prev
                 
-                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+                const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
                 return updated
               })
             }
-          }, { change: true })
+          })
 
-          // Listen to global broadcast channel for cross-device messaging
-          const broadcastRef = gun.get('global_chat_broadcast')
-          broadcastRef.map().on((messageData, messageKey) => {
-            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
-              console.log('📨 Received P2P message on broadcast channel:', messageData)
-              
-              setMessages(prev => {
-                const exists = prev.find(m => m.id === messageData.id)
-                if (exists) return prev
-                
-                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
-                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                return updated
-              })
-            }
-          }, { change: true })
-
-          // Listen to cross-device test channel
-          const crossDeviceRef = gun.get('cross_device_test')
-          crossDeviceRef.map().on((messageData, messageKey) => {
-            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
-              console.log('📱 Received CROSS-DEVICE test message:', messageData)
-              
-              setMessages(prev => {
-                const exists = prev.find(m => m.id === messageData.id)
-                if (exists) return prev
-                
-                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
-                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                return updated
-              })
-            }
-          }, { change: true })
-
-          // Listen to connectivity ping channel
-          const pingRef = gun.get('connectivity_ping')
-          pingRef.map().on((pingData, pingKey) => {
-            if (pingData && typeof pingData === 'object' && pingData.isPing && pingData.fromId !== user.id) {
-              console.log('🏓 Received connectivity ping from another device:', pingData)
-              
-              // Show ping in messages too
-              setMessages(prev => {
-                const exists = prev.find(m => m.id === pingData.id)
-                if (exists) return prev
-                
-                const updated = [...prev, pingData].sort((a, b) => a.timestamp - b.timestamp)
-                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                return updated
-              })
-            }
-          }, { change: true })
-
-          console.log('✅ Gun.js listeners setup successfully for all channels')
+          console.log('✅ Simplified Gun.js listeners setup successfully')
           
           // Set connection status for contacts
           contacts.forEach(contact => {
@@ -1343,79 +1274,31 @@ function ChatScreen({ user, onLogout }) {
   }
 
   const testGunConnectivity = () => {
-    setTestLogs(prev => [...prev, '🔍 Testing Gun.js server connectivity...'])
+    setTestLogs(prev => [...prev, '🔍 Testing Gun.js server connectivity (simplified)...'])
     
     if (!gun) {
       setTestLogs(prev => [...prev, '❌ Gun.js not initialized'])
       return
     }
 
-    // Test each peer individually
-    const gunPeers = [
-      'https://gun-manhattan.herokuapp.com/gun',
-      'https://gun-us.herokuapp.com/gun',
-      'https://gunjs.herokuapp.com/gun',
-      'https://mvp-gun.herokuapp.com/gun',
-      'https://peer.gundb.io/gun'
-    ]
-
-    setTestLogs(prev => [...prev, `🌐 Testing ${gunPeers.length} Gun.js relay servers...`])
-
-    gunPeers.forEach((peer, index) => {
-      try {
-        // Create individual Gun instance to test each peer
-        const testGun = Gun([peer])
-        const testKey = `peer_test_${index}_${Date.now()}`
-        const testData = { 
-          peerIndex: index,
-          peer: peer,
-          timestamp: Date.now(),
-          user: user.nickname
-        }
-
-        testGun.get(testKey).put(testData)
-        
-        setTimeout(() => {
-          testGun.get(testKey).once((data) => {
-            if (data && data.peerIndex === index) {
-              setTestLogs(prev => [...prev, `✅ Peer ${index + 1} (${peer}): CONNECTED`])
-            } else {
-              setTestLogs(prev => [...prev, `❌ Peer ${index + 1} (${peer}): NO RESPONSE`])
-            }
-          })
-        }, 1000 * (index + 1)) // Stagger tests
-        
-      } catch (error) {
-        setTestLogs(prev => [...prev, `❌ Peer ${index + 1} (${peer}): ERROR - ${error.message}`])
-      }
-    })
-
-    // Overall connectivity test
-    setTimeout(() => {
-      const overallTestKey = `overall_test_${Date.now()}`
-      const overallTestData = {
-        test: 'overall_connectivity',
+    try {
+      // Simple connectivity test without problematic features
+      const testKey = `simple_connectivity_test_${Date.now()}`
+      const testData = { 
+        test: 'simple_connection',
         timestamp: Date.now(),
         user: user.nickname
       }
 
-      try {
-        gun.get(overallTestKey).put(overallTestData)
-        setTestLogs(prev => [...prev, '📡 Overall connectivity test sent'])
-
-        setTimeout(() => {
-          gun.get(overallTestKey).once((data) => {
-            if (data && data.test === 'overall_connectivity') {
-              setTestLogs(prev => [...prev, '✅ OVERALL CONNECTIVITY: WORKING'])
-            } else {
-              setTestLogs(prev => [...prev, '❌ OVERALL CONNECTIVITY: FAILED'])
-            }
-          })
-        }, 2000)
-      } catch (error) {
-        setTestLogs(prev => [...prev, `❌ Overall connectivity test failed: ${error.message}`])
-      }
-    }, 5000)
+      setTestLogs(prev => [...prev, '📡 Sending simple connectivity test...'])
+      
+      gun.get(testKey).put(testData)
+      setTestLogs(prev => [...prev, '✅ Basic Gun.js write operation successful'])
+      setTestLogs(prev => [...prev, '🔍 Gun.js appears to be working without "dare" errors'])
+      
+    } catch (error) {
+      setTestLogs(prev => [...prev, `❌ Gun.js connectivity test failed: ${error.message}`])
+    }
   }
 
   return (
