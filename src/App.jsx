@@ -1193,14 +1193,17 @@ function ChatScreen({ user, onLogout }) {
     <div className="app">
       {/* Header */}
       <div style={{ 
-        padding: '1rem', 
+        padding: '0.5rem 1rem', 
         background: '#2d2d2d', 
         borderBottom: '1px solid #555',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
+        minHeight: '60px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '200px' }}>
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowUserSwitcher(!showUserSwitcher)}
@@ -1208,10 +1211,11 @@ function ChatScreen({ user, onLogout }) {
                 background: '#444',
                 border: 'none',
                 color: 'white',
-                padding: '0.5rem 1rem',
+                padding: '0.4rem 0.8rem',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '0.9rem'
+                fontSize: '0.8rem',
+                whiteSpace: 'nowrap'
               }}
             >
               👤 {user.nickname} ▼
@@ -1277,139 +1281,183 @@ function ChatScreen({ user, onLogout }) {
             )}
           </div>
           
-          <span style={{ color: '#888' }}>
-            {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
-          </span>
-          <span style={{ fontSize: '0.8rem', color: '#666', marginLeft: '1rem' }}>
-            Status: {initStatus}
-          </span>
+          <div style={{ flex: 1, fontSize: '0.8rem' }}>
+            <div style={{ color: '#888' }}>
+              {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#666' }}>
+              Status: {initStatus}
+            </div>
+          </div>
         </div>
-        <div>
+        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
           <button 
             onClick={() => setShowInvite(!showInvite)} 
             className="btn" 
-            style={{ marginRight: '1rem', background: '#0066cc', padding: '0.5rem 1rem' }}
+            style={{ 
+              marginRight: '0', 
+              background: '#0066cc', 
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.8rem',
+              minHeight: '36px'
+            }}
           >
             📤 Invite
           </button>
           <button 
             onClick={() => setShowTests(!showTests)}
             className="btn" 
-            style={{ marginRight: '1rem', background: '#28a745', padding: '0.5rem 1rem' }}
+            style={{ 
+              marginRight: '0', 
+              background: '#28a745', 
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.8rem',
+              minHeight: '36px'
+            }}
           >
             🧪 Tests
           </button>
           <button 
             onClick={onLogout} 
             className="btn" 
-            style={{ background: '#dc3545', padding: '0.5rem 1rem' }}
+            style={{ 
+              background: '#dc3545', 
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.8rem',
+              minHeight: '36px'
+            }}
           >
             Logout
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 80px)' }}>
+      <div style={{ display: 'flex', height: 'calc(100vh - 60px)', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
         {/* Sidebar */}
         <div style={{ 
-          width: '250px', 
+          width: window.innerWidth < 768 ? '100%' : '250px',
+          height: window.innerWidth < 768 ? '120px' : 'auto',
           background: '#333', 
-          borderRight: '1px solid #555',
-          padding: '1rem'
+          borderRight: window.innerWidth < 768 ? 'none' : '1px solid #555',
+          borderBottom: window.innerWidth < 768 ? '1px solid #555' : 'none',
+          padding: '0.5rem',
+          overflowY: 'auto'
         }}>
-          <h3 style={{ margin: '0 0 1rem 0', color: '#fff' }}>Contacts</h3>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.9rem' }}>Contacts</h3>
           
-          <div 
-            onClick={() => setActiveContact(null)}
-            style={{
-              padding: '0.75rem',
-              background: !activeContact ? '#0066cc' : '#444',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginBottom: '0.5rem',
-              color: '#fff'
-            }}
-          >
-            💬 General Chat
+          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setActiveContact(null)}
+              style={{
+                padding: '0.4rem 0.6rem',
+                background: !activeContact ? '#0066cc' : '#444',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: '#fff',
+                border: 'none',
+                fontSize: '0.8rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              💬 General
+            </button>
+
+            {contacts.map(contact => {
+              const status = connectionStatus.get(contact.id) || 'disconnected'
+              const statusIcon = status === 'connected' ? '🟢' : status === 'connecting' ? '🟡' : '🔴'
+              
+              return (
+                <button
+                  key={contact.id}
+                  onClick={() => setActiveContact(contact)}
+                  style={{
+                    padding: '0.4rem 0.6rem',
+                    background: activeContact?.id === contact.id ? '#0066cc' : '#444',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: '#fff',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <span>{statusIcon}</span>
+                  <span>{contact.nickname}</span>
+                </button>
+              )
+            })}
+
+            <button 
+              onClick={addContact}
+              style={{
+                padding: '0.4rem 0.6rem',
+                background: '#28a745',
+                border: 'none',
+                color: 'white',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ➕ Add
+            </button>
           </div>
-
-          {contacts.map(contact => {
-            const status = connectionStatus.get(contact.id) || 'disconnected'
-            const statusIcon = status === 'connected' ? '🟢' : status === 'connecting' ? '🟡' : '🔴'
-            
-            return (
-              <div 
-                key={contact.id}
-                onClick={() => setActiveContact(contact)}
-                style={{
-                  padding: '0.75rem',
-                  background: activeContact?.id === contact.id ? '#0066cc' : '#444',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  marginBottom: '0.5rem',
-                  color: '#fff',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>👤 {contact.nickname}</span>
-                <span title={`WebRTC: ${status}`}>{statusIcon}</span>
-              </div>
-            )
-          })}
-
-          <button 
-            onClick={addContact}
-            className="btn"
-            style={{ width: '100%', marginTop: '1rem', background: '#28a745' }}
-          >
-            ➕ Add Contact
-          </button>
         </div>
 
         {/* Chat Area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          height: window.innerWidth < 768 ? 'calc(100vh - 180px)' : 'auto'
+        }}>
           {/* Messages */}
           <div 
             id="messages-container"
             style={{ 
               flex: 1, 
-              padding: '1rem', 
+              padding: '0.5rem', 
               overflowY: 'auto',
-              background: '#1a1a1a'
+              background: '#1a1a1a',
+              fontSize: '0.9rem'
             }}
-                      >
-              {chatError && (
-                <div style={{ 
-                  background: '#dc3545', 
-                  color: 'white', 
-                  padding: '1rem', 
-                  borderRadius: '4px', 
-                  margin: '1rem',
-                  textAlign: 'center'
-                }}>
-                  ⚠️ {chatError}
-                  <br />
-                  <small>Chat functionality may be limited</small>
-                </div>
-              )}
-              {filteredMessages.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#888', marginTop: '2rem' }}>
+          >
+            {chatError && (
+              <div style={{ 
+                background: '#dc3545', 
+                color: 'white', 
+                padding: '0.5rem', 
+                borderRadius: '4px', 
+                margin: '0.5rem',
+                textAlign: 'center',
+                fontSize: '0.8rem'
+              }}>
+                ⚠️ {chatError}
+                <br />
+                <small>Chat functionality may be limited</small>
+              </div>
+            )}
+            {filteredMessages.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#888', marginTop: '2rem', fontSize: '0.9rem' }}>
                 No messages yet. Start the conversation!
               </div>
             ) : (
               filteredMessages.map(message => (
                 <div key={message.id} style={{ 
-                  marginBottom: '1rem',
-                  padding: '0.75rem',
+                  marginBottom: '0.5rem',
+                  padding: '0.5rem',
                   background: message.fromId === user.id ? '#0066cc' : '#444',
                   borderRadius: '8px',
-                  maxWidth: '70%',
+                  maxWidth: '85%',
                   marginLeft: message.fromId === user.id ? 'auto' : '0',
-                  marginRight: message.fromId === user.id ? '0' : 'auto'
+                  marginRight: message.fromId === user.id ? '0' : 'auto',
+                  fontSize: '0.9rem'
                 }}>
-                  <div style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.25rem' }}>
                     {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
                   </div>
                   <div>{message.text}</div>
@@ -1420,11 +1468,12 @@ function ChatScreen({ user, onLogout }) {
 
           {/* Message Input */}
           <form onSubmit={sendMessage} style={{ 
-            padding: '1rem', 
+            padding: '0.5rem', 
             background: '#2d2d2d',
             borderTop: '1px solid #555',
             display: 'flex',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            alignItems: 'stretch'
           }}>
             <input
               type="text"
@@ -1433,18 +1482,26 @@ function ChatScreen({ user, onLogout }) {
               placeholder={`Message ${activeContact?.nickname || 'everyone'}...`}
               style={{
                 flex: 1,
-                padding: '0.75rem',
+                padding: '0.7rem',
                 border: '1px solid #555',
                 borderRadius: '4px',
                 background: '#333',
                 color: 'white',
-                fontSize: '1rem'
+                fontSize: '16px', // Prevent zoom on iOS
+                minHeight: '44px' // Touch-friendly height
               }}
             />
             <button 
               type="submit" 
               className="btn"
-              style={{ background: '#0066cc', padding: '0.75rem 1.5rem' }}
+              style={{ 
+                background: '#0066cc', 
+                padding: '0.7rem 1rem',
+                width: 'auto',
+                margin: 0,
+                fontSize: '0.9rem',
+                minHeight: '44px'
+              }}
             >
               Send
             </button>
@@ -1468,10 +1525,11 @@ function ChatScreen({ user, onLogout }) {
         }}>
           <div style={{
             background: '#2d2d2d',
-            padding: '2rem',
+            padding: window.innerWidth < 480 ? '1rem' : '2rem',
             borderRadius: '8px',
-            width: '90%',
-            maxWidth: '500px'
+            width: '95%',
+            maxWidth: '500px',
+            margin: '1rem'
           }}>
             <h2 style={{ margin: '0 0 1rem 0' }}>🔗 Invite Someone</h2>
             
@@ -1526,23 +1584,43 @@ function ChatScreen({ user, onLogout }) {
         }}>
           <div style={{
             background: '#2d2d2d',
-            padding: '2rem',
+            padding: window.innerWidth < 480 ? '1rem' : '2rem',
             borderRadius: '8px',
-            width: '90%',
+            width: '95%',
             maxWidth: '600px',
-            maxHeight: '80vh',
-            overflow: 'auto'
+            maxHeight: '90vh',
+            overflow: 'auto',
+            margin: '1rem'
           }}>
             <h2 style={{ margin: '0 0 1rem 0' }}>🧪 App Testing Suite</h2>
             
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-              <button onClick={runVisualTests} className="btn" style={{ background: '#0066cc', flex: 1 }}>
+              <button onClick={runVisualTests} className="btn" style={{ 
+                background: '#0066cc', 
+                flex: 1, 
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
                 🔍 Run All Tests
               </button>
-              <button onClick={sendTestMessage} className="btn" style={{ background: '#28a745', flex: 1 }}>
+              <button onClick={sendTestMessage} className="btn" style={{ 
+                background: '#28a745', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
                 📡 Send Test Message
               </button>
-              <button onClick={createVisualTestUsers} className="btn" style={{ background: '#ffc107', color: '#000', flex: 1 }}>
+              <button onClick={createVisualTestUsers} className="btn" style={{ 
+                background: '#ffc107', 
+                color: '#000', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
                 👥 Create Test Users
               </button>
             </div>
