@@ -725,24 +725,37 @@ function ChatScreen({ user, onLogout }) {
 
     // Listen for ALL messages and add them to state
     gun.get('simple_chat_channel').on((data, key) => {
-      console.log('📨 RECEIVED MESSAGE:', data)
+      console.log('📨 RAW DATA:', JSON.stringify(data, null, 2))
+      console.log('📨 DATA TYPE:', typeof data)
+      console.log('📨 HAS ID:', !!data?.id)
+      console.log('📨 HAS TEXT:', !!data?.text)
+      console.log('📨 HAS FROM:', !!data?.from)
       
       if (data && data.id && data.text && data.from) {
-        console.log('✅ Valid message:', data.text, 'from:', data.from)
+        console.log('✅ VALID - Adding to state:', data.text, 'from:', data.from)
         
         setMessages(prev => {
+          console.log('📊 Current messages before add:', prev.length)
+          
           // Check if already exists
           const exists = prev.find(m => m.id === data.id)
           if (exists) {
-            console.log('⚠️ Message already in state')
+            console.log('⚠️ Message already exists, skipping')
             return prev
           }
           
-          console.log('💾 Adding message to state')
+          console.log('💾 Adding NEW message to state')
           const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-          console.log('📊 Total messages now:', updated.length)
+          console.log('📊 Messages after add:', updated.length)
+          console.log('📋 Latest message:', updated[updated.length - 1])
           return updated
         })
+      } else {
+        console.log('❌ INVALID MESSAGE - Missing required fields')
+        console.log('- Data exists:', !!data)
+        console.log('- ID exists:', !!data?.id)
+        console.log('- Text exists:', !!data?.text) 
+        console.log('- From exists:', !!data?.from)
       }
     })
 
