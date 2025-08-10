@@ -1064,10 +1064,46 @@ function App() {
 
   if (currentView === 'login') {
     return (
-      <div className="screen">
-        <div className="form">
-          <h1>🔑 Welcome Back</h1>
-          <p>Enter your PIN to access your account</p>
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: '2rem',
+        background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '400px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+        }}>
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔑</div>
+            <h1 style={{ 
+              fontSize: '1.8rem', 
+              fontWeight: '600', 
+              margin: '0 0 0.5rem 0',
+              color: '#ffffff',
+              letterSpacing: '-0.5px'
+            }}>
+              Welcome Back
+            </h1>
+            <p style={{ 
+              color: 'rgba(255, 255, 255, 0.6)', 
+              fontSize: '1rem',
+              margin: 0,
+              fontWeight: '300'
+            }}>
+              Enter your PIN to continue
+            </p>
+          </div>
+          
           <form onSubmit={(e) => {
             e.preventDefault()
             const pin = e.target.pin.value.trim()
@@ -1085,18 +1121,37 @@ function App() {
               required
               autoFocus
               className="input"
-              style={{ marginBottom: '1rem' }}
+              style={{ marginBottom: '1.5rem' }}
             />
             <button type="submit" className="btn">
               Sign In
             </button>
           </form>
-          <p style={{ textAlign: 'center', margin: '1rem 0', color: '#888' }}>
-            Don't have an account?
-          </p>
-          <p style={{ textAlign: 'center', margin: '1rem 0', color: '#888', fontSize: '0.9rem' }}>
-            Need an account? Ask a friend for an invite link
-          </p>
+          
+          <div style={{ 
+            marginTop: '2rem', 
+            padding: '1.5rem',
+            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <p style={{ 
+              color: 'rgba(255, 255, 255, 0.5)', 
+              fontSize: '0.9rem',
+              margin: '0 0 0.5rem 0',
+              fontWeight: '300'
+            }}>
+              Don't have an account?
+            </p>
+            <p style={{ 
+              color: 'rgba(255, 255, 255, 0.4)', 
+              fontSize: '0.8rem',
+              margin: 0,
+              fontWeight: '300'
+            }}>
+              Ask a friend for an invite link
+            </p>
+          </div>
         </div>
       </div>
     )

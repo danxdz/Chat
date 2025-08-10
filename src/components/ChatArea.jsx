@@ -124,17 +124,20 @@ export default function ChatArea({
         )}
       </div>
 
-      {/* Message Input */}
-      <form onSubmit={onSendMessage} className="message-input-container" style={{ 
-        padding: '0.7rem 0.5rem', 
-        background: '#2d2d2d',
-        borderTop: '1px solid #555',
+      {/* Minimalist Message Input */}
+      <form onSubmit={onSendMessage} style={{ 
+        padding: '1rem', 
+        background: 'rgba(0, 0, 0, 0.3)',
+        backdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         display: 'flex',
-        gap: '0.5rem',
-        alignItems: 'flex-end'
+        gap: '0.8rem',
+        alignItems: 'flex-end',
+        position: 'sticky',
+        bottom: 0,
+        zIndex: 100
       }}>
         <textarea
-          className="message-input"
           value={newMessage}
           onChange={onMessageChange}
           onKeyDown={(e) => {
@@ -147,18 +150,32 @@ export default function ChatArea({
           rows={1}
           style={{
             flex: 1,
-            padding: '0.8rem',
-            border: '1px solid #555',
-            borderRadius: '8px',
-            background: '#333',
-            color: 'white',
-            fontSize: '16px', // Prevent zoom on iOS
-            minHeight: '44px', // Touch-friendly height
+            padding: '1rem 1.2rem',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            color: '#ffffff',
+            fontSize: '16px',
+            fontWeight: '400',
+            minHeight: '48px',
             maxHeight: '120px',
             resize: 'none',
             fontFamily: 'inherit',
             lineHeight: '1.4',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            transition: 'all 0.3s ease',
+            letterSpacing: '0.3px'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+            e.target.style.background = 'rgba(255, 255, 255, 0.08)'
+            e.target.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3)'
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+            e.target.style.background = 'rgba(255, 255, 255, 0.05)'
+            e.target.style.boxShadow = 'none'
           }}
           onInput={(e) => {
             // Auto-resize textarea
@@ -168,19 +185,28 @@ export default function ChatArea({
         />
         <button 
           type="submit" 
-          className="btn send-button"
           style={{ 
-            background: '#0066cc', 
-            padding: '0.8rem 1rem',
-            width: 'auto',
-            margin: 0,
-            fontSize: '0.9rem',
-            minHeight: '44px',
-            borderRadius: '8px',
-            border: 'none',
-            color: 'white',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            padding: '1rem 1.5rem',
+            fontSize: '16px',
+            fontWeight: '500',
+            minHeight: '48px',
             cursor: 'pointer',
-            transition: 'background 0.2s'
+            transition: 'all 0.3s ease',
+            letterSpacing: '0.5px',
+            whiteSpace: 'nowrap'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.15)'
+            e.target.style.transform = 'translateY(-1px)'
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)'
+            e.target.style.transform = 'translateY(0)'
           }}
         >
           Send
