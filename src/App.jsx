@@ -717,48 +717,8 @@ function ChatScreen({ user, onLogout }) {
     }
   }, [initStatus])
 
-  // Simple display - show ALL messages, no complex filtering
-  const displayMessages = messages // Just show everything
-
-  // Gun.js message listener - listen to the messages collection
-  useEffect(() => {
-    if (!gun) return
-
-    console.log('🔧 Setting up Gun.js message listener for chat_messages...')
-
-    // Listen to the messages collection using .map().on()
-    gun.get('chat_messages').map().on((data, key) => {
-      console.log('📨 RAW DATA:', JSON.stringify(data, null, 2))
-      console.log('📨 MESSAGE KEY:', key)
-      
-      if (data && data.id && data.text && data.from) {
-        console.log('✅ VALID - Adding to state:', data.text, 'from:', data.from)
-        
-        setMessages(prev => {
-          console.log('📊 Current messages before add:', prev.length)
-          
-          // Check if already exists
-          const exists = prev.find(m => m.id === data.id)
-          if (exists) {
-            console.log('⚠️ Message already exists, skipping')
-            return prev
-          }
-          
-          console.log('💾 Adding NEW message to state')
-          const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-          console.log('📊 Messages after add:', updated.length)
-          return updated
-        })
-      } else {
-        console.log('❌ INVALID MESSAGE - Missing required fields')
-      }
-    })
-
-    console.log('✅ Gun.js listener ready for chat_messages')
-  }, [gun])
-
-  // Simplified Gun.js send function - use unique keys for each message
-  const sendP2PMessage = async (message) => {
+  // Enhanced Gun.js send function with channel support
+  const sendP2PMessage = async (message, channelName = 'general_chat') => {
     if (!gun) {
       console.log('❌ Gun.js not available')
       return false
@@ -767,10 +727,10 @@ function ChatScreen({ user, onLogout }) {
     try {
       // Use unique key for each message to prevent replacement
       const messageKey = `msg_${message.id}`
-      console.log('📡 Sending to Gun.js with key:', messageKey, 'message:', message)
+      console.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
-      // Put message with unique key
-      gun.get('chat_messages').get(messageKey).put(message)
+      // Put message with unique key in specific channel
+      gun.get(channelName).get(messageKey).put(message)
       console.log('✅ Message sent to Gun.js with unique key')
       return true
     } catch (error) {
@@ -779,6 +739,7 @@ function ChatScreen({ user, onLogout }) {
     }
   }
 
+  // Enhanced message sending with contact support
   const sendMessage = async () => {
     if (!newMessage.trim()) return
 
@@ -787,13 +748,19 @@ function ChatScreen({ user, onLogout }) {
       text: newMessage.trim(),
       from: user.nickname,
       fromId: user.id,
-      timestamp: Date.now()
+      to: activeContact?.nickname || 'General',
+      toId: activeContact?.id || 'general',
+      timestamp: Date.now(),
+      type: activeContact ? 'private' : 'general'
     }
 
     console.log('📤 SENDING MESSAGE TO GUN.JS:', messageToSend)
 
-    // Just send to Gun.js - no localStorage
-    const p2pSuccess = await sendP2PMessage(messageToSend)
+    // Send to appropriate channel based on contact
+    const channelName = activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
+    console.log('📡 Using channel:', channelName)
+
+    const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
     
     if (p2pSuccess) {
       console.log('✅ Message sent via Gun.js successfully')
@@ -803,6 +770,68 @@ function ChatScreen({ user, onLogout }) {
 
     setNewMessage('')
   }
+
+  // Enhanced Gun.js listener for multiple channels
+  useEffect(() => {
+    if (!gun) return
+
+    console.log('🔧 Setting up Gun.js listeners for general and private chats...')
+
+    // Listen to general chat
+    gun.get('general_chat').map().on((data, key) => {
+      console.log('📨 GENERAL CHAT - RAW DATA:', JSON.stringify(data, null, 2))
+      handleIncomingMessage(data, key, 'general')
+    })
+
+    // Listen to private chats for current user
+    if (user?.id) {
+      // Listen to all possible private channels where this user might be involved
+      contacts.forEach(contact => {
+        const privateChannel = `private_${[user.id, contact.id].sort().join('_')}`
+        console.log('👥 Setting up private channel listener:', privateChannel)
+        
+        gun.get(privateChannel).map().on((data, key) => {
+          console.log('📨 PRIVATE CHAT - RAW DATA:', JSON.stringify(data, null, 2))
+          handleIncomingMessage(data, key, 'private')
+        })
+      })
+    }
+
+    console.log('✅ Gun.js listeners ready for general and private chats')
+  }, [gun, user?.id, contacts])
+
+  // Handle incoming messages from any channel
+  const handleIncomingMessage = (data, key, channelType) => {
+    if (data && data.id && data.text && data.from) {
+      console.log(`✅ VALID ${channelType.toUpperCase()} MESSAGE - Adding to state:`, data.text, 'from:', data.from)
+      
+      setMessages(prev => {
+        console.log('📊 Current messages before add:', prev.length)
+        
+        // Check if already exists
+        const exists = prev.find(m => m.id === data.id)
+        if (exists) {
+          console.log('⚠️ Message already exists, skipping')
+          return prev
+        }
+        
+        console.log('💾 Adding NEW message to state')
+        const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
+        console.log('📊 Messages after add:', updated.length)
+        return updated
+      })
+    } else {
+      console.log(`❌ INVALID ${channelType.toUpperCase()} MESSAGE - Missing required fields`)
+    }
+  }
+
+  // Filter messages based on active contact
+  const displayMessages = activeContact 
+    ? messages.filter(m => 
+        (m.fromId === user.id && m.toId === activeContact.id) ||
+        (m.fromId === activeContact.id && m.toId === user.id)
+      )
+    : messages.filter(m => m.type === 'general' || m.toId === 'general' || !m.toId)
 
   const addContact = () => {
     const nickname = prompt('Enter contact nickname:')
@@ -820,33 +849,6 @@ function ChatScreen({ user, onLogout }) {
     // Set connection status for new contact
     setConnectionStatus(prev => new Map(prev.set(newContact.id, 'connected')))
   }
-
-  // displayMessages declared above
-
-  useEffect(() => {
-    // Load messages from all users for general chat
-    if (!activeContact) {
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      let allGeneralMessages = []
-      
-      allUsers.forEach(u => {
-        const userMessages = JSON.parse(localStorage.getItem(`messages_${u.id}`) || '[]')
-        const generalMessages = userMessages.filter(m => m.toId === 'general')
-        allGeneralMessages = [...allGeneralMessages, ...generalMessages]
-      })
-      
-      // Sort by timestamp and remove duplicates
-      allGeneralMessages.sort((a, b) => a.timestamp - b.timestamp)
-      const uniqueMessages = allGeneralMessages.filter((msg, index, arr) => 
-        index === arr.findIndex(m => m.id === msg.id)
-      )
-      
-      setMessages(prev => {
-        const combined = [...prev.filter(m => m.toId !== 'general'), ...uniqueMessages]
-        return combined.sort((a, b) => a.timestamp - b.timestamp)
-      })
-    }
-  }, [activeContact, user.id])
 
   // REAL functional tests - not just code checks
   const runVisualTests = async () => {
