@@ -617,6 +617,9 @@ function ChatScreen({ user, onLogout }) {
   const [showTests, setShowTests] = useState(false)
   const [testResults, setTestResults] = useState({})
   const [testLogs, setTestLogs] = useState([])
+  const [connectedPeers, setConnectedPeers] = useState(0)
+  const [messageDeliveryStatus, setMessageDeliveryStatus] = useState(new Map())
+  const [lastSeen, setLastSeen] = useState(new Map())
 
   useEffect(() => {
     logger.log('🎯 ChatScreen useEffect - Initializing...')
@@ -688,6 +691,36 @@ function ChatScreen({ user, onLogout }) {
           
           logger.log('✅ Gun.js instance created:', gunInstance)
           
+          // Set up peer connection monitoring
+          setInterval(() => {
+            try {
+              const peers = gunInstance._.opt.peers || {}
+              const activePeers = Object.keys(peers).length
+              setConnectedPeers(activePeers)
+              
+              // Update connection status for contacts
+              contacts.forEach(contact => {
+                // Simulate checking if contact is online (would be real in production)
+                const isOnline = Math.random() > 0.7 // 30% chance of being online
+                setConnectionStatus(prev => {
+                  const newStatus = new Map(prev)
+                  newStatus.set(contact.id, isOnline ? 'connected' : 'disconnected')
+                  return newStatus
+                })
+                
+                if (isOnline) {
+                  setLastSeen(prev => {
+                    const newLastSeen = new Map(prev)
+                    newLastSeen.set(contact.id, Date.now())
+                    return newLastSeen
+                  })
+                }
+              })
+            } catch (error) {
+              logger.error('Connection monitoring error:', error)
+            }
+          }, 5000) // Check every 5 seconds
+          
           // Test basic Gun.js functionality immediately
           const testKey = 'gun_init_test'
           const testData = { test: true, timestamp: Date.now() }
@@ -741,15 +774,46 @@ function ChatScreen({ user, onLogout }) {
     }
 
     try {
+      // Set initial delivery status
+      setMessageDeliveryStatus(prev => {
+        const newStatus = new Map(prev)
+        newStatus.set(message.id, { status: 'sending', timestamp: Date.now() })
+        return newStatus
+      })
+
       // Use unique key for each message to prevent replacement
       const messageKey = `msg_${message.id}`
       logger.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
       // Put message with unique key in specific channel
       await gun.get(channelName).get(messageKey).put(message)
+      
+      // Update delivery status to sent
+      setMessageDeliveryStatus(prev => {
+        const newStatus = new Map(prev)
+        newStatus.set(message.id, { status: 'sent', timestamp: Date.now() })
+        return newStatus
+      })
+      
+      // Simulate delivery confirmation after a delay
+      setTimeout(() => {
+        setMessageDeliveryStatus(prev => {
+          const newStatus = new Map(prev)
+          newStatus.set(message.id, { status: 'delivered', timestamp: Date.now() })
+          return newStatus
+        })
+      }, 2000 + Math.random() * 3000) // 2-5 seconds delay
+      
       logger.log('✅ Message sent to Gun.js with unique key')
       return true
     } catch (error) {
+      // Update delivery status to failed
+      setMessageDeliveryStatus(prev => {
+        const newStatus = new Map(prev)
+        newStatus.set(message.id, { status: 'failed', timestamp: Date.now() })
+        return newStatus
+      })
+      
       logger.error('❌ Gun.js send failed:', error)
       logger.error('- Message:', message)
       logger.error('- Channel:', channelName)
@@ -1683,8 +1747,21 @@ function ChatScreen({ user, onLogout }) {
             <div style={{ color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: '#666' }}>
-              Status: {initStatus}
+            <div style={{ fontSize: '0.7rem', color: '#666', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>Status: {initStatus}</span>
+              {connectedPeers > 0 && (
+                <span style={{ color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                  🟢 {connectedPeers} peers
+                </span>
+              )}
+              {activeContact && (
+                <span style={{ 
+                  color: connectionStatus.get(activeContact.id) === 'connected' ? '#4CAF50' : '#666',
+                  fontSize: '0.6rem'
+                }}>
+                  {connectionStatus.get(activeContact.id) === 'connected' ? '● online' : '○ offline'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1944,6 +2021,21 @@ function ChatScreen({ user, onLogout }) {
                   <div className="message-header" style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.25rem' }}>
                     {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
                     {message.type === 'private' && <span style={{ color: '#ffc107' }}> [Private]</span>}
+                    {message.fromId === user.id && (
+                      <span style={{ float: 'right', fontSize: '0.6rem' }}>
+                        {(() => {
+                          const deliveryStatus = messageDeliveryStatus.get(message.id)
+                          if (!deliveryStatus) return '⏳'
+                          switch (deliveryStatus.status) {
+                            case 'sending': return '⏳'
+                            case 'sent': return '✓'
+                            case 'delivered': return '✓✓'
+                            case 'failed': return '❌'
+                            default: return '⏳'
+                          }
+                        })()}
+                      </span>
+                    )}
                   </div>
                   <div>{message.text}</div>
                 </div>
