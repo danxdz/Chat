@@ -6,17 +6,17 @@
 
 /* Enhanced mobile responsiveness for 4-inch screens */
 
-/* Base styles */
+/* Minimalist base styles */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a1a1a;
-  color: white;
-  overflow: hidden; /* Prevent body scroll */
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  color: #ffffff;
+  overflow: hidden;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .app {
@@ -24,6 +24,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(20px);
 }
 
 /* 4-inch screens (iPhone SE, small phones) - ENHANCED */
@@ -366,41 +368,50 @@ body {
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
 }
 
-/* General input styling for login/register forms */
+/* Minimalist input styling */
 .input {
   width: 100%;
-  padding: 0.8rem;
-  border: 1px solid #555;
-  border-radius: 8px;
-  background: #333;
-  color: white;
-  font-size: 16px; /* Prevent zoom on iOS */
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  font-size: 16px;
   font-family: inherit;
-  transition: border-color 0.2s;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
 }
 
 .input:focus {
   outline: none;
-  border-color: #0066cc;
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 .input::placeholder {
-  color: #888;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 300;
 }
 
 .btn {
   width: 100%;
-  padding: 0.8rem;
-  background: #0066cc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
   margin-top: 1rem;
-  transition: background-color 0.2s;
-  /* Prevent tap highlight on mobile */
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
