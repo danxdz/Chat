@@ -857,12 +857,16 @@ function ChatScreen({ user, onLogout }) {
       const channelName = activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
       logger.log('📡 Using channel:', channelName)
 
+      // Add message to local state immediately for immediate UI feedback
+      setMessages(prevMessages => [...prevMessages, messageToSend])
+      logger.log('✅ Message added to local state')
+
       const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
       
       if (p2pSuccess) {
         logger.log('✅ Message sent via Gun.js successfully')
       } else {
-        logger.log('❌ Failed to send message via Gun.js')
+        logger.log('❌ Failed to send message via Gun.js, but showing in local UI')
       }
 
       setNewMessage('')
@@ -878,9 +882,15 @@ function ChatScreen({ user, onLogout }) {
 
     logger.log('🔧 Setting up Gun.js listeners for general and private chats...')
 
-    // Listen to general chat
+    // Listen to general chat - using same channel as sender
     gun.get('general_chat').map().on((data, key) => {
       logger.log('📨 GENERAL CHAT - RAW DATA:', JSON.stringify(data, null, 2))
+      handleIncomingMessage(data, key, 'general')
+    })
+    
+    // Also listen to the old chat_messages channel for backward compatibility
+    gun.get('chat_messages').map().on((data, key) => {
+      logger.log('📨 CHAT MESSAGES - RAW DATA:', JSON.stringify(data, null, 2))
       handleIncomingMessage(data, key, 'general')
     })
 
@@ -904,6 +914,12 @@ function ChatScreen({ user, onLogout }) {
   // Handle incoming messages from any channel
   const handleIncomingMessage = (data, key, channelType) => {
     if (data && data.id && data.text && data.from) {
+      // Prevent double messages from current user (they already see their message locally)
+      if (data.fromId === user.id) {
+        logger.log(`🔄 SKIPPING own message from ${channelType} channel to prevent duplicates`)
+        return
+      }
+      
       logger.log(`✅ VALID ${channelType.toUpperCase()} MESSAGE - Adding to state:`, data.text, 'from:', data.from)
       
       setMessages(prev => {
