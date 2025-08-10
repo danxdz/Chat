@@ -708,13 +708,14 @@ function ChatScreen({ user, onLogout }) {
       // Wait a bit for Gun.js to fully initialize
       setTimeout(() => {
         try {
-          console.log('✅ Setting up ENHANCED Gun.js listeners for cross-device sync')
+          console.log('✅ Setting up BASIC Gun.js listener for simple chat')
           
-          // Enhanced message listening for cross-device sync
-          gun.get('general_chat').on((data, key) => {
+          // Use the simplest possible listener - just one channel
+          gun.get('simple_chat_channel').on((data, key) => {
+            console.log('📨 RAW DATA RECEIVED:', data, 'KEY:', key)
+            
             if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
-              console.log('📨 RECEIVED CROSS-DEVICE MESSAGE (general_chat):', data)
-              console.log('📄 Message details:', JSON.stringify(data, null, 2))
+              console.log('📨 VALID MESSAGE RECEIVED:', data)
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === data.id)
@@ -723,68 +724,20 @@ function ChatScreen({ user, onLogout }) {
                   return prev
                 }
                 
-                console.log('💾 ADDING CROSS-DEVICE MESSAGE - count before:', prev.length)
+                console.log('💾 ADDING MESSAGE TO STATE - count before:', prev.length)
                 const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                console.log('💾 ADDED CROSS-DEVICE MESSAGE - count after:', updated.length)
-                
-                // Show notification that message was received
-                console.log('🎉 NEW MESSAGE FROM ANOTHER DEVICE!')
+                console.log('💾 MESSAGE ADDED TO STATE - count after:', updated.length)
+                console.log('🎉 NEW MESSAGE FROM ANOTHER TAB/DEVICE!')
                 return updated
               })
+            } else {
+              console.log('📨 Ignoring data - invalid or from self:', data)
             }
           })
 
-          // Listen to global broadcast channel
-          gun.get('global_chat_broadcast').on((data, key) => {
-            if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
-              console.log('📨 RECEIVED BROADCAST MESSAGE:', data)
-              
-              setMessages(prev => {
-                const exists = prev.find(m => m.id === data.id)
-                if (exists) return prev
-                
-                console.log('💾 Adding broadcast message to state')
-                const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                return updated
-              })
-            }
-          })
-
-          // Listen to cross-device sync channel
-          gun.get('cross_device_sync').on((data, key) => {
-            if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
-              console.log('📨 RECEIVED CROSS-DEVICE SYNC MESSAGE:', data)
-              
-              setMessages(prev => {
-                const exists = prev.find(m => m.id === data.id)
-                if (exists) return prev
-                
-                console.log('💾 Adding sync message to state')
-                const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                return updated
-              })
-            }
-          })
-
-          // Listen for ping responses to verify connectivity
-          gun.get('device_ping_test').on((pingData, key) => {
-            if (pingData && pingData.type === 'ping' && pingData.from !== user.nickname) {
-              console.log('🏓 RECEIVED PING FROM ANOTHER DEVICE:', pingData.from)
-              console.log('✅ This proves Gun.js P2P is working between devices!')
-            }
-          })
-
-          console.log('✅ ENHANCED Gun.js listeners setup - ready for cross-device sync!')
+          console.log('✅ BASIC Gun.js listener setup complete')
           
-          // Set connection status for contacts
-          contacts.forEach(contact => {
-            setConnectionStatus(prev => new Map(prev.set(contact.id, 'connected')))
-            console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
-          })
-
         } catch (innerError) {
           console.error('❌ Error in Gun.js listener setup:', innerError)
           setChatError('P2P listener setup failed: ' + innerError.message)
@@ -804,41 +757,17 @@ function ChatScreen({ user, onLogout }) {
     }
 
     try {
-      console.log('📡 SENDING MESSAGE VIA GUN.JS P2P:')
-      console.log('📄 Message data:', JSON.stringify(message, null, 2))
+      console.log('📡 SENDING MESSAGE VIA BASIC GUN.JS:')
+      console.log('📄 Message:', message)
       
-      // Send to multiple channels for maximum reach
-      const channels = [
-        'general_chat',
-        'global_chat_broadcast',
-        'cross_device_sync'
-      ]
-
-      console.log(`📡 Broadcasting to ${channels.length} channels:`, channels)
-
-      // Send to all channels with error handling
-      for (const channel of channels) {
-        try {
-          console.log(`📤 Sending to channel: ${channel}`)
-          gun.get(channel).put(message)
-          console.log(`✅ Successfully sent to: ${channel}`)
-        } catch (channelError) {
-          console.error(`❌ Failed to send to channel ${channel}:`, channelError)
-        }
-      }
-
-      // Also send a simple ping to verify Gun.js is working
-      const pingData = {
-        type: 'ping',
-        from: message.from,
-        timestamp: Date.now(),
-        originalMessageId: message.id
-      }
+      // Use the simplest possible approach - just one channel
+      const channelName = 'simple_chat_channel'
       
-      gun.get('device_ping_test').put(pingData)
-      console.log('🏓 Ping sent to verify Gun.js connectivity')
+      console.log(`📤 Sending to channel: ${channelName}`)
+      gun.get(channelName).put(message)
+      console.log(`✅ Message sent to: ${channelName}`)
 
-      console.log('🎯 P2P Message broadcast complete!')
+      console.log('🎯 Basic P2P message sent!')
       return true
     } catch (error) {
       console.error('❌ Failed to send P2P message:', error)
@@ -1354,31 +1283,66 @@ function ChatScreen({ user, onLogout }) {
     ])
   }
 
-  const testGunConnectivity = () => {
-    setTestLogs(prev => [...prev, '🔍 Testing Gun.js server connectivity (simplified)...'])
+  const testBasicGunConnectivity = () => {
+    setTestLogs(prev => [...prev, '🔍 Testing BASIC Gun.js connectivity (same browser)...'])
     
     if (!gun) {
       setTestLogs(prev => [...prev, '❌ Gun.js not initialized'])
       return
     }
 
-    try {
-      // Simple connectivity test without problematic features
-      const testKey = `simple_connectivity_test_${Date.now()}`
-      const testData = { 
-        test: 'simple_connection',
-        timestamp: Date.now(),
-        user: user.nickname
-      }
+    // Simple test that should work between browser tabs
+    const testKey = 'simple_browser_test'
+    const testData = {
+      test: 'basic_connectivity',
+      from: user.nickname,
+      timestamp: Date.now(),
+      message: `Test from ${user.nickname} at ${new Date().toLocaleTimeString()}`
+    }
 
-      setTestLogs(prev => [...prev, '📡 Sending simple connectivity test...'])
+    try {
+      setTestLogs(prev => [...prev, '📡 Sending basic test data to Gun.js...'])
+      console.log('🔍 BASIC GUN TEST - Sending:', testData)
       
+      // Use simple put operation
       gun.get(testKey).put(testData)
-      setTestLogs(prev => [...prev, '✅ Basic Gun.js write operation successful'])
-      setTestLogs(prev => [...prev, '🔍 Gun.js appears to be working without "dare" errors'])
+      setTestLogs(prev => [...prev, '✅ Basic test data sent to Gun.js'])
+      
+      // Try to read it back immediately
+      setTimeout(() => {
+        gun.get(testKey).once((data) => {
+          console.log('🔍 BASIC GUN TEST - Received back:', data)
+          if (data && data.test === 'basic_connectivity') {
+            setTestLogs(prev => [...prev, '✅ SUCCESS: Gun.js read/write working!'])
+            setTestLogs(prev => [...prev, `📄 Data: ${data.message}`])
+          } else {
+            setTestLogs(prev => [...prev, '❌ FAILED: Could not read back test data'])
+          }
+        })
+      }, 1000)
+
+      // Test live listener
+      gun.get('live_test_channel').on((liveData, key) => {
+        if (liveData && liveData.liveTest && liveData.from !== user.nickname) {
+          console.log('🔍 LIVE TEST - Received from another tab/device:', liveData)
+          setTestLogs(prev => [...prev, `🎉 LIVE UPDATE: Message from ${liveData.from}`])
+        }
+      })
+
+      // Send live test
+      const liveTestData = {
+        liveTest: true,
+        from: user.nickname,
+        message: `Live test from ${user.nickname}`,
+        timestamp: Date.now()
+      }
+      
+      gun.get('live_test_channel').put(liveTestData)
+      setTestLogs(prev => [...prev, '📡 Live test sent - open another tab to see real-time sync'])
       
     } catch (error) {
-      setTestLogs(prev => [...prev, `❌ Gun.js connectivity test failed: ${error.message}`])
+      setTestLogs(prev => [...prev, `❌ Basic Gun.js test failed: ${error.message}`])
+      console.error('Basic Gun.js test error:', error)
     }
   }
 
@@ -1858,14 +1822,14 @@ function ChatScreen({ user, onLogout }) {
               }}>
                 🚀 Cross-Device Test
               </button>
-              <button onClick={testGunConnectivity} className="btn" style={{ 
+              <button onClick={testBasicGunConnectivity} className="btn" style={{ 
                 background: '#dc3545', 
                 flex: 1,
                 minWidth: window.innerWidth < 480 ? '100%' : 'auto',
                 fontSize: '0.9rem',
                 padding: '0.6rem'
               }}>
-                🌐 Test Gun Servers
+                🔍 Test Basic Gun.js
               </button>
               <button onClick={createVisualTestUsers} className="btn" style={{ 
                 background: '#ffc107', 
