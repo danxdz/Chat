@@ -615,16 +615,16 @@ function ChatScreen({ user, onLogout }) {
     try {
       const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
       const users = JSON.parse(localStorage.getItem('users') || '[]')
-      const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+      // Messages will be loaded from Gun.js only
       
       setContacts(savedContacts)
       setAllUsers(users)
-      setMessages(savedMessages)
+      setMessages([]) // Start with empty messages - Gun.js will populate
       
       console.log('📋 Basic data loaded successfully')
       console.log('- Contacts:', savedContacts.length)
       console.log('- Users:', users.length) 
-      console.log('- Messages:', savedMessages.length)
+      console.log('- Messages: Starting fresh, will load from Gun.js')
       
       setInitStatus('basic_data_loaded')
       
@@ -717,102 +717,57 @@ function ChatScreen({ user, onLogout }) {
     }
   }, [initStatus])
 
-  // Gun.js message listener (simplified - no complex filtering)
+  // Simplified Gun.js listener - just add ALL messages to state
   useEffect(() => {
     if (!gun) return
 
     console.log('🔧 Setting up SIMPLE Gun.js message listener...')
 
-    // Simple listener - just add ALL valid messages
+    // Listen for ALL messages and add them to state
     gun.get('simple_chat_channel').on((data, key) => {
-      console.log('📨 RECEIVED DATA:', data)
+      console.log('📨 RECEIVED MESSAGE:', data)
       
-      // Basic validation only
       if (data && data.id && data.text && data.from) {
-        console.log('✅ Valid message received:', data.text, 'from:', data.from)
+        console.log('✅ Valid message:', data.text, 'from:', data.from)
         
-        // Add to messages if not already exists
         setMessages(prev => {
+          // Check if already exists
           const exists = prev.find(m => m.id === data.id)
           if (exists) {
-            console.log('⚠️ Message already exists, skipping')
+            console.log('⚠️ Message already in state')
             return prev
           }
           
           console.log('💾 Adding message to state')
           const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-          localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-          console.log('✅ Message added! Total messages:', updated.length)
+          console.log('📊 Total messages now:', updated.length)
           return updated
         })
-      } else {
-        console.log('❌ Invalid message data:', data)
       }
     })
 
-    console.log('✅ Simple Gun.js listener setup complete')
-  }, [gun, user.id])
+    console.log('✅ Gun.js listener ready')
+  }, [gun])
 
+  // Simple display - show ALL messages, no complex filtering
+  const displayMessages = messages // Just show everything
+
+  // Simplified Gun.js send function
   const sendP2PMessage = async (message) => {
     if (!gun) {
-      console.log('❌ Gun.js not initialized')
+      console.log('❌ Gun.js not available')
       return false
     }
 
     try {
-      console.log('📡 SENDING MESSAGE VIA BASIC GUN.JS:')
-      console.log('📄 Message:', message)
-      
-      // Use the simplest possible approach - just one channel
-      const channelName = 'simple_chat_channel'
-      
-      console.log(`📤 Sending to channel: ${channelName}`)
-      gun.get(channelName).put(message)
-      console.log(`✅ Message sent to: ${channelName}`)
-
-      console.log('🎯 Basic P2P message sent!')
+      console.log('📡 Sending to Gun.js channel:', message)
+      gun.get('simple_chat_channel').put(message)
+      console.log('✅ Message sent to Gun.js')
       return true
     } catch (error) {
-      console.error('❌ Failed to send P2P message:', error)
+      console.error('❌ Gun.js send failed:', error)
       return false
     }
-  }
-
-  useEffect(() => {
-    // Auto-scroll to bottom when messages change
-    const messagesDiv = document.getElementById('messages-container')
-    if (messagesDiv) {
-      messagesDiv.scrollTop = messagesDiv.scrollHeight
-    }
-  }, [messages, activeContact])
-
-  const generateInvite = () => {
-    // Use simple, safe encoding to avoid Vercel redirects
-    const inviteData = {
-      from: user.nickname, 
-      fromId: user.id,
-      timestamp: Date.now()
-    }
-    
-    // Use URL-safe base64 encoding
-    const invite = btoa(JSON.stringify(inviteData))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '')
-    
-    const link = `${window.location.origin}#invite=${invite}`
-    setInviteLink(link)
-    setShowInvite(true)
-  }
-
-  const copyInvite = () => {
-    navigator.clipboard.writeText(inviteLink)
-    alert('Invite link copied!')
-  }
-
-  const switchToUser = (targetUser) => {
-    localStorage.setItem('currentUser', JSON.stringify(targetUser))
-    window.location.reload()
   }
 
   const sendMessage = async () => {
@@ -823,38 +778,21 @@ function ChatScreen({ user, onLogout }) {
       text: newMessage.trim(),
       from: user.nickname,
       fromId: user.id,
-      to: activeContact?.nickname || 'General',
-      toId: activeContact?.id || null,
-      timestamp: Date.now(),
-      type: activeContact ? 'private' : 'general'
+      timestamp: Date.now()
     }
 
-    console.log('📤 SENDING MESSAGE:', messageToSend)
+    console.log('📤 SENDING MESSAGE TO GUN.JS:', messageToSend)
 
-    // Add to local state immediately (for instant feedback)
-    setMessages(prev => {
-      const exists = prev.find(m => m.id === messageToSend.id)
-      if (exists) {
-        console.log('⚠️ Message already exists locally, skipping add')
-        return prev
-      }
-      
-      console.log('💾 Adding message to LOCAL state')
-      const updated = [...prev, messageToSend].sort((a, b) => a.timestamp - b.timestamp)
-      localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-      return updated
-    })
-
-    // Send via P2P (but don't add to state again)
+    // Just send to Gun.js - no localStorage
     const p2pSuccess = await sendP2PMessage(messageToSend)
     
     if (p2pSuccess) {
-      console.log('✅ Message sent via P2P successfully')
+      console.log('✅ Message sent via Gun.js successfully')
     } else {
-      console.log('⚠️ P2P send failed, but message saved locally')
+      console.log('❌ Failed to send message via Gun.js')
     }
 
-         setNewMessage('')
+    setNewMessage('')
   }
 
   const addContact = () => {
@@ -874,20 +812,7 @@ function ChatScreen({ user, onLogout }) {
     setConnectionStatus(prev => new Map(prev.set(newContact.id, 'connected')))
   }
 
-  const filteredMessages = activeContact 
-    ? messages.filter(m => 
-        (m.fromId === user.id && m.toId === activeContact.id) ||
-        (m.fromId === activeContact.id && m.toId === user.id)
-      )
-    : messages.filter(m => 
-        m.toId === 'general' || 
-        m.toId === 'General' || 
-        !m.toId || 
-        m.realTest || 
-        m.deviceTest || 
-        m.isPing ||
-        (m.to && (m.to === 'General' || m.to === 'general'))
-      )
+  // displayMessages declared above
 
   useEffect(() => {
     // Load messages from all users for general chat
@@ -1865,13 +1790,12 @@ function ChatScreen({ user, onLogout }) {
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <span>📊 Total: {messages.length} | Filtered: {filteredMessages.length} | Active: {activeContact?.nickname || 'General'}</span>
+              <span>📊 Total Messages: {messages.length} | From Gun.js</span>
               <button 
                 onClick={() => {
                   console.log('🔍 ALL MESSAGES:', messages)
-                  console.log('🔍 FILTERED MESSAGES:', filteredMessages)
-                  console.log('🔍 ACTIVE CONTACT:', activeContact)
-                  alert(`Total messages: ${messages.length}\nFiltered: ${filteredMessages.length}\nCheck console for details`)
+                  console.log('🔍 DISPLAY MESSAGES:', displayMessages)
+                  alert(`Total messages: ${messages.length}\nAll from Gun.js\nCheck console for details`)
                 }}
                 style={{
                   background: '#666',
@@ -1887,16 +1811,16 @@ function ChatScreen({ user, onLogout }) {
               </button>
             </div>
             
-            {filteredMessages.length === 0 ? (
+            {displayMessages.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#888', marginTop: '2rem', fontSize: '0.9rem' }}>
                 No messages yet. Start the conversation!
                 <br />
                 <small style={{ fontSize: '0.7rem' }}>
-                  Debug: {messages.length} total messages stored
+                  Messages will appear here from Gun.js
                 </small>
               </div>
             ) : (
-              filteredMessages.map(message => (
+              displayMessages.map(message => (
                 <div key={message.id} style={{ 
                   marginBottom: '0.5rem',
                   padding: '0.5rem',
