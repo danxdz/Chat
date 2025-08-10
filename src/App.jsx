@@ -1953,28 +1953,44 @@ function ChatScreen({ user, onLogout }) {
 
           {/* Message Input */}
           <form onSubmit={sendMessage} className="message-input-container" style={{ 
-            padding: '0.5rem', 
+            padding: '0.7rem 0.5rem', 
             background: '#2d2d2d',
             borderTop: '1px solid #555',
             display: 'flex',
             gap: '0.5rem',
-            alignItems: 'stretch'
+            alignItems: 'flex-end'
           }}>
-            <input
-              type="text"
+            <textarea
               className="message-input"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(e);
+                }
+              }}
               placeholder={`Message ${activeContact?.nickname || 'everyone'}...`}
+              rows={1}
               style={{
                 flex: 1,
-                padding: '0.7rem',
+                padding: '0.8rem',
                 border: '1px solid #555',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 background: '#333',
                 color: 'white',
                 fontSize: '16px', // Prevent zoom on iOS
-                minHeight: '44px' // Touch-friendly height
+                minHeight: '44px', // Touch-friendly height
+                maxHeight: '120px',
+                resize: 'none',
+                fontFamily: 'inherit',
+                lineHeight: '1.4',
+                overflowY: 'auto'
+              }}
+              onInput={(e) => {
+                // Auto-resize textarea
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
               }}
             />
             <button 
@@ -1982,11 +1998,16 @@ function ChatScreen({ user, onLogout }) {
               className="btn send-button"
               style={{ 
                 background: '#0066cc', 
-                padding: '0.7rem 1rem',
+                padding: '0.8rem 1rem',
                 width: 'auto',
                 margin: 0,
                 fontSize: '0.9rem',
-                minHeight: '44px'
+                minHeight: '44px',
+                borderRadius: '8px',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
               }}
             >
               Send
