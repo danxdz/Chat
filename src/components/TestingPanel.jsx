@@ -13,7 +13,6 @@ export default function TestingPanel({
   onSendCrossDeviceTest,
   onTestMultiUser,
   onTestPrivateMsg,
-  onCreateTestUsers,
   onTestBasicGun,
   onClearCurrentClient, 
   onClearAllClients, 
@@ -104,16 +103,6 @@ export default function TestingPanel({
             padding: '0.6rem'
           }}>
             🔍 Test Basic Gun.js
-          </button>
-          <button onClick={onCreateTestUsers} className="btn" style={{ 
-            background: '#ffc107', 
-            color: '#000', 
-            flex: 1,
-            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
-            fontSize: '0.9rem',
-            padding: '0.6rem'
-          }}>
-            👥 Create Test Users
           </button>
         </div>
 

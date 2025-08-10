@@ -19,11 +19,7 @@ export default function Header({
     setShowUserSwitcher(false)
   }
 
-  const createTestUsers = () => {
-    window.createTestUsers()
-    setShowUserSwitcher(false)
-    setTimeout(() => window.location.reload(), 100)
-  }
+  // Demo user creation removed for security - users must register with PIN
 
   return (
     <div className="header" style={{ 
@@ -99,23 +95,11 @@ export default function Header({
                   👤 {u.nickname}
                 </button>
               ))}
-              <div style={{ padding: '0.5rem', borderTop: '1px solid #555' }}>
-                <button
-                  onClick={createTestUsers}
-                  style={{
-                    width: '100%',
-                    background: '#0066cc',
-                    border: 'none',
-                    color: 'white',
-                    padding: '0.5rem',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  ➕ Create Test Users
-                </button>
-              </div>
+              {allUsers.length <= 1 && (
+                <div style={{ padding: '0.5rem', borderTop: '1px solid #555', fontSize: '0.8rem', color: '#888' }}>
+                  Create more accounts by registering with different PINs
+                </div>
+              )}
             </div>
           )}
         </div>

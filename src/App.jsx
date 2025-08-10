@@ -315,10 +315,28 @@ function App() {
   }, [contacts])
 
   // Core functions
-  const register = (nickname) => {
+  const register = (nickname, pin) => {
+    if (!nickname.trim() || !pin.trim()) {
+      alert('Both nickname and PIN are required')
+      return false
+    }
+
+    if (pin.length < 4) {
+      alert('PIN must be at least 4 characters')
+      return false
+    }
+
+    // Check if nickname already exists
+    const existingUser = allUsers.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
+    if (existingUser) {
+      alert('Nickname already exists. Please choose a different one.')
+      return false
+    }
+
     const newUser = {
       id: Date.now(),
       nickname: nickname.trim(),
+      pin: pin.trim(), // In production, this should be hashed
       createdAt: Date.now()
     }
     
@@ -327,12 +345,25 @@ function App() {
     localStorage.setItem('users', JSON.stringify(updatedUsers))
     
     setUser(newUser)
-    logger.log('✅ User registered successfully:', newUser)
+    logger.log('✅ User registered successfully:', { nickname: newUser.nickname, id: newUser.id })
+    return true
   }
 
-  const login = (selectedUser) => {
-    setUser(selectedUser)
-    logger.log('✅ User logged in:', selectedUser.nickname)
+  const login = (pin) => {
+    if (!pin.trim()) {
+      alert('PIN is required')
+      return false
+    }
+
+    const user = allUsers.find(u => u.pin === pin.trim())
+    if (!user) {
+      alert('Invalid PIN. Please try again.')
+      return false
+    }
+
+    setUser(user)
+    logger.log('✅ User logged in:', user.nickname)
+    return true
   }
 
   const logout = () => {
@@ -742,47 +773,48 @@ function App() {
       return
     }
 
+    // Use simulated test users for testing (no longer creating actual accounts)
     const testUsers = [
-      { id: 1001, nickname: 'Alice', createdAt: Date.now() },
-      { id: 1002, nickname: 'Bob', createdAt: Date.now() },
-      { id: 1003, nickname: 'Charlie', createdAt: Date.now() }
+      { id: 9001, nickname: 'TestUser_A', pin: 'test1' },
+      { id: 9002, nickname: 'TestUser_B', pin: 'test2' },
+      { id: 9003, nickname: 'TestUser_C', pin: 'test3' }
     ]
 
-    logger.log('🧪 STARTING MULTI-USER MESSAGING TEST')
+    logger.log('🧪 STARTING MULTI-USER MESSAGING TEST (Simulated Users)')
     
-    // Simulate messages from multiple users
-    const testMessages = [
-      {
-        id: Date.now() + '_alice',
-        text: '👋 Hello everyone! This is Alice testing general chat',
-        from: 'Alice',
-        fromId: 1001,
-        to: 'General',
-        toId: 'general',
-        timestamp: Date.now(),
-        type: 'general'
-      },
-      {
-        id: Date.now() + '_bob',
-        text: '🚀 Bob here! Testing P2P messaging functionality',
-        from: 'Bob', 
-        fromId: 1002,
-        to: 'General',
-        toId: 'general',
-        timestamp: Date.now() + 1000,
-        type: 'general'
-      },
-      {
-        id: Date.now() + '_charlie',
-        text: '⚡ Charlie joining the conversation! P2P works great!',
-        from: 'Charlie',
-        fromId: 1003,
-        to: 'General', 
-        toId: 'general',
-        timestamp: Date.now() + 2000,
-        type: 'general'
-      }
-    ]
+          // Simulate messages from multiple users
+      const testMessages = [
+        {
+          id: Date.now() + '_usera',
+          text: '👋 Hello everyone! This is TestUser_A testing general chat',
+          from: 'TestUser_A',
+          fromId: 9001,
+          to: 'General',
+          toId: 'general',
+          timestamp: Date.now(),
+          type: 'general'
+        },
+        {
+          id: Date.now() + '_userb',
+          text: '🚀 TestUser_B here! Testing P2P messaging functionality',
+          from: 'TestUser_B', 
+          fromId: 9002,
+          to: 'General',
+          toId: 'general',
+          timestamp: Date.now() + 1000,
+          type: 'general'
+        },
+        {
+          id: Date.now() + '_userc',
+          text: '⚡ TestUser_C joining the conversation! P2P works great!',
+          from: 'TestUser_C',
+          fromId: 9003,
+          to: 'General', 
+          toId: 'general',
+          timestamp: Date.now() + 2000,
+          type: 'general'
+        }
+      ]
 
     // Send each test message to Gun.js P2P network
     for (let i = 0; i < testMessages.length; i++) {
@@ -800,8 +832,8 @@ function App() {
       }
     }
 
-    logger.log('🎯 Multi-user test complete! Check for messages from Alice, Bob, and Charlie')
-    alert('🧪 Multi-user test sent! You should see messages from Alice, Bob, and Charlie appear in general chat.')
+    logger.log('🎯 Multi-user test complete! Check for messages from TestUser_A, TestUser_B, and TestUser_C')
+    alert('🧪 Multi-user test sent! You should see messages from TestUser_A, TestUser_B, and TestUser_C appear in general chat.')
   }
 
   // Test private messaging between users
@@ -844,27 +876,7 @@ function App() {
     }
   }
 
-  const createTestUsers = () => {
-    const testUsers = [
-      { id: 1001, nickname: 'Alice', createdAt: Date.now() },
-      { id: 1002, nickname: 'Bob', createdAt: Date.now() },
-      { id: 1003, nickname: 'Charlie', createdAt: Date.now() }
-    ]
-    
-    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-    const combinedUsers = [...existingUsers]
-    
-    testUsers.forEach(testUser => {
-      if (!existingUsers.find(u => u.id === testUser.id)) {
-        combinedUsers.push(testUser)
-      }
-    })
-    
-    setAllUsers(combinedUsers)
-    localStorage.setItem('users', JSON.stringify(combinedUsers))
-    
-    logger.log('✅ Test users created:', testUsers.map(u => u.nickname).join(', '))
-  }
+  // Removed demo user creation - users must register with PIN for security
 
   const testBasicGunConnectivity = async () => {
     if (!gun) {
@@ -944,7 +956,6 @@ function App() {
     window.clearCurrentClientData = clearCurrentClientData
     window.clearAllClientsData = clearAllClientsData
     window.resetAppToFresh = resetAppToFresh
-    window.createTestUsers = createTestUsers
   }, [user])
 
   // Render different views
@@ -964,11 +975,17 @@ function App() {
       <div className="screen">
         <div className="form">
           <h1>🚀 Welcome to P2P Chat</h1>
-          <p>Enter your nickname to get started</p>
+          <p>Create your account with a secure PIN</p>
           <form onSubmit={(e) => {
             e.preventDefault()
             const nickname = e.target.nickname.value.trim()
-            if (nickname) register(nickname)
+            const pin = e.target.pin.value.trim()
+            if (nickname && pin) {
+              const success = register(nickname, pin)
+              if (success) {
+                // Registration successful, will automatically login
+              }
+            }
           }}>
             <input
               name="nickname"
@@ -977,9 +994,19 @@ function App() {
               required
               autoFocus
               className="input"
+              style={{ marginBottom: '1rem' }}
+            />
+            <input
+              name="pin"
+              type="password"
+              placeholder="Create a PIN (min 4 characters)"
+              required
+              className="input"
+              minLength={4}
+              style={{ marginBottom: '1rem' }}
             />
             <button type="submit" className="btn">
-              Register
+              Create Account
             </button>
           </form>
         </div>
@@ -991,26 +1018,40 @@ function App() {
     return (
       <div className="screen">
         <div className="form">
-          <h1>👤 Select User</h1>
-          <p>Choose your profile to continue</p>
-          <div className="user-list">
-            {allUsers.map(u => (
-              <button
-                key={u.id}
-                onClick={() => login(u)}
-                className="btn user-btn"
-              >
-                👤 {u.nickname}
-              </button>
-            ))}
-          </div>
-          <p style={{ textAlign: 'center', margin: '1rem 0' }}>or</p>
+          <h1>🔑 Welcome Back</h1>
+          <p>Enter your PIN to access your account</p>
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const pin = e.target.pin.value.trim()
+            if (pin) {
+              const success = login(pin)
+              if (success) {
+                // Login successful, will automatically navigate to chat
+              }
+            }
+          }}>
+            <input
+              name="pin"
+              type="password"
+              placeholder="Enter your PIN"
+              required
+              autoFocus
+              className="input"
+              style={{ marginBottom: '1rem' }}
+            />
+            <button type="submit" className="btn">
+              Sign In
+            </button>
+          </form>
+          <p style={{ textAlign: 'center', margin: '1rem 0', color: '#888' }}>
+            Don't have an account?
+          </p>
           <button
             onClick={() => setCurrentView('register')}
             className="btn"
             style={{ background: '#666' }}
           >
-            ➕ Create New User
+            ➕ Create New Account
           </button>
         </div>
       </div>
@@ -1094,7 +1135,6 @@ function App() {
           onSendCrossDeviceTest={sendCrossDeviceTest}
           onTestMultiUser={testMultiUserMessaging}
           onTestPrivateMsg={testPrivateMessaging}
-          onCreateTestUsers={createTestUsers}
           onTestBasicGun={testBasicGunConnectivity}
           onClearCurrentClient={clearCurrentClientData}
           onClearAllClients={clearAllClientsData}
