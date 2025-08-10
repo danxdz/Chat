@@ -1595,7 +1595,15 @@ function ChatScreen({ user, onLogout }) {
         gap: '0.5rem',
         minHeight: '60px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '200px' }}>
+        {/* Left side - User info and status */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem', 
+          flex: '1', 
+          minWidth: '200px',
+          maxWidth: 'calc(100% - 220px)' // Leave space for right buttons
+        }}>
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowUserSwitcher(!showUserSwitcher)}
@@ -1673,8 +1681,8 @@ function ChatScreen({ user, onLogout }) {
             )}
           </div>
           
-          <div style={{ flex: 1, fontSize: '0.8rem' }}>
-            <div style={{ color: '#888' }}>
+          <div style={{ flex: 1, fontSize: '0.8rem', overflow: 'hidden' }}>
+            <div style={{ color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
             </div>
             <div style={{ fontSize: '0.7rem', color: '#666' }}>
@@ -1682,44 +1690,79 @@ function ChatScreen({ user, onLogout }) {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+
+        {/* Right side - Action buttons (horizontally aligned) */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.4rem', 
+          alignItems: 'center',
+          flexShrink: 0, // Prevent shrinking
+          minWidth: 'auto'
+        }}>
           <button 
             onClick={() => setShowInvite(!showInvite)} 
             className="btn" 
             style={{ 
-              marginRight: '0', 
               background: '#0066cc', 
-              padding: '0.4rem 0.6rem',
+              border: 'none',
+              color: 'white',
+              padding: '0.5rem 0.7rem',
+              borderRadius: '4px',
+              cursor: 'pointer',
               fontSize: '0.8rem',
-              minHeight: '36px'
+              minHeight: '36px',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
             }}
+            title="Generate invite link"
           >
-            📤 Invite
+            📤 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Invite</span>
           </button>
+          
           <button 
             onClick={() => setShowTests(!showTests)}
             className="btn" 
             style={{ 
-              marginRight: '0', 
               background: '#28a745', 
-              padding: '0.4rem 0.6rem',
+              border: 'none',
+              color: 'white',
+              padding: '0.5rem 0.7rem',
+              borderRadius: '4px',
+              cursor: 'pointer',
               fontSize: '0.8rem',
-              minHeight: '36px'
+              minHeight: '36px',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
             }}
+            title="Run tests and diagnostics"
           >
-            🧪 Tests
+            🧪 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Tests</span>
           </button>
+          
           <button 
             onClick={onLogout} 
             className="btn" 
             style={{ 
               background: '#dc3545', 
-              padding: '0.4rem 0.6rem',
+              border: 'none',
+              color: 'white',
+              padding: '0.5rem 0.7rem',
+              borderRadius: '4px',
+              cursor: 'pointer',
               fontSize: '0.8rem',
-              minHeight: '36px'
+              minHeight: '36px',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
             }}
+            title="Logout and return to registration"
           >
-            Logout
+            🚪 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Logout</span>
           </button>
         </div>
       </div>
