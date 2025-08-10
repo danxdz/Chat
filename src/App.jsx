@@ -720,6 +720,43 @@ function ChatScreen({ user, onLogout }) {
   // Simple display - show ALL messages, no complex filtering
   const displayMessages = messages // Just show everything
 
+  // Gun.js message listener - listen to the messages collection
+  useEffect(() => {
+    if (!gun) return
+
+    console.log('🔧 Setting up Gun.js message listener for chat_messages...')
+
+    // Listen to the messages collection using .map().on()
+    gun.get('chat_messages').map().on((data, key) => {
+      console.log('📨 RAW DATA:', JSON.stringify(data, null, 2))
+      console.log('📨 MESSAGE KEY:', key)
+      
+      if (data && data.id && data.text && data.from) {
+        console.log('✅ VALID - Adding to state:', data.text, 'from:', data.from)
+        
+        setMessages(prev => {
+          console.log('📊 Current messages before add:', prev.length)
+          
+          // Check if already exists
+          const exists = prev.find(m => m.id === data.id)
+          if (exists) {
+            console.log('⚠️ Message already exists, skipping')
+            return prev
+          }
+          
+          console.log('💾 Adding NEW message to state')
+          const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
+          console.log('📊 Messages after add:', updated.length)
+          return updated
+        })
+      } else {
+        console.log('❌ INVALID MESSAGE - Missing required fields')
+      }
+    })
+
+    console.log('✅ Gun.js listener ready for chat_messages')
+  }, [gun])
+
   // Simplified Gun.js send function - use unique keys for each message
   const sendP2PMessage = async (message) => {
     if (!gun) {
