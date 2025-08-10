@@ -840,11 +840,11 @@ function ChatScreen({ user, onLogout }) {
   }
 
   const sendMessage = async () => {
-    if (!message.trim()) return
+    if (!newMessage.trim()) return
 
-    const newMessage = {
+    const messageToSend = {
       id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-             text: message.trim(),
+      text: newMessage.trim(),
       from: user.nickname,
       fromId: user.id,
       to: activeContact?.nickname || 'General',
@@ -853,24 +853,24 @@ function ChatScreen({ user, onLogout }) {
       type: activeContact ? 'private' : 'general'
     }
 
-    console.log('📤 SENDING MESSAGE:', newMessage)
+    console.log('📤 SENDING MESSAGE:', messageToSend)
 
     // Add to local state immediately (for instant feedback)
     setMessages(prev => {
-      const exists = prev.find(m => m.id === newMessage.id)
+      const exists = prev.find(m => m.id === messageToSend.id)
       if (exists) {
         console.log('⚠️ Message already exists locally, skipping add')
         return prev
       }
       
       console.log('💾 Adding message to LOCAL state')
-      const updated = [...prev, newMessage].sort((a, b) => a.timestamp - b.timestamp)
+      const updated = [...prev, messageToSend].sort((a, b) => a.timestamp - b.timestamp)
       localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
       return updated
     })
 
     // Send via P2P (but don't add to state again)
-    const p2pSuccess = await sendP2PMessage(newMessage)
+    const p2pSuccess = await sendP2PMessage(messageToSend)
     
     if (p2pSuccess) {
       console.log('✅ Message sent via P2P successfully')
@@ -878,7 +878,7 @@ function ChatScreen({ user, onLogout }) {
       console.log('⚠️ P2P send failed, but message saved locally')
     }
 
-         setMessage('')
+         setNewMessage('')
   }
 
   const addContact = () => {
