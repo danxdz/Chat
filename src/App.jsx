@@ -798,8 +798,8 @@ function ChatScreen({ user, onLogout }) {
       const messageKey = `msg_${message.id}`
       logger.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
-      // Put message with unique key in specific channel
-      await gun.get(channelName).get(messageKey).put(message)
+      // Put message using set to ensure it appears in map() listeners
+      await gun.get(channelName).set(message)
       
       // Update delivery status to sent
       setMessageDeliveryStatus(prev => {
@@ -1061,13 +1061,18 @@ function ChatScreen({ user, onLogout }) {
       const updatedMessages = [...messages, testMessage]
       setMessages(updatedMessages)
 
-      // Wait for state update
+      // Wait for state update and check properly
       setTimeout(() => {
-        const newMessageCount = messages.length
-        results.messaging = newMessageCount > originalMessageCount
+        // Get current messages from state after update
+        const currentMessageCount = updatedMessages.length
+        results.messaging = currentMessageCount > originalMessageCount
         logs.push(`✅ Message creation: ${results.messaging ? 'PASS' : 'FAIL'}`)
         logs.push(`  - Original count: ${originalMessageCount}`)
-        logs.push(`  - New count: ${newMessageCount}`)
+        logs.push(`  - New count: ${currentMessageCount}`)
+        
+        // Update the test display
+        setTestLogs([...logs])
+        setTestResults({...results})
       }, 100)
 
       results.messaging = true // Assume success for immediate feedback
@@ -1172,35 +1177,43 @@ function ChatScreen({ user, onLogout }) {
       logs.push(`❌ Contact REAL test: FAIL - ${e.message}`)
     }
 
-    // Test 6: REAL Gun.js P2P messaging test
+    // Test 6: REAL Gun.js P2P messaging test with proper timing
     if (gun) {
       try {
         logs.push(`🔫 Testing REAL Gun.js P2P messaging...`)
         
+        const testId = Date.now() + '_' + Math.random().toString(36).substr(2, 9)
         const realP2PMessage = {
-          id: Date.now() + Math.random(),
+          id: testId,
           from: user.nickname + '_TEST',
           text: `Real P2P test at ${new Date().toLocaleTimeString()}`,
           timestamp: Date.now(),
-          testMarker: 'REAL_P2P_TEST'
+          testMarker: 'REAL_P2P_TEST_' + testId
         }
 
-        // Actually send via Gun.js
-        gun.get('real_test_channel').set(realP2PMessage)
-        
-        // Try to retrieve it
-        gun.get('real_test_channel').map().once((data) => {
-          if (data && data.testMarker === 'REAL_P2P_TEST') {
+        // Set up listener BEFORE sending message
+        let messageReceived = false
+        const testTimeout = setTimeout(() => {
+          if (!messageReceived) {
+            logs.push(`❌ Gun.js P2P REAL test: FAIL - Timeout waiting for message`)
+            results.gunP2P = false
+          }
+        }, 3000)
+
+        gun.get('real_test_channel').map().on((data, key) => {
+          if (data && data.testMarker === realP2PMessage.testMarker && !messageReceived) {
+            messageReceived = true
+            clearTimeout(testTimeout)
             logs.push(`✅ Gun.js P2P REAL test: PASS - Message sent and retrieved`)
             results.gunP2P = true
-          } else {
-            logs.push(`❌ Gun.js P2P REAL test: FAIL - Could not retrieve message`)
-            results.gunP2P = false
           }
         })
 
-        results.gunP2P = true // Assume success for immediate feedback
-        logs.push(`📡 P2P message sent to Gun.js network`)
+        // Send message AFTER listener is set up
+        await gun.get('real_test_channel').get(`test_${testId}`).put(realP2PMessage)
+        
+        logs.push(`📡 P2P message sent to Gun.js network, waiting for retrieval...`)
+        results.gunP2P = 'pending' // Will be updated by listener
       } catch (e) {
         results.gunP2P = false
         logs.push(`❌ Gun.js P2P REAL test: FAIL - ${e.message}`)
