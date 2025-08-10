@@ -4,12 +4,14 @@ import 'gun/lib/webrtc'
 import 'gun/lib/radix'
 import 'gun/lib/radisk'
 import 'gun/lib/store'
+import { getOrCreateUserSalt, deriveKeyFromPin, encryptJson, decryptJson } from './crypto'
 
 function App() {
   const [currentView, setCurrentView] = useState('loading')
   const [sodium, setSodium] = useState(null)
   const [user, setUser] = useState(null)
   const [error, setError] = useState('')
+  const [userEncKey, setUserEncKey] = useState(null)
 
   useEffect(() => {
     initApp()
@@ -126,7 +128,17 @@ function App() {
       // Check if user is logged in
       const savedUser = localStorage.getItem('currentUser')
       if (savedUser) {
-        setUser(JSON.parse(savedUser))
+        const parsed = JSON.parse(savedUser)
+        setUser(parsed)
+        // create per-user encryption key from a stored PIN hash context if present
+        try {
+          const pinCache = sessionStorage.getItem('session_pin')
+          if (pinCache) {
+            const salt = getOrCreateUserSalt(parsed.id, sodium)
+            const key = await deriveKeyFromPin(pinCache, salt, sodium)
+            setUserEncKey(key)
+          }
+        } catch {}
         setCurrentView('chat')
       } else {
         // Check if this is an invitation - use hash to avoid Vercel issues
@@ -144,13 +156,13 @@ function App() {
     }
   }
 
-  const handleLogin = (userData) => {
+  const handleLogin = async (userData) => {
     setUser(userData)
     localStorage.setItem('currentUser', JSON.stringify(userData))
     setCurrentView('chat')
   }
 
-  const handleRegister = (userData) => {
+  const handleRegister = async (userData) => {
     setUser(userData)
     localStorage.setItem('currentUser', JSON.stringify(userData))
     setCurrentView('chat')
@@ -158,6 +170,8 @@ function App() {
 
   const handleLogout = () => {
     setUser(null)
+    setUserEncKey(null)
+    sessionStorage.removeItem('session_pin')
     localStorage.removeItem('currentUser')
     setCurrentView('login')
   }
@@ -174,21 +188,21 @@ function App() {
   }
 
   if (currentView === 'login') {
-    return <LoginScreen onLogin={handleLogin} sodium={sodium} />
+    return <LoginScreen onLogin={handleLogin} sodium={sodium} setUserEncKey={setUserEncKey} />
   }
 
   if (currentView === 'register') {
-    return <RegisterScreen onRegister={handleRegister} sodium={sodium} />
+    return <RegisterScreen onRegister={handleRegister} sodium={sodium} setUserEncKey={setUserEncKey} />
   }
 
   if (currentView === 'chat') {
-    return <ChatScreen user={user} onLogout={handleLogout} />
+    return <ChatScreen user={user} onLogout={handleLogout} sodium={sodium} userEncKey={userEncKey} />
   }
 
   return null
 }
 
-function LoginScreen({ onLogin, sodium }) {
+function LoginScreen({ onLogin, sodium, setUserEncKey }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -216,6 +230,12 @@ function LoginScreen({ onLogin, sodium }) {
         setLoading(false)
         return
       }
+
+      // Derive in-memory session key for encryption-at-rest
+      const salt = getOrCreateUserSalt(user.id, sodium)
+      const key = await deriveKeyFromPin(pin, salt, sodium)
+      setUserEncKey(key)
+      sessionStorage.setItem('session_pin', pin)
 
       onLogin(user)
     } catch (err) {
@@ -250,7 +270,7 @@ function LoginScreen({ onLogin, sodium }) {
   )
 }
 
-function RegisterScreen({ onRegister, sodium }) {
+function RegisterScreen({ onRegister, sodium, setUserEncKey }) {
   const [nickname, setNickname] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
@@ -302,6 +322,12 @@ function RegisterScreen({ onRegister, sodium }) {
 
       users.push(newUser)
       localStorage.setItem('users', JSON.stringify(users))
+
+      // Derive in-memory session key and cache PIN in session
+      const salt = getOrCreateUserSalt(newUser.id, sodium)
+      const key = await deriveKeyFromPin(pin, salt, sodium)
+      setUserEncKey(key)
+      sessionStorage.setItem('session_pin', pin)
 
       // If this was an invite, automatically add the inviter as a contact
       if (inviteData && inviteData.from && inviteData.fromId) {
@@ -373,7 +399,7 @@ function RegisterScreen({ onRegister, sodium }) {
   )
 }
 
-function ChatScreen({ user, onLogout }) {
+function ChatScreen({ user, onLogout, sodium, userEncKey }) {
   const [inviteLink, setInviteLink] = useState('')
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
@@ -430,16 +456,34 @@ function ChatScreen({ user, onLogout }) {
           if (exists) return prev
           
           const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
-          // Also save to localStorage as backup
-          localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+          // Also save to localStorage as backup (encrypted if we can)
+          try {
+            if (userEncKey && sodium) {
+              const enc = encryptJson(updated, userEncKey, sodium)
+              localStorage.setItem(`messages_enc_${user.id}`, enc)
+            } else {
+              localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+            }
+          } catch {}
           return updated
         })
       }
     })
 
-    // Load existing messages from localStorage
-    const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
-    setMessages(savedMessages)
+    // Load existing messages from storage (prefer encrypted)
+    try {
+      const enc = localStorage.getItem(`messages_enc_${user.id}`)
+      if (enc && userEncKey && sodium) {
+        const decrypted = decryptJson(enc, userEncKey, sodium)
+        setMessages(decrypted)
+      } else {
+        const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+        setMessages(savedMessages)
+      }
+    } catch {
+      const savedMessages = JSON.parse(localStorage.getItem(`messages_${user.id}`) || '[]')
+      setMessages(savedMessages)
+    }
 
     // Initialize connections with contacts
     savedContacts.forEach(contact => {
@@ -447,7 +491,7 @@ function ChatScreen({ user, onLogout }) {
       console.log(`🟢 Gun.js P2P connection with ${contact.nickname}`)
     })
 
-  }, [gun, user.id])
+  }, [gun, user.id, userEncKey, sodium])
 
   // --- Manual WebRTC helpers ---
   const waitForIceGatheringComplete = (peer) => {
@@ -676,10 +720,17 @@ function ChatScreen({ user, onLogout }) {
       timestamp: Date.now()
     }
 
-    // Save to current user's messages locally as backup
+    // Save to current user's messages locally as backup (encrypted if possible)
     const updatedMessages = [...messages, message]
     setMessages(updatedMessages)
-    localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
+    try {
+      if (userEncKey && sodium) {
+        const enc = encryptJson(updatedMessages, userEncKey, sodium)
+        localStorage.setItem(`messages_enc_${user.id}`, enc)
+      } else {
+        localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
+      }
+    } catch {}
 
     // Prefer direct P2P data channel for 1:1 chats if available
     if (activeContact && rtcDataChannel && rtcDataChannel.readyState === 'open') {
