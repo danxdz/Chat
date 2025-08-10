@@ -1557,7 +1557,7 @@ function ChatScreen({ user, onLogout }) {
   return (
     <div className="app">
       {/* Header */}
-      <div style={{ 
+      <div className="header" style={{ 
         padding: '0.5rem 1rem', 
         background: '#2d2d2d', 
         borderBottom: '1px solid #555',
@@ -1579,6 +1579,7 @@ function ChatScreen({ user, onLogout }) {
         }}>
           <div style={{ position: 'relative' }}>
             <button
+              className="user-button"
               onClick={() => setShowUserSwitcher(!showUserSwitcher)}
               style={{
                 background: '#444',
@@ -1665,7 +1666,7 @@ function ChatScreen({ user, onLogout }) {
         </div>
 
         {/* Right side - Action buttons (horizontally aligned) */}
-        <div style={{ 
+        <div className="action-buttons" style={{ 
           display: 'flex', 
           gap: '0.4rem', 
           alignItems: 'center',
@@ -1740,9 +1741,9 @@ function ChatScreen({ user, onLogout }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 60px)', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
+      <div className="main-layout" style={{ display: 'flex', height: 'calc(100vh - 60px)', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
         {/* Sidebar */}
-        <div style={{ 
+        <div className="sidebar" style={{ 
           width: window.innerWidth < 768 ? '100%' : '250px',
           height: window.innerWidth < 768 ? '120px' : 'auto',
           background: '#333', 
@@ -1753,8 +1754,14 @@ function ChatScreen({ user, onLogout }) {
         }}>
           <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.9rem' }}>Contacts</h3>
           
-          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+          <div className={window.innerWidth < 480 ? "contacts-horizontal" : "contacts-container"} style={{ 
+            display: 'flex', 
+            gap: '0.3rem', 
+            flexWrap: window.innerWidth < 480 ? 'nowrap' : 'wrap',
+            overflowX: window.innerWidth < 480 ? 'auto' : 'visible'
+          }}>
             <button
+              className="contact-button"
               onClick={() => setActiveContact(null)}
               style={{
                 padding: '0.4rem 0.6rem',
@@ -1764,7 +1771,8 @@ function ChatScreen({ user, onLogout }) {
                 color: '#fff',
                 border: 'none',
                 fontSize: '0.8rem',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               💬 General
@@ -1777,6 +1785,7 @@ function ChatScreen({ user, onLogout }) {
               return (
                 <button
                   key={contact.id}
+                  className="contact-button"
                   onClick={() => setActiveContact(contact)}
                   style={{
                     padding: '0.4rem 0.6rem',
@@ -1789,16 +1798,19 @@ function ChatScreen({ user, onLogout }) {
                     whiteSpace: 'nowrap',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.3rem'
+                    gap: '0.3rem',
+                    flexShrink: 0
                   }}
                 >
                   <span>{statusIcon}</span>
                   <span>{contact.nickname}</span>
+                  {contact.status === 'pending' && <span style={{ color: '#ffc107' }}>⏳</span>}
                 </button>
               )
             })}
 
             <button 
+              className="contact-button"
               onClick={addContact}
               style={{
                 padding: '0.4rem 0.6rem',
@@ -1808,7 +1820,8 @@ function ChatScreen({ user, onLogout }) {
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               ➕ Add
@@ -1817,7 +1830,7 @@ function ChatScreen({ user, onLogout }) {
         </div>
 
         {/* Chat Area */}
-        <div style={{ 
+        <div className="chat-area" style={{ 
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
@@ -1826,6 +1839,7 @@ function ChatScreen({ user, onLogout }) {
           {/* Messages */}
           <div 
             id="messages-container"
+            className="messages-container"
             style={{ 
               flex: 1, 
               padding: '0.5rem', 
@@ -1851,7 +1865,7 @@ function ChatScreen({ user, onLogout }) {
             )}
             
             {/* Debug info */}
-            <div style={{ 
+            <div className="debug-info" style={{ 
               background: '#333', 
               padding: '0.5rem', 
               margin: '0.5rem', 
@@ -1893,7 +1907,7 @@ function ChatScreen({ user, onLogout }) {
               </div>
             ) : (
               displayMessages.map(message => (
-                <div key={message.id} style={{ 
+                <div key={message.id} className="message-bubble" style={{ 
                   marginBottom: '0.5rem',
                   padding: '0.5rem',
                   background: message.fromId === user.id ? '#0066cc' : '#444',
@@ -1903,11 +1917,9 @@ function ChatScreen({ user, onLogout }) {
                   marginRight: message.fromId === user.id ? '0' : 'auto',
                   fontSize: '0.9rem'
                 }}>
-                  <div style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.25rem' }}>
+                  <div className="message-header" style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.25rem' }}>
                     {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
-                    {message.realTest && <span style={{ color: '#ffc107' }}> [TEST]</span>}
-                    {message.deviceTest && <span style={{ color: '#28a745' }}> [DEVICE]</span>}
-                    {message.isPing && <span style={{ color: '#17a2b8' }}> [PING]</span>}
+                    {message.type === 'private' && <span style={{ color: '#ffc107' }}> [Private]</span>}
                   </div>
                   <div>{message.text}</div>
                 </div>
@@ -1916,7 +1928,7 @@ function ChatScreen({ user, onLogout }) {
           </div>
 
           {/* Message Input */}
-          <form onSubmit={sendMessage} style={{ 
+          <form onSubmit={sendMessage} className="message-input-container" style={{ 
             padding: '0.5rem', 
             background: '#2d2d2d',
             borderTop: '1px solid #555',
@@ -1926,6 +1938,7 @@ function ChatScreen({ user, onLogout }) {
           }}>
             <input
               type="text"
+              className="message-input"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder={`Message ${activeContact?.nickname || 'everyone'}...`}
@@ -1942,7 +1955,7 @@ function ChatScreen({ user, onLogout }) {
             />
             <button 
               type="submit" 
-              className="btn"
+              className="btn send-button"
               style={{ 
                 background: '#0066cc', 
                 padding: '0.7rem 1rem',
