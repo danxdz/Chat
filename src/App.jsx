@@ -1491,6 +1491,67 @@ function ChatScreen({ user, onLogout }) {
     }
   }
 
+  // Restore and improve magic link functionality
+  const generateInvite = () => {
+    const inviteData = {
+      from: user.nickname, 
+      fromId: user.id,
+      timestamp: Date.now(),
+      type: 'chat_invite'
+    }
+    
+    // Use URL-safe base64 encoding
+    const invite = btoa(JSON.stringify(inviteData))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+    
+    const link = `${window.location.origin}#invite=${invite}`
+    setInviteLink(link)
+    setShowInvite(true)
+    
+    console.log('📤 Generated invite link:', link)
+    
+    // Auto-add to pending contacts when generating invite
+    addPendingContact(inviteData)
+  }
+
+  const copyInvite = () => {
+    navigator.clipboard.writeText(inviteLink)
+    alert('Invite link copied!')
+  }
+
+  // Add pending contact when generating invite
+  const addPendingContact = (inviteData) => {
+    const pendingContact = {
+      id: `pending_${Date.now()}`,
+      nickname: `Invited User (${new Date().toLocaleTimeString()})`,
+      status: 'pending',
+      invitedAt: inviteData.timestamp,
+      invitedBy: inviteData.from
+    }
+    
+    const updatedContacts = [...contacts, pendingContact]
+    setContacts(updatedContacts)
+    localStorage.setItem(`contacts_${user.id}`, JSON.stringify(updatedContacts))
+    
+    console.log('👥 Added pending contact:', pendingContact)
+  }
+
+  // Switch to different user
+  const switchToUser = (targetUser) => {
+    localStorage.setItem('currentUser', JSON.stringify(targetUser))
+    window.location.reload()
+  }
+
+  // Auto-scroll messages to bottom
+  useEffect(() => {
+    const messagesDiv = document.getElementById('messages-container')
+    if (messagesDiv) {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight
+    }
+  }, [messages])
+
   return (
     <div className="app">
       {/* Header */}
