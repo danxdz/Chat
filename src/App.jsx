@@ -724,23 +724,31 @@ function ChatScreen({ user, onLogout }) {
       return false
     }
 
+    if (!message || !message.id || !message.text) {
+      console.error('❌ Invalid message format:', message)
+      return false
+    }
+
     try {
       // Use unique key for each message to prevent replacement
       const messageKey = `msg_${message.id}`
       console.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
       // Put message with unique key in specific channel
-      gun.get(channelName).get(messageKey).put(message)
+      await gun.get(channelName).get(messageKey).put(message)
       console.log('✅ Message sent to Gun.js with unique key')
       return true
     } catch (error) {
       console.error('❌ Gun.js send failed:', error)
+      console.error('- Message:', message)
+      console.error('- Channel:', channelName)
       return false
     }
   }
 
   // Enhanced message sending with contact support
-  const sendMessage = async () => {
+  const sendMessage = async (e) => {
+    if (e) e.preventDefault() // Handle form submission
     if (!newMessage.trim()) return
 
     const messageToSend = {
@@ -756,19 +764,24 @@ function ChatScreen({ user, onLogout }) {
 
     console.log('📤 SENDING MESSAGE TO GUN.JS:', messageToSend)
 
-    // Send to appropriate channel based on contact
-    const channelName = activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
-    console.log('📡 Using channel:', channelName)
+    try {
+      // Send to appropriate channel based on contact
+      const channelName = activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
+      console.log('📡 Using channel:', channelName)
 
-    const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
-    
-    if (p2pSuccess) {
-      console.log('✅ Message sent via Gun.js successfully')
-    } else {
-      console.log('❌ Failed to send message via Gun.js')
+      const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
+      
+      if (p2pSuccess) {
+        console.log('✅ Message sent via Gun.js successfully')
+      } else {
+        console.log('❌ Failed to send message via Gun.js')
+      }
+
+      setNewMessage('')
+    } catch (error) {
+      console.error('❌ Error sending message:', error)
+      alert('Failed to send message. Please try again.')
     }
-
-    setNewMessage('')
   }
 
   // Enhanced Gun.js listener for multiple channels
