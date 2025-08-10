@@ -733,8 +733,16 @@ function ChatScreen({ user, onLogout }) {
           gun.get('simple_chat_channel').on((data, key) => {
             console.log('📨 RAW DATA RECEIVED:', data, 'KEY:', key)
             
-            if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
-              console.log('📨 VALID MESSAGE RECEIVED:', data)
+            // STRICT filtering to prevent double messages
+            if (data && typeof data === 'object' && data.id && data.text) {
+              
+              // Skip own messages completely (prevent doubles)
+              if (data.fromId === user.id) {
+                console.log('📨 Ignoring OWN message to prevent double:', data.id)
+                return
+              }
+              
+              console.log('📨 VALID MESSAGE FROM ANOTHER USER:', data)
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === data.id)
@@ -743,15 +751,15 @@ function ChatScreen({ user, onLogout }) {
                   return prev
                 }
                 
-                console.log('💾 ADDING MESSAGE TO STATE - count before:', prev.length)
+                console.log('💾 ADDING EXTERNAL MESSAGE - count before:', prev.length)
                 const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                console.log('💾 MESSAGE ADDED TO STATE - count after:', updated.length)
-                console.log('🎉 NEW MESSAGE FROM ANOTHER TAB/DEVICE!')
+                console.log('💾 EXTERNAL MESSAGE ADDED - count after:', updated.length)
+                console.log('🎉 NEW MESSAGE FROM ANOTHER DEVICE!', data.from)
                 return updated
               })
             } else {
-              console.log('📨 Ignoring data - invalid or from self:', data)
+              console.log('📨 Ignoring invalid data:', data)
             }
           })
 
@@ -831,29 +839,46 @@ function ChatScreen({ user, onLogout }) {
     window.location.reload()
   }
 
-  const sendMessage = (e) => {
-    e.preventDefault()
-    if (!newMessage.trim()) return
+  const sendMessage = async () => {
+    if (!message.trim()) return
 
-    const message = {
-      id: Date.now(),
+    const newMessage = {
+      id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+             text: message.trim(),
       from: user.nickname,
       fromId: user.id,
       to: activeContact?.nickname || 'General',
-      toId: activeContact?.id || 'general',
-      text: newMessage.trim(),
-      timestamp: Date.now()
+      toId: activeContact?.id || null,
+      timestamp: Date.now(),
+      type: activeContact ? 'private' : 'general'
     }
 
-    // Save to current user's messages locally as backup
-    const updatedMessages = [...messages, message]
-    setMessages(updatedMessages)
-    localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
+    console.log('📤 SENDING MESSAGE:', newMessage)
 
-    // Send via Gun.js P2P network
-    sendP2PMessage(message)
+    // Add to local state immediately (for instant feedback)
+    setMessages(prev => {
+      const exists = prev.find(m => m.id === newMessage.id)
+      if (exists) {
+        console.log('⚠️ Message already exists locally, skipping add')
+        return prev
+      }
+      
+      console.log('💾 Adding message to LOCAL state')
+      const updated = [...prev, newMessage].sort((a, b) => a.timestamp - b.timestamp)
+      localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+      return updated
+    })
 
-    setNewMessage('')
+    // Send via P2P (but don't add to state again)
+    const p2pSuccess = await sendP2PMessage(newMessage)
+    
+    if (p2pSuccess) {
+      console.log('✅ Message sent via P2P successfully')
+    } else {
+      console.log('⚠️ P2P send failed, but message saved locally')
+    }
+
+         setMessage('')
   }
 
   const addContact = () => {
