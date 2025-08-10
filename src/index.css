@@ -45,10 +45,9 @@ body {
   /* Optimize main layout for 4-inch - FIXED viewport */
   .main-layout {
     margin-top: 52px !important;
-    height: calc(100vh - 52px - 120px) !important; /* Account for beautiful fixed input */
+    height: calc(100vh - 52px) !important;
     display: flex !important;
     flex-direction: column !important;
-    padding-bottom: 0 !important;
   }
   
   /* Ensure chat area takes available space but leaves room for input */
@@ -135,7 +134,7 @@ body {
   /* Stack layout vertically on very small screens */
   .main-layout {
     flex-direction: column !important;
-    height: calc(100vh - 48px - 120px) !important; /* Account for beautiful fixed input */
+    height: calc(100vh - 48px) !important;
   }
   
   /* Compact sidebar */
@@ -491,7 +490,7 @@ body {
   /* Adjust main content to account for fixed header */
   .main-layout {
     margin-top: 66px !important;
-    height: calc(100vh - 66px - 120px) !important; /* Account for beautiful fixed input */
+    height: calc(100vh - 66px) !important;
   }
   
   .user-button {
@@ -533,11 +532,6 @@ body {
     display: flex;
     gap: 0.6rem; /* +10% */
     align-items: flex-end;
-    position: fixed; /* FIXED POSITION for visibility */
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
   }
   
   .message-input {

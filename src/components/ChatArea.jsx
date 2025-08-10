@@ -14,8 +14,7 @@ export default function ChatArea({
       flex: 1, 
       display: 'flex', 
       flexDirection: 'column',
-      height: '100%',
-      position: 'relative'
+      height: '100%'
     }}>
       {/* Messages Container */}
       <div 
@@ -23,7 +22,7 @@ export default function ChatArea({
         className="messages-container"
         style={{ 
           flex: 1, 
-          padding: '1rem 1rem 8rem 1rem', // Beautiful spacing for the new input
+          padding: '1rem', 
           overflowY: 'auto',
           background: 'linear-gradient(180deg, #1a1a1a 0%, #161616 100%)',
           fontSize: '0.9rem'
@@ -127,20 +126,16 @@ export default function ChatArea({
 
       {/* Beautiful Message Input */}
       <form onSubmit={onSendMessage} style={{ 
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '1.5rem 1rem 1.5rem 1rem', 
+        padding: '1.5rem 1rem', 
         background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 20%)',
         backdropFilter: 'blur(30px)',
         borderTop: '1px solid rgba(255, 255, 255, 0.15)',
         display: 'flex',
         gap: '1rem',
         alignItems: 'flex-end',
-        zIndex: 1000,
         boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        transition: 'all 0.3s ease'
+        transition: 'all 0.3s ease',
+        flexShrink: 0
       }}>
         <textarea
           value={newMessage}
