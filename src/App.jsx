@@ -735,6 +735,115 @@ function App() {
     setTimeout(() => sendMessage(), 100)
   }
 
+  // Enhanced multi-user testing function
+  const testMultiUserMessaging = async () => {
+    if (!gun) {
+      alert('❌ Gun.js not connected - cannot test multi-user messaging')
+      return
+    }
+
+    const testUsers = [
+      { id: 1001, nickname: 'Alice', createdAt: Date.now() },
+      { id: 1002, nickname: 'Bob', createdAt: Date.now() },
+      { id: 1003, nickname: 'Charlie', createdAt: Date.now() }
+    ]
+
+    logger.log('🧪 STARTING MULTI-USER MESSAGING TEST')
+    
+    // Simulate messages from multiple users
+    const testMessages = [
+      {
+        id: Date.now() + '_alice',
+        text: '👋 Hello everyone! This is Alice testing general chat',
+        from: 'Alice',
+        fromId: 1001,
+        to: 'General',
+        toId: 'general',
+        timestamp: Date.now(),
+        type: 'general'
+      },
+      {
+        id: Date.now() + '_bob',
+        text: '🚀 Bob here! Testing P2P messaging functionality',
+        from: 'Bob', 
+        fromId: 1002,
+        to: 'General',
+        toId: 'general',
+        timestamp: Date.now() + 1000,
+        type: 'general'
+      },
+      {
+        id: Date.now() + '_charlie',
+        text: '⚡ Charlie joining the conversation! P2P works great!',
+        from: 'Charlie',
+        fromId: 1003,
+        to: 'General', 
+        toId: 'general',
+        timestamp: Date.now() + 2000,
+        type: 'general'
+      }
+    ]
+
+    // Send each test message to Gun.js P2P network
+    for (let i = 0; i < testMessages.length; i++) {
+      const msg = testMessages[i]
+      try {
+        await gun.get('general_chat').set(msg)
+        logger.log(`✅ Multi-user test message ${i + 1}/3 sent from ${msg.from}`)
+        
+        // Add small delay between messages
+        if (i < testMessages.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+      } catch (error) {
+        logger.error(`❌ Failed to send test message from ${msg.from}:`, error)
+      }
+    }
+
+    logger.log('🎯 Multi-user test complete! Check for messages from Alice, Bob, and Charlie')
+    alert('🧪 Multi-user test sent! You should see messages from Alice, Bob, and Charlie appear in general chat.')
+  }
+
+  // Test private messaging between users
+  const testPrivateMessaging = async () => {
+    if (!contacts || contacts.length === 0) {
+      alert('❌ No contacts available for private messaging test. Add a contact first.')
+      return
+    }
+
+    if (!gun) {
+      alert('❌ Gun.js not connected - cannot test private messaging')
+      return
+    }
+
+    const testContact = contacts[0]
+    const privateChannel = `private_${[user.id, testContact.id].sort().join('_')}`
+    
+    const privateTestMessage = {
+      id: Date.now() + '_private_test',
+      text: `🔒 Private message test from ${user.nickname} to ${testContact.nickname} at ${new Date().toLocaleTimeString()}`,
+      from: user.nickname,
+      fromId: user.id,
+      to: testContact.nickname,
+      toId: testContact.id,
+      timestamp: Date.now(),
+      type: 'private'
+    }
+
+    try {
+      await gun.get(privateChannel).set(privateTestMessage)
+      logger.log(`✅ Private message sent to ${testContact.nickname} on channel: ${privateChannel}`)
+      
+      // Add to local messages to show in UI
+      setMessages(prev => [...prev, privateTestMessage])
+      
+      alert(`🔒 Private message test sent to ${testContact.nickname}! Check the private chat.`)
+    } catch (error) {
+      logger.error('❌ Private message test failed:', error)
+      alert('❌ Private message test failed. Check console for details.')
+    }
+  }
+
   const createTestUsers = () => {
     const testUsers = [
       { id: 1001, nickname: 'Alice', createdAt: Date.now() },
@@ -983,6 +1092,8 @@ function App() {
           onRunTests={runVisualTests}
           onSendTestMessage={sendTestMessage}
           onSendCrossDeviceTest={sendCrossDeviceTest}
+          onTestMultiUser={testMultiUserMessaging}
+          onTestPrivateMsg={testPrivateMessaging}
           onCreateTestUsers={createTestUsers}
           onTestBasicGun={testBasicGunConnectivity}
           onClearCurrentClient={clearCurrentClientData}

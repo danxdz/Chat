@@ -11,6 +11,8 @@ export default function TestingPanel({
   onRunTests, 
   onSendTestMessage,
   onSendCrossDeviceTest,
+  onTestMultiUser,
+  onTestPrivateMsg,
   onCreateTestUsers,
   onTestBasicGun,
   onClearCurrentClient, 
@@ -73,6 +75,26 @@ export default function TestingPanel({
             padding: '0.6rem'
           }}>
             🚀 Cross-Device Test
+          </button>
+          <button onClick={onTestMultiUser} className="btn" style={{ 
+            background: '#9c27b0', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            👥 Multi-User Test
+          </button>
+          <button onClick={onTestPrivateMsg} className="btn" style={{ 
+            background: '#e91e63', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🔒 Private Msg Test
           </button>
           <button onClick={onTestBasicGun} className="btn" style={{ 
             background: '#dc3545', 
