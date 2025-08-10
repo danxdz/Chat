@@ -708,13 +708,13 @@ function ChatScreen({ user, onLogout }) {
       // Wait a bit for Gun.js to fully initialize
       setTimeout(() => {
         try {
-          console.log('✅ Setting up simplified Gun.js listeners (avoiding "dare" error)')
+          console.log('✅ Setting up ENHANCED Gun.js listeners for cross-device sync')
           
-          // Simple message listening without problematic .map() calls
-          // Listen to general chat with simpler approach
+          // Enhanced message listening for cross-device sync
           gun.get('general_chat').on((data, key) => {
-            if (data && typeof data === 'object' && data.id && data.text) {
-              console.log('📨 Received message on general chat:', data)
+            if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
+              console.log('📨 RECEIVED CROSS-DEVICE MESSAGE (general_chat):', data)
+              console.log('📄 Message details:', JSON.stringify(data, null, 2))
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === data.id)
@@ -723,24 +723,28 @@ function ChatScreen({ user, onLogout }) {
                   return prev
                 }
                 
-                console.log('💾 Adding message to state - count before:', prev.length)
+                console.log('💾 ADDING CROSS-DEVICE MESSAGE - count before:', prev.length)
                 const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                console.log('💾 Added message to state - count after:', updated.length)
+                console.log('💾 ADDED CROSS-DEVICE MESSAGE - count after:', updated.length)
+                
+                // Show notification that message was received
+                console.log('🎉 NEW MESSAGE FROM ANOTHER DEVICE!')
                 return updated
               })
             }
           })
 
-          // Listen to broadcast channel
+          // Listen to global broadcast channel
           gun.get('global_chat_broadcast').on((data, key) => {
-            if (data && typeof data === 'object' && data.id && data.text) {
-              console.log('📨 Received broadcast message:', data)
+            if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
+              console.log('📨 RECEIVED BROADCAST MESSAGE:', data)
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === data.id)
                 if (exists) return prev
                 
+                console.log('💾 Adding broadcast message to state')
                 const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
                 localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
                 return updated
@@ -748,7 +752,32 @@ function ChatScreen({ user, onLogout }) {
             }
           })
 
-          console.log('✅ Simplified Gun.js listeners setup successfully')
+          // Listen to cross-device sync channel
+          gun.get('cross_device_sync').on((data, key) => {
+            if (data && typeof data === 'object' && data.id && data.text && data.fromId !== user.id) {
+              console.log('📨 RECEIVED CROSS-DEVICE SYNC MESSAGE:', data)
+              
+              setMessages(prev => {
+                const exists = prev.find(m => m.id === data.id)
+                if (exists) return prev
+                
+                console.log('💾 Adding sync message to state')
+                const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
+                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                return updated
+              })
+            }
+          })
+
+          // Listen for ping responses to verify connectivity
+          gun.get('device_ping_test').on((pingData, key) => {
+            if (pingData && pingData.type === 'ping' && pingData.from !== user.nickname) {
+              console.log('🏓 RECEIVED PING FROM ANOTHER DEVICE:', pingData.from)
+              console.log('✅ This proves Gun.js P2P is working between devices!')
+            }
+          })
+
+          console.log('✅ ENHANCED Gun.js listeners setup - ready for cross-device sync!')
           
           // Set connection status for contacts
           contacts.forEach(contact => {
@@ -760,7 +789,7 @@ function ChatScreen({ user, onLogout }) {
           console.error('❌ Error in Gun.js listener setup:', innerError)
           setChatError('P2P listener setup failed: ' + innerError.message)
         }
-      }, 500) // Small delay to ensure Gun.js is fully ready
+      }, 1000) // Increased delay to ensure Gun.js is fully ready
 
     } catch (error) {
       console.error('❌ Error setting up Gun.js listeners:', error)
@@ -775,45 +804,41 @@ function ChatScreen({ user, onLogout }) {
     }
 
     try {
-      console.log('📡 Broadcasting message to multiple P2P channels...')
+      console.log('📡 SENDING MESSAGE VIA GUN.JS P2P:')
+      console.log('📄 Message data:', JSON.stringify(message, null, 2))
       
-      // Always broadcast to multiple channels to ensure cross-device sync
+      // Send to multiple channels for maximum reach
       const channels = [
-        'general_chat',           // General chat channel
-        'global_chat_broadcast',  // Global broadcast for all devices
-        `chat_${user.id}`,       // Sender's personal channel
+        'general_chat',
+        'global_chat_broadcast',
+        'cross_device_sync'
       ]
 
-      // If messaging a specific contact, also send to their channel
-      if (activeContact) {
-        channels.push(`chat_${activeContact.id}`)
-        console.log(`📤 Sending to contact ${activeContact.nickname}`)
-      }
+      console.log(`📡 Broadcasting to ${channels.length} channels:`, channels)
 
-      // Also broadcast to all known users to ensure wide distribution
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      allUsers.forEach(u => {
-        if (u.id !== user.id) {
-          channels.push(`chat_${u.id}`)
-        }
-      })
-
-      // Remove duplicates
-      const uniqueChannels = [...new Set(channels)]
-      
-      console.log(`📡 Broadcasting to ${uniqueChannels.length} channels:`, uniqueChannels)
-
-      // Send to all channels
-      for (const channel of uniqueChannels) {
+      // Send to all channels with error handling
+      for (const channel of channels) {
         try {
-          await gun.get(channel).set(message)
-          console.log(`✅ Message sent to channel: ${channel}`)
+          console.log(`📤 Sending to channel: ${channel}`)
+          gun.get(channel).put(message)
+          console.log(`✅ Successfully sent to: ${channel}`)
         } catch (channelError) {
           console.error(`❌ Failed to send to channel ${channel}:`, channelError)
         }
       }
 
-      console.log('🎯 Message broadcast complete!')
+      // Also send a simple ping to verify Gun.js is working
+      const pingData = {
+        type: 'ping',
+        from: message.from,
+        timestamp: Date.now(),
+        originalMessageId: message.id
+      }
+      
+      gun.get('device_ping_test').put(pingData)
+      console.log('🏓 Ping sent to verify Gun.js connectivity')
+
+      console.log('🎯 P2P Message broadcast complete!')
       return true
     } catch (error) {
       console.error('❌ Failed to send P2P message:', error)
@@ -1243,6 +1268,62 @@ function ChatScreen({ user, onLogout }) {
       }
     } else {
       setTestLogs(prev => [...prev, '❌ Gun.js not connected - cannot test cross-device sync'])
+    }
+  }
+
+  const sendCrossDeviceTest = () => {
+    const testMessage = {
+      id: Date.now() + Math.random(),
+      from: user.nickname + ' [DEVICE_TEST]',
+      fromId: user.id,
+      to: 'General',
+      toId: 'general',
+      text: `🚀 CROSS-DEVICE TEST from ${user.nickname} on device at ${new Date().toLocaleTimeString()}`,
+      timestamp: Date.now(),
+      crossDeviceTest: true
+    }
+
+    setTestLogs(prev => [...prev, '🚀 SENDING CROSS-DEVICE TEST MESSAGE...'])
+    setTestLogs(prev => [...prev, `📄 Message: "${testMessage.text}"`])
+    setTestLogs(prev => [...prev, `👤 From: ${testMessage.from}`])
+    setTestLogs(prev => [...prev, `🆔 Message ID: ${testMessage.id}`])
+
+    // Add to local messages
+    const updatedMessages = [...messages, testMessage]
+    setMessages(updatedMessages)
+    localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
+
+    // Send via Gun.js P2P
+    if (gun) {
+      try {
+        // Send to all channels
+        gun.get('general_chat').put(testMessage)
+        gun.get('global_chat_broadcast').put(testMessage)
+        gun.get('cross_device_sync').put(testMessage)
+        
+        setTestLogs(prev => [
+          ...prev,
+          '✅ Cross-device test message sent to ALL channels',
+          '📱 CHECK OTHER DEVICES - you should see this message appear!',
+          '⏰ Wait 5-10 seconds for P2P sync',
+          '🔍 Look for message with [DEVICE_TEST] in the chat'
+        ])
+
+        // Send verification ping
+        const pingData = {
+          type: 'ping',
+          from: user.nickname,
+          text: `Ping from ${user.nickname} to verify connectivity`,
+          timestamp: Date.now()
+        }
+        gun.get('device_ping_test').put(pingData)
+        setTestLogs(prev => [...prev, '🏓 Verification ping sent'])
+
+      } catch (error) {
+        setTestLogs(prev => [...prev, `❌ Cross-device test failed: ${error.message}`])
+      }
+    } else {
+      setTestLogs(prev => [...prev, '❌ Gun.js not connected - cannot test cross-device'])
     }
   }
 
@@ -1766,6 +1847,16 @@ function ChatScreen({ user, onLogout }) {
                 padding: '0.6rem'
               }}>
                 📡 Send Test Message
+              </button>
+              <button onClick={sendCrossDeviceTest} className="btn" style={{ 
+                background: '#ffc107', 
+                color: '#000', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
+                🚀 Cross-Device Test
               </button>
               <button onClick={testGunConnectivity} className="btn" style={{ 
                 background: '#dc3545', 
