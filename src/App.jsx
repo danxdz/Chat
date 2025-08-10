@@ -717,65 +717,41 @@ function ChatScreen({ user, onLogout }) {
     }
   }, [initStatus])
 
-  // Gun.js message listener (only if Gun is available)
+  // Gun.js message listener (simplified - no complex filtering)
   useEffect(() => {
     if (!gun) return
 
-    console.log('🔄 Setting up Gun.js message listeners...')
+    console.log('🔧 Setting up SIMPLE Gun.js message listener...')
 
-    try {
-      // Wait a bit for Gun.js to fully initialize
-      setTimeout(() => {
-        try {
-          console.log('✅ Setting up BASIC Gun.js listener for simple chat')
+    // Simple listener - just add ALL valid messages
+    gun.get('simple_chat_channel').on((data, key) => {
+      console.log('📨 RECEIVED DATA:', data)
+      
+      // Basic validation only
+      if (data && data.id && data.text && data.from) {
+        console.log('✅ Valid message received:', data.text, 'from:', data.from)
+        
+        // Add to messages if not already exists
+        setMessages(prev => {
+          const exists = prev.find(m => m.id === data.id)
+          if (exists) {
+            console.log('⚠️ Message already exists, skipping')
+            return prev
+          }
           
-          // Use the simplest possible listener - just one channel
-          gun.get('simple_chat_channel').on((data, key) => {
-            console.log('📨 RAW DATA RECEIVED:', data, 'KEY:', key)
-            
-            // STRICT filtering to prevent double messages
-            if (data && typeof data === 'object' && data.id && data.text) {
-              
-              // Skip own messages completely (prevent doubles)
-              if (data.fromId === user.id) {
-                console.log('📨 Ignoring OWN message to prevent double:', data.id)
-                return
-              }
-              
-              console.log('📨 VALID MESSAGE FROM ANOTHER USER:', data)
-              
-              setMessages(prev => {
-                const exists = prev.find(m => m.id === data.id)
-                if (exists) {
-                  console.log('⚠️ Duplicate message ignored:', data.id)
-                  return prev
-                }
-                
-                console.log('💾 ADDING EXTERNAL MESSAGE - count before:', prev.length)
-                const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
-                console.log('💾 EXTERNAL MESSAGE ADDED - count after:', updated.length)
-                console.log('🎉 NEW MESSAGE FROM ANOTHER DEVICE!', data.from)
-                return updated
-              })
-            } else {
-              console.log('📨 Ignoring invalid data:', data)
-            }
-          })
+          console.log('💾 Adding message to state')
+          const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
+          localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+          console.log('✅ Message added! Total messages:', updated.length)
+          return updated
+        })
+      } else {
+        console.log('❌ Invalid message data:', data)
+      }
+    })
 
-          console.log('✅ BASIC Gun.js listener setup complete')
-          
-        } catch (innerError) {
-          console.error('❌ Error in Gun.js listener setup:', innerError)
-          setChatError('P2P listener setup failed: ' + innerError.message)
-        }
-      }, 1000) // Increased delay to ensure Gun.js is fully ready
-
-    } catch (error) {
-      console.error('❌ Error setting up Gun.js listeners:', error)
-      setChatError('Failed to setup P2P listeners: ' + error.message)
-    }
-  }, [gun, user.id, contacts])
+    console.log('✅ Simple Gun.js listener setup complete')
+  }, [gun, user.id])
 
   const sendP2PMessage = async (message) => {
     if (!gun) {
