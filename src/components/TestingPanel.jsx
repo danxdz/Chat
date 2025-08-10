@@ -1,0 +1,181 @@
+export default function TestingPanel({ 
+  isVisible, 
+  user,
+  contacts,
+  messages,
+  gun,
+  initStatus,
+  chatError,
+  testLogs,
+  onClose,
+  onRunTests, 
+  onSendTestMessage,
+  onSendCrossDeviceTest,
+  onCreateTestUsers,
+  onTestBasicGun,
+  onClearCurrentClient, 
+  onClearAllClients, 
+  onResetApp 
+}) {
+  if (!isVisible) return null
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }}>
+      <div style={{
+        background: '#2d2d2d',
+        padding: window.innerWidth < 480 ? '1rem' : '2rem',
+        borderRadius: '8px',
+        width: '95%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        margin: '1rem'
+      }}>
+        <h2 style={{ margin: '0 0 1rem 0' }}>🧪 App Testing Suite</h2>
+        
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button onClick={onRunTests} className="btn" style={{ 
+            background: '#0066cc', 
+            flex: 1, 
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🔍 Run All Tests
+          </button>
+          <button onClick={onSendTestMessage} className="btn" style={{ 
+            background: '#28a745', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            📡 Send Test Message
+          </button>
+          <button onClick={onSendCrossDeviceTest} className="btn" style={{ 
+            background: '#ffc107', 
+            color: '#000', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🚀 Cross-Device Test
+          </button>
+          <button onClick={onTestBasicGun} className="btn" style={{ 
+            background: '#dc3545', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🔍 Test Basic Gun.js
+          </button>
+          <button onClick={onCreateTestUsers} className="btn" style={{ 
+            background: '#ffc107', 
+            color: '#000', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            👥 Create Test Users
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button onClick={onClearCurrentClient} className="btn" style={{ 
+            background: '#ff6b6b', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🧹 Clear Current User Data
+          </button>
+          <button onClick={onClearAllClients} className="btn" style={{ 
+            background: '#dc3545', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            💥 Clear ALL Data
+          </button>
+          <button onClick={onResetApp} className="btn" style={{ 
+            background: '#0066cc', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🔄 Reset App to Fresh Start
+          </button>
+        </div>
+
+        {testLogs.length > 0 && (
+          <div style={{
+            background: '#1a1a1a',
+            padding: '1rem',
+            borderRadius: '4px',
+            marginBottom: '1rem',
+            maxHeight: '300px',
+            overflow: 'auto',
+            fontFamily: 'monospace',
+            fontSize: '0.9rem'
+          }}>
+            {testLogs.map((log, index) => (
+              <div key={index} style={{ marginBottom: '0.25rem' }}>
+                {log}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ marginBottom: '1rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>📊 Current Status:</h3>
+          <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
+            <div>👤 User: {user.nickname}</div>
+            <div>📋 Contacts: {contacts.length}</div>
+            <div>💬 Messages: {messages.length}</div>
+            <div>🔫 Gun.js: {gun ? '🟢 Connected' : '🔴 Not Connected'}</div>
+            <div>⚡ Status: {initStatus}</div>
+            {chatError && <div style={{ color: '#ff6b6b' }}>⚠️ Error: {chatError}</div>}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            onClick={onClose} 
+            className="btn" 
+            style={{ background: '#666', flex: 1 }}
+          >
+            Close
+          </button>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="btn" 
+            style={{ background: '#dc3545', flex: 1 }}
+          >
+            🔄 Restart App
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
