@@ -13,8 +13,7 @@ export default function ChatArea({
     <div className="chat-area" style={{ 
       flex: 1, 
       display: 'flex', 
-      flexDirection: 'column',
-      height: '100%'
+      flexDirection: 'column'
     }}>
       {/* Messages Container */}
       <div 
@@ -22,9 +21,9 @@ export default function ChatArea({
         className="messages-container"
         style={{ 
           flex: 1, 
-          padding: '1rem', 
+          padding: '0.5rem', 
           overflowY: 'auto',
-          background: 'linear-gradient(180deg, #1a1a1a 0%, #161616 100%)',
+          background: '#1a1a1a',
           fontSize: '0.9rem'
         }}
       >
@@ -124,20 +123,17 @@ export default function ChatArea({
         )}
       </div>
 
-      {/* Beautiful Message Input */}
-      <form onSubmit={onSendMessage} style={{ 
-        padding: '1.5rem 1rem', 
-        background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 20%)',
-        backdropFilter: 'blur(30px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+      {/* Message Input */}
+      <form onSubmit={onSendMessage} className="message-input-container" style={{ 
+        padding: '0.7rem 0.5rem', 
+        background: '#2d2d2d',
+        borderTop: '1px solid #555',
         display: 'flex',
-        gap: '1rem',
-        alignItems: 'flex-end',
-        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        transition: 'all 0.3s ease',
-        flexShrink: 0
+        gap: '0.5rem',
+        alignItems: 'flex-end'
       }}>
         <textarea
+          className="message-input"
           value={newMessage}
           onChange={onMessageChange}
           onKeyDown={(e) => {
@@ -146,87 +142,46 @@ export default function ChatArea({
               onSendMessage(e);
             }
           }}
-          placeholder={`💬 Message ${activeContact?.nickname || 'everyone'}...`}
+          placeholder={`Message ${activeContact?.nickname || 'everyone'}...`}
           rows={1}
           style={{
             flex: 1,
-            padding: '1.2rem 1.5rem',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: '20px',
-            background: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(15px)',
-            color: '#ffffff',
-            fontSize: '16px',
-            fontWeight: '400',
-            minHeight: '56px',
-            maxHeight: '140px',
+            padding: '0.8rem',
+            border: '1px solid #555',
+            borderRadius: '8px',
+            background: '#333',
+            color: 'white',
+            fontSize: '16px', // Prevent zoom on iOS
+            minHeight: '44px', // Touch-friendly height
+            maxHeight: '120px',
             resize: 'none',
             fontFamily: 'inherit',
-            lineHeight: '1.5',
-            overflowY: 'auto',
-            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-            letterSpacing: '0.2px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.4)'
-            e.target.style.background = 'rgba(255, 255, 255, 0.12)'
-            e.target.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.1), 0 8px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-            e.target.style.transform = 'translateY(-2px)'
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'
-            e.target.style.background = 'rgba(255, 255, 255, 0.08)'
-            e.target.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-            e.target.style.transform = 'translateY(0)'
+            lineHeight: '1.4',
+            overflowY: 'auto'
           }}
           onInput={(e) => {
-            // Auto-resize textarea with smooth animation
+            // Auto-resize textarea
             e.target.style.height = 'auto';
-            const newHeight = Math.min(e.target.scrollHeight, 140);
-            e.target.style.height = newHeight + 'px';
+            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
           }}
         />
         <button 
           type="submit" 
+          className="btn send-button"
           style={{ 
-            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.9) 100%)',
-            backdropFilter: 'blur(15px)',
-            color: '#ffffff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '20px',
-            padding: '1.2rem 2rem',
-            fontSize: '16px',
-            fontWeight: '600',
-            minHeight: '56px',
+            background: '#0066cc', 
+            padding: '0.8rem 1rem',
+            width: 'auto',
+            margin: 0,
+            fontSize: '0.9rem',
+            minHeight: '44px',
+            borderRadius: '8px',
+            border: 'none',
+            color: 'white',
             cursor: 'pointer',
-            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-            letterSpacing: '0.5px',
-            whiteSpace: 'nowrap',
-            boxShadow: '0 4px 20px rgba(76, 175, 80, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 1) 0%, rgba(56, 142, 60, 1) 100%)'
-            e.target.style.transform = 'translateY(-3px) scale(1.02)'
-            e.target.style.boxShadow = '0 8px 40px rgba(76, 175, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.9) 100%)'
-            e.target.style.transform = 'translateY(0) scale(1)'
-            e.target.style.boxShadow = '0 4px 20px rgba(76, 175, 80, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-          }}
-          onMouseDown={(e) => {
-            e.target.style.transform = 'translateY(-1px) scale(0.98)'
-          }}
-          onMouseUp={(e) => {
-            e.target.style.transform = 'translateY(-3px) scale(1.02)'
+            transition: 'background 0.2s'
           }}
         >
-          <span>✈️</span>
           Send
         </button>
       </form>
