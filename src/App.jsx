@@ -1153,7 +1153,6 @@ function App() {
       <div className="app">
         <Header
           user={user}
-          allUsers={allUsers}
           activeContact={activeContact}
           initStatus={initStatus}
           connectedPeers={connectedPeers}
@@ -1161,7 +1160,6 @@ function App() {
           onShowInvite={() => setShowInvite(true)}
           onShowTests={() => setShowTests(true)}
           onLogout={logout}
-          onSwitchUser={switchToUser}
         />
 
         <div className="main-layout">

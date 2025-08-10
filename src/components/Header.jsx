@@ -1,25 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function Header({ 
   user, 
-  allUsers, 
   activeContact, 
   initStatus,
   connectedPeers,
   connectionStatus,
   onShowInvite, 
   onShowTests, 
-  onLogout, 
-  onSwitchUser 
+  onLogout
 }) {
-  const [showUserSwitcher, setShowUserSwitcher] = useState(false)
+  const [showDevMenu, setShowDevMenu] = useState(false)
 
-  const handleSwitchUser = (targetUser) => {
-    onSwitchUser(targetUser)
-    setShowUserSwitcher(false)
-  }
-
-  // Demo user creation removed for security - users must register with PIN
+  // Close dev menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDevMenu && !event.target.closest('.action-buttons')) {
+        setShowDevMenu(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showDevMenu])
 
   return (
     <div className="header" style={{ 
@@ -42,66 +45,29 @@ export default function Header({
         minWidth: '200px',
         maxWidth: 'calc(100% - 220px)'
       }}>
-        <div style={{ position: 'relative' }}>
-          <button
-            className="user-button"
-            onClick={() => setShowUserSwitcher(!showUserSwitcher)}
-            style={{
-              background: '#444',
-              border: 'none',
-              color: 'white',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            👤 {user.nickname} ▼
-          </button>
-          
-          {showUserSwitcher && (
-            <div style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              background: '#333',
-              border: '1px solid #555',
-              borderRadius: '4px',
-              zIndex: 1000,
-              minWidth: '150px',
-              marginTop: '0.25rem'
-            }}>
-              <div style={{ padding: '0.5rem', borderBottom: '1px solid #555', fontSize: '0.8rem', color: '#888' }}>
-                Switch User:
-              </div>
-              {allUsers.filter(u => u.id !== user.id).map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => handleSwitchUser(u)}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'white',
-                    padding: '0.75rem',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}
-                  onMouseOver={(e) => e.target.style.background = '#444'}
-                  onMouseOut={(e) => e.target.style.background = 'transparent'}
-                >
-                  👤 {u.nickname}
-                </button>
-              ))}
-              {allUsers.length <= 1 && (
-                <div style={{ padding: '0.5rem', borderTop: '1px solid #555', fontSize: '0.8rem', color: '#888' }}>
-                  Create more accounts by registering with different PINs
-                </div>
-              )}
-            </div>
-          )}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem',
+          background: 'rgba(255, 255, 255, 0.05)',
+          padding: '0.4rem 0.8rem',
+          borderRadius: '8px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{ 
+            width: '8px', 
+            height: '8px', 
+            borderRadius: '50%', 
+            background: '#4CAF50',
+            flexShrink: 0 
+          }}></div>
+          <span style={{ 
+            fontSize: '0.9rem', 
+            fontWeight: '500',
+            color: '#ffffff'
+          }}>
+            {user.nickname}
+          </span>
         </div>
         
         <div style={{ flex: 1, fontSize: '0.8rem', overflow: 'hidden' }}>
@@ -127,13 +93,13 @@ export default function Header({
         </div>
       </div>
 
-      {/* Right side - Action buttons */}
+      {/* Right side - Minimalist actions */}
       <div className="action-buttons" style={{ 
         display: 'flex', 
-        gap: '0.4rem', 
+        gap: '0.5rem', 
         alignItems: 'center',
         flexShrink: 0,
-        minWidth: 'auto'
+        position: 'relative'
       }}>
         <button 
           onClick={onShowInvite} 
