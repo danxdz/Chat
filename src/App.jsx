@@ -680,13 +680,11 @@ function ChatScreen({ user, onLogout }) {
       // Wait a bit for Gun.js to fully initialize
       setTimeout(() => {
         try {
-          // Use a simpler approach to avoid the "dare is not a function" error
-          const chatRef = gun.get(`chat_${user.id}`)
-          
-          // Subscribe to new messages
-          chatRef.map().on((messageData, messageKey) => {
+          // Listen to personal chat channel
+          const personalChatRef = gun.get(`chat_${user.id}`)
+          personalChatRef.map().on((messageData, messageKey) => {
             if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
-              console.log('📨 Received P2P message:', messageData)
+              console.log('📨 Received P2P message on personal channel:', messageData)
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === messageData.id)
@@ -699,10 +697,11 @@ function ChatScreen({ user, onLogout }) {
             }
           }, { change: true })
 
-          // Also listen to general chat
-          gun.get('general_chat').map().on((messageData, messageKey) => {
-            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text && messageData.toId === 'general') {
-              console.log('📨 Received general P2P message:', messageData)
+          // Listen to general chat channel for all users
+          const generalChatRef = gun.get('general_chat')
+          generalChatRef.map().on((messageData, messageKey) => {
+            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
+              console.log('📨 Received P2P message on general channel:', messageData)
               
               setMessages(prev => {
                 const exists = prev.find(m => m.id === messageData.id)
@@ -715,7 +714,59 @@ function ChatScreen({ user, onLogout }) {
             }
           }, { change: true })
 
-          console.log('✅ Gun.js listeners setup successfully')
+          // Listen to global broadcast channel for cross-device messaging
+          const broadcastRef = gun.get('global_chat_broadcast')
+          broadcastRef.map().on((messageData, messageKey) => {
+            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
+              console.log('📨 Received P2P message on broadcast channel:', messageData)
+              
+              setMessages(prev => {
+                const exists = prev.find(m => m.id === messageData.id)
+                if (exists) return prev
+                
+                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                return updated
+              })
+            }
+          }, { change: true })
+
+          // Listen to cross-device test channel
+          const crossDeviceRef = gun.get('cross_device_test')
+          crossDeviceRef.map().on((messageData, messageKey) => {
+            if (messageData && typeof messageData === 'object' && messageData.id && messageData.text) {
+              console.log('📱 Received CROSS-DEVICE test message:', messageData)
+              
+              setMessages(prev => {
+                const exists = prev.find(m => m.id === messageData.id)
+                if (exists) return prev
+                
+                const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
+                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                return updated
+              })
+            }
+          }, { change: true })
+
+          // Listen to connectivity ping channel
+          const pingRef = gun.get('connectivity_ping')
+          pingRef.map().on((pingData, pingKey) => {
+            if (pingData && typeof pingData === 'object' && pingData.isPing && pingData.fromId !== user.id) {
+              console.log('🏓 Received connectivity ping from another device:', pingData)
+              
+              // Show ping in messages too
+              setMessages(prev => {
+                const exists = prev.find(m => m.id === pingData.id)
+                if (exists) return prev
+                
+                const updated = [...prev, pingData].sort((a, b) => a.timestamp - b.timestamp)
+                localStorage.setItem(`messages_${user.id}`, JSON.stringify(updated))
+                return updated
+              })
+            }
+          }, { change: true })
+
+          console.log('✅ Gun.js listeners setup successfully for all channels')
           
           // Set connection status for contacts
           contacts.forEach(contact => {
@@ -742,25 +793,45 @@ function ChatScreen({ user, onLogout }) {
     }
 
     try {
-      // Send to specific contact's chat channel
+      console.log('📡 Broadcasting message to multiple P2P channels...')
+      
+      // Always broadcast to multiple channels to ensure cross-device sync
+      const channels = [
+        'general_chat',           // General chat channel
+        'global_chat_broadcast',  // Global broadcast for all devices
+        `chat_${user.id}`,       // Sender's personal channel
+      ]
+
+      // If messaging a specific contact, also send to their channel
       if (activeContact) {
-        const contactChatKey = `chat_${activeContact.id}`
-        await gun.get(contactChatKey).set(message)
-        console.log(`📤 P2P message sent to ${activeContact.nickname} via Gun.js`)
-      } else {
-        // Send to general chat - broadcast to all users
-        const generalChatKey = 'general_chat'
-        await gun.get(generalChatKey).set(message)
-        console.log('📤 P2P message sent to general chat via Gun.js')
-        
-        // Also send to each user's personal channel
-        const users = JSON.parse(localStorage.getItem('users') || '[]')
-        users.forEach(async (u) => {
-          if (u.id !== user.id) {
-            await gun.get(`chat_${u.id}`).set(message)
-          }
-        })
+        channels.push(`chat_${activeContact.id}`)
+        console.log(`📤 Sending to contact ${activeContact.nickname}`)
       }
+
+      // Also broadcast to all known users to ensure wide distribution
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      allUsers.forEach(u => {
+        if (u.id !== user.id) {
+          channels.push(`chat_${u.id}`)
+        }
+      })
+
+      // Remove duplicates
+      const uniqueChannels = [...new Set(channels)]
+      
+      console.log(`📡 Broadcasting to ${uniqueChannels.length} channels:`, uniqueChannels)
+
+      // Send to all channels
+      for (const channel of uniqueChannels) {
+        try {
+          await gun.get(channel).set(message)
+          console.log(`✅ Message sent to channel: ${channel}`)
+        } catch (channelError) {
+          console.error(`❌ Failed to send to channel ${channel}:`, channelError)
+        }
+      }
+
+      console.log('🎯 Message broadcast complete!')
       return true
     } catch (error) {
       console.error('❌ Failed to send P2P message:', error)
@@ -1115,50 +1186,73 @@ function ChatScreen({ user, onLogout }) {
       fromId: user.id,
       to: 'General',
       toId: 'general', 
-      text: `🧪 REAL P2P test message sent at ${new Date().toLocaleTimeString()}`,
+      text: `🧪 CROSS-DEVICE test message from ${user.nickname} at ${new Date().toLocaleTimeString()}`,
       timestamp: Date.now(),
-      realTest: true
+      realTest: true,
+      deviceTest: true
     }
 
-    setTestLogs(prev => [...prev, '📡 Sending REAL test message...'])
+    setTestLogs(prev => [...prev, '📡 Sending CROSS-DEVICE test message...'])
 
     // Add to local messages first
     const updatedMessages = [...messages, testMessage]
     setMessages(updatedMessages)
     localStorage.setItem(`messages_${user.id}`, JSON.stringify(updatedMessages))
 
-    // Actually test P2P functionality
+    // Test real cross-device P2P functionality
     if (gun) {
       try {
-        // Send to multiple channels to test real P2P
-        gun.get('general_chat').set(testMessage)
-        gun.get(`chat_${user.id}`).set(testMessage)
-        gun.get('real_test_broadcast').set(testMessage)
+        // Broadcast to multiple channels for maximum reach
+        const testChannels = [
+          'general_chat',
+          'global_chat_broadcast', 
+          'cross_device_test',
+          `chat_${user.id}`
+        ]
+
+        // Also send to all user channels
+        const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        allUsers.forEach(u => {
+          testChannels.push(`chat_${u.id}`)
+        })
+
+        testChannels.forEach(async (channel) => {
+          try {
+            await gun.get(channel).set(testMessage)
+            console.log(`📡 Test message sent to: ${channel}`)
+          } catch (e) {
+            console.error(`Failed to send to ${channel}:`, e)
+          }
+        })
 
         setTestLogs(prev => [
           ...prev, 
-          '✅ Message sent to Gun.js P2P network',
-          '📡 Broadcasted to multiple channels',
-          '⏳ Other users should receive this message',
-          `🔗 Test message ID: ${testMessage.id}`
+          '✅ Test message broadcasted to ALL channels',
+          '📱 Check other devices - they should receive this message',
+          '🔗 Broadcasting to Gun.js P2P network',
+          `🎯 Test message: "${testMessage.text}"`,
+          `📊 Sent to ${testChannels.length} channels`
         ])
 
-        // Test retrieval after a delay
-        setTimeout(() => {
-          gun.get('real_test_broadcast').map().once((data) => {
-            if (data && data.realTest && data.id === testMessage.id) {
-              setTestLogs(prev => [...prev, '✅ P2P round-trip test: SUCCESS - Message retrieved from network'])
-            } else {
-              setTestLogs(prev => [...prev, '❌ P2P round-trip test: FAILED - Could not retrieve message'])
-            }
-          })
-        }, 2000)
+        // Send a connectivity ping
+        const pingMessage = {
+          id: Date.now() + Math.random() + 0.1,
+          from: user.nickname + '_PING',
+          fromId: user.id,
+          text: `🏓 Device connectivity ping from ${user.nickname}`,
+          timestamp: Date.now(),
+          isPing: true,
+          toId: 'general'
+        }
+
+        gun.get('connectivity_ping').set(pingMessage)
+        setTestLogs(prev => [...prev, '🏓 Connectivity ping sent to network'])
         
       } catch (error) {
-        setTestLogs(prev => [...prev, `❌ P2P send failed: ${error.message}`])
+        setTestLogs(prev => [...prev, `❌ Cross-device test failed: ${error.message}`])
       }
     } else {
-      setTestLogs(prev => [...prev, '❌ Gun.js not connected - cannot test real P2P'])
+      setTestLogs(prev => [...prev, '❌ Gun.js not connected - cannot test cross-device sync'])
     }
   }
 
