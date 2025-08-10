@@ -86,7 +86,7 @@ const main = async () => {
     'sendP2PMessage', 
     'runVisualTests',
     'generateInvite',
-    'ChatScreen'
+    'function App'
   ];
   
   let missingFunctions = [];
