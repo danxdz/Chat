@@ -28,14 +28,21 @@ body {
 
 /* 4-inch screens (iPhone SE, small phones) - ENHANCED */
 @media (max-width: 414px) and (max-height: 736px) {
-  /* Ultra compact header */
+  /* Ultra compact header - ALWAYS AT TOP */
   .header {
     min-height: 52px !important;
     padding: 0.4rem 0.6rem !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1001 !important;
+    width: 100% !important;
   }
   
   /* Optimize main layout for 4-inch - FIXED viewport */
   .main-layout {
+    margin-top: 52px !important;
     height: calc(100vh - 52px) !important;
     display: flex !important;
     flex-direction: column !important;
@@ -433,10 +440,23 @@ body {
     min-height: 48px; /* +10% */
   }
   
-  /* Bigger header elements */
+  /* Bigger header elements - FIXED POSITIONING */
   .header {
     min-height: 66px; /* +10% from 60px */
     padding: 0.6rem 1.1rem; /* +10% */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Adjust main content to account for fixed header */
+  .main-layout {
+    margin-top: 66px !important;
+    height: calc(100vh - 66px) !important;
   }
   
   .user-button {

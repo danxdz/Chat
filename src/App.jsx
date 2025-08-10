@@ -620,6 +620,19 @@ function ChatScreen({ user, onLogout }) {
   const [connectedPeers, setConnectedPeers] = useState(0)
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState(new Map())
   const [lastSeen, setLastSeen] = useState(new Map())
+  const [showDevMenu, setShowDevMenu] = useState(false)
+
+  // Close dev menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDevMenu && !event.target.closest('.header-actions')) {
+        setShowDevMenu(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showDevMenu])
 
   useEffect(() => {
     logger.log('🎯 ChatScreen useEffect - Initializing...')
@@ -1766,14 +1779,15 @@ function ChatScreen({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Right side - Action buttons (horizontally aligned) */}
-        <div className="action-buttons" style={{ 
+        {/* Right side - Clean Menu System */}
+        <div className="header-actions" style={{ 
           display: 'flex', 
-          gap: '0.4rem', 
+          gap: '0.5rem', 
           alignItems: 'center',
-          flexShrink: 0, // Prevent shrinking
-          minWidth: 'auto'
+          flexShrink: 0,
+          position: 'relative'
         }}>
+          {/* Invite Button */}
           <button 
             onClick={() => setShowInvite(!showInvite)} 
             className="btn" 
@@ -1781,64 +1795,135 @@ function ChatScreen({ user, onLogout }) {
               background: '#0066cc', 
               border: 'none',
               color: 'white',
-              padding: '0.5rem 0.7rem',
-              borderRadius: '4px',
+              padding: '0.6rem 0.8rem',
+              borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '0.8rem',
-              minHeight: '36px',
-              whiteSpace: 'nowrap',
+              fontSize: '0.85rem',
+              minHeight: '40px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.3rem'
             }}
             title="Generate invite link"
           >
-            📤 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Invite</span>
+            📤
           </button>
           
-          <button 
-            onClick={() => setShowTests(!showTests)}
-            className="btn" 
-            style={{ 
-              background: '#28a745', 
-              border: 'none',
-              color: 'white',
-              padding: '0.5rem 0.7rem',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              minHeight: '36px',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem'
-            }}
-            title="Run tests and diagnostics"
-          >
-            🧪 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Tests</span>
-          </button>
-          
-          <button 
-            onClick={onLogout} 
-            className="btn" 
-            style={{ 
-              background: '#dc3545', 
-              border: 'none',
-              color: 'white',
-              padding: '0.5rem 0.7rem',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              minHeight: '36px',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem'
-            }}
-            title="Logout and return to registration"
-          >
-            🚪 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Logout</span>
-          </button>
+          {/* Developer Menu */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowDevMenu(!showDevMenu)}
+              className="btn" 
+              style={{ 
+                background: '#666', 
+                border: 'none',
+                color: 'white',
+                padding: '0.6rem 0.8rem',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                minHeight: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
+              }}
+              title="Developer tools"
+            >
+              ⚙️
+            </button>
+            
+            {showDevMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                background: '#333',
+                border: '1px solid #555',
+                borderRadius: '6px',
+                zIndex: 1002,
+                minWidth: '180px',
+                marginTop: '0.5rem',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ padding: '0.5rem', borderBottom: '1px solid #555', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>
+                  🔧 Developer Tools
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowTests(!showTests)
+                    setShowDevMenu(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    padding: '0.75rem',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#444'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  🧪 Run Tests
+                </button>
+                
+                <button
+                  onClick={() => {
+                    window.debugGunJS && window.debugGunJS()
+                    setShowDevMenu(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    padding: '0.75rem',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#444'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  🔍 Debug Gun.js
+                </button>
+                
+                <div style={{ padding: '0.5rem', borderTop: '1px solid #555' }}>
+                  <button
+                    onClick={() => {
+                      onLogout()
+                      setShowDevMenu(false)
+                    }}
+                    style={{
+                      width: '100%',
+                      background: '#dc3545',
+                      border: 'none',
+                      color: 'white',
+                      padding: '0.6rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    🚪 Logout
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
