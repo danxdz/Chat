@@ -60,12 +60,17 @@ const main = async () => {
 
   // Step 4: Check bundle size
   try {
-    const stats = fs.statSync('dist/assets/index-*.js');
-    const sizeKB = (stats.size / 1024).toFixed(2);
-    log('blue', `📦 Bundle size: ${sizeKB} KB`);
-    
-    if (stats.size > 200 * 1024) { // 200KB threshold
-      log('yellow', '⚠️ Bundle size is larger than 200KB');
+    const jsFiles = fs.readdirSync('dist/assets/').filter(f => f.endsWith('.js'));
+    if (jsFiles.length > 0) {
+      const stats = fs.statSync(`dist/assets/${jsFiles[0]}`);
+      const sizeKB = (stats.size / 1024).toFixed(2);
+      log('blue', `📦 Bundle size: ${sizeKB} KB (${jsFiles[0]})`);
+      
+      if (stats.size > 200 * 1024) { // 200KB threshold
+        log('yellow', '⚠️ Bundle size is larger than 200KB');
+      }
+    } else {
+      log('yellow', '⚠️ No JavaScript bundle found');
     }
   } catch (error) {
     log('yellow', '⚠️ Could not check bundle size');
