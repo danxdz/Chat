@@ -1,5 +1,16 @@
 import { useState, useEffect, Component } from 'react'
 
+// Smart logging system - only logs in development
+const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
+
+const logger = {
+  log: (...args) => isDev && logger.log(...args),
+  error: (...args) => logger.error(...args), // Always show errors
+  warn: (...args) => isDev && logger.warn(...args),
+  info: (...args) => isDev && console.info(...args),
+  debug: (...args) => isDev && console.debug(...args)
+}
+
 // Error Boundary Component
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,7 +23,7 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('🚨 React Error Boundary caught an error:', error, errorInfo)
+    logger.error('🚨 React Error Boundary caught an error:', error, errorInfo)
   }
 
   render() {
@@ -94,11 +105,11 @@ function App() {
         }))
         const magicLink = `${window.location.origin}?invite=${magicToken}`
         
-        console.log('🔑 MAGIC LINK FOR FIRST ACCESS:')
-        console.log(magicLink)
-        console.log('')
-        console.log('📋 Copy this link to create the first account!')
-        console.log('🎯 Or just add this to URL: ?invite=' + magicToken)
+        logger.log('🔑 MAGIC LINK FOR FIRST ACCESS:')
+        logger.log(magicLink)
+        logger.log('')
+        logger.log('📋 Copy this link to create the first account!')
+        logger.log('🎯 Or just add this to URL: ?invite=' + magicToken)
       }
 
       // Add dev helper to window
@@ -109,23 +120,23 @@ function App() {
           from: 'admin'
         }))
         const magicLink = `${window.location.origin}?invite=${magicToken}`
-        console.log('🔗 NEW MAGIC LINK:')
-        console.log(magicLink)
+        logger.log('🔗 NEW MAGIC LINK:')
+        logger.log(magicLink)
         return magicLink
       }
 
       // Add WebRTC debugging helpers
       window.webrtcDebug = () => {
-        console.log('🔍 Gun.js P2P Debug Info:')
-        console.log('Gun instance:', window.Gun)
-        console.log('Available peers:', window.Gun ? window.Gun._.opt.peers : 'Gun not initialized')
+        logger.log('🔍 Gun.js P2P Debug Info:')
+        logger.log('Gun instance:', window.Gun)
+        logger.log('Available peers:', window.Gun ? window.Gun._.opt.peers : 'Gun not initialized')
       }
 
       window.clearWebRTC = () => {
         localStorage.clear()
         if (window.Gun) {
           // Gun.js data is decentralized, but we can clear local storage
-          console.log('🧹 Local data cleared, Gun.js network data persists')
+          logger.log('🧹 Local data cleared, Gun.js network data persists')
         }
       }
 
@@ -146,19 +157,19 @@ function App() {
           localStorage.setItem(`contacts_${user.id}`, JSON.stringify(contacts))
         })
         
-        console.log('👥 Test users created:')
-        console.log('Alice: PIN 1111')
-        console.log('Bob: PIN 2222') 
-        console.log('Charlie: PIN 3333')
-        console.log('Diana: PIN 4444')
-        console.log('All users have each other as contacts!')
+        logger.log('👥 Test users created:')
+        logger.log('Alice: PIN 1111')
+        logger.log('Bob: PIN 2222') 
+        logger.log('Charlie: PIN 3333')
+        logger.log('Diana: PIN 4444')
+        logger.log('All users have each other as contacts!')
         
         return testUsers
       }
 
       // Comprehensive testing suite
       window.runTests = () => {
-        console.log('🧪 Starting comprehensive app tests...')
+        logger.log('🧪 Starting comprehensive app tests...')
         
         const tests = {
           localStorage: false,
@@ -175,21 +186,21 @@ function App() {
           const retrieved = JSON.parse(localStorage.getItem('test_storage'))
           tests.localStorage = retrieved.test === 'data'
           localStorage.removeItem('test_storage')
-          console.log('✅ LocalStorage test:', tests.localStorage ? 'PASS' : 'FAIL')
+          logger.log('✅ LocalStorage test:', tests.localStorage ? 'PASS' : 'FAIL')
         } catch (e) {
-          console.log('❌ LocalStorage test: FAIL -', e.message)
+          logger.log('❌ LocalStorage test: FAIL -', e.message)
         }
 
         // Test 2: Gun.js availability
         try {
           tests.gunJS = typeof window.Gun === 'function'
-          console.log('✅ Gun.js test:', tests.gunJS ? 'PASS' : 'FAIL')
+          logger.log('✅ Gun.js test:', tests.gunJS ? 'PASS' : 'FAIL')
           if (tests.gunJS) {
-            console.log('  - Gun.js version available')
-            console.log('  - SEA module:', typeof window.Gun.SEA === 'object' ? 'available' : 'missing')
+            logger.log('  - Gun.js version available')
+            logger.log('  - SEA module:', typeof window.Gun.SEA === 'object' ? 'available' : 'missing')
           }
         } catch (e) {
-          console.log('❌ Gun.js test: FAIL -', e.message)
+          logger.log('❌ Gun.js test: FAIL -', e.message)
         }
 
         // Test 3: Test message creation and storage
@@ -209,9 +220,9 @@ function App() {
           const retrievedMessages = JSON.parse(localStorage.getItem('messages_test'))
           tests.messaging = retrievedMessages.length === 1 && retrievedMessages[0].text === testMessage.text
           localStorage.removeItem('messages_test')
-          console.log('✅ Messaging test:', tests.messaging ? 'PASS' : 'FAIL')
+          logger.log('✅ Messaging test:', tests.messaging ? 'PASS' : 'FAIL')
         } catch (e) {
-          console.log('❌ Messaging test: FAIL -', e.message)
+          logger.log('❌ Messaging test: FAIL -', e.message)
         }
 
         // Test 4: Invite link generation
@@ -220,9 +231,9 @@ function App() {
           const invite = btoa(JSON.stringify(inviteData))
           const decoded = JSON.parse(atob(invite))
           tests.invites = decoded.from === 'TestUser'
-          console.log('✅ Invite test:', tests.invites ? 'PASS' : 'FAIL')
+          logger.log('✅ Invite test:', tests.invites ? 'PASS' : 'FAIL')
         } catch (e) {
-          console.log('❌ Invite test: FAIL -', e.message)
+          logger.log('❌ Invite test: FAIL -', e.message)
         }
 
         // Test 5: Contact management
@@ -235,23 +246,23 @@ function App() {
           const retrievedContacts = JSON.parse(localStorage.getItem('contacts_test'))
           tests.contacts = retrievedContacts.length === 2
           localStorage.removeItem('contacts_test')
-          console.log('✅ Contact test:', tests.contacts ? 'PASS' : 'FAIL')
+          logger.log('✅ Contact test:', tests.contacts ? 'PASS' : 'FAIL')
         } catch (e) {
-          console.log('❌ Contact test: FAIL -', e.message)
+          logger.log('❌ Contact test: FAIL -', e.message)
         }
 
         // Summary
         const passedTests = Object.values(tests).filter(Boolean).length
         const totalTests = Object.keys(tests).length
         
-        console.log('\n📊 TEST SUMMARY:')
-        console.log(`Passed: ${passedTests}/${totalTests} tests`)
-        console.log('Results:', tests)
+        logger.log('\n📊 TEST SUMMARY:')
+        logger.log(`Passed: ${passedTests}/${totalTests} tests`)
+        logger.log('Results:', tests)
         
         if (passedTests === totalTests) {
-          console.log('🎉 All tests PASSED! App is fully functional.')
+          logger.log('🎉 All tests PASSED! App is fully functional.')
         } else {
-          console.log('⚠️ Some tests failed. Check individual results above.')
+          logger.log('⚠️ Some tests failed. Check individual results above.')
         }
         
         return tests
@@ -259,10 +270,10 @@ function App() {
 
       // Test Gun.js P2P connectivity
       window.testP2P = () => {
-        console.log('🔫 Testing Gun.js P2P connectivity...')
+        logger.log('🔫 Testing Gun.js P2P connectivity...')
         
         if (!window.Gun) {
-          console.log('❌ Gun.js not available')
+          logger.log('❌ Gun.js not available')
           return false
         }
 
@@ -278,24 +289,24 @@ function App() {
           setTimeout(() => {
             testGun.get(testKey).once((data) => {
               if (data && data.message === 'P2P test') {
-                console.log('✅ Gun.js P2P test: PASS - Data sync working')
+                logger.log('✅ Gun.js P2P test: PASS - Data sync working')
               } else {
-                console.log('❌ Gun.js P2P test: FAIL - Data sync failed')
+                logger.log('❌ Gun.js P2P test: FAIL - Data sync failed')
               }
             })
           }, 2000)
           
-          console.log('⏳ P2P test running... check results in 2 seconds')
+          logger.log('⏳ P2P test running... check results in 2 seconds')
           return true
         } catch (e) {
-          console.log('❌ Gun.js P2P test: FAIL -', e.message)
+          logger.log('❌ Gun.js P2P test: FAIL -', e.message)
           return false
         }
       }
 
       // Test message broadcasting
       window.testMessageBroadcast = () => {
-        console.log('📡 Testing message broadcasting...')
+        logger.log('📡 Testing message broadcasting...')
         
         const testMessage = {
           id: Date.now(),
@@ -311,13 +322,13 @@ function App() {
           try {
             const gun = Gun(['https://gun-manhattan.herokuapp.com/gun'])
             gun.get('general_chat').set(testMessage)
-            console.log('✅ Test message broadcasted to Gun.js network')
-            console.log('📝 Message:', testMessage.text)
+            logger.log('✅ Test message broadcasted to Gun.js network')
+            logger.log('📝 Message:', testMessage.text)
           } catch (e) {
-            console.log('❌ Broadcast failed:', e.message)
+            logger.log('❌ Broadcast failed:', e.message)
           }
         } else {
-          console.log('❌ Gun.js not available for broadcasting')
+          logger.log('❌ Gun.js not available for broadcasting')
         }
       }
 
@@ -327,9 +338,9 @@ function App() {
         if (user) {
           localStorage.setItem('currentUser', JSON.stringify(user))
           window.location.reload()
-          console.log(`🔄 Switched to ${user.nickname}`)
+          logger.log(`🔄 Switched to ${user.nickname}`)
         } else {
-          console.log('❌ User not found. Available users:', users.map(u => u.nickname))
+          logger.log('❌ User not found. Available users:', users.map(u => u.nickname))
         }
       }
 
@@ -361,7 +372,7 @@ function App() {
   }
 
   const handleRegister = (userData) => {
-    console.log('🎉 Registration successful, switching to chat for user:', userData)
+    logger.log('🎉 Registration successful, switching to chat for user:', userData)
     setUser(userData)
     localStorage.setItem('currentUser', JSON.stringify(userData))
     setCurrentView('chat')
@@ -394,11 +405,11 @@ function App() {
 
   if (currentView === 'chat') {
     if (!user) {
-      console.error('❌ Trying to render chat without user data')
+      logger.error('❌ Trying to render chat without user data')
       setCurrentView('login')
       return null
     }
-    console.log('🚀 Rendering ChatScreen for user:', user.nickname)
+    logger.log('🚀 Rendering ChatScreen for user:', user.nickname)
     return <ChatScreen user={user} onLogout={handleLogout} />
   }
 
@@ -505,7 +516,7 @@ function RegisterScreen({ onRegister, sodium }) {
           const padded = restored + '='.repeat((4 - restored.length % 4) % 4)
           inviteData = JSON.parse(atob(padded))
         } catch (e) {
-          console.log('Invalid invite format:', e)
+          logger.log('Invalid invite format:', e)
         }
       }
 
@@ -608,7 +619,7 @@ function ChatScreen({ user, onLogout }) {
   const [testLogs, setTestLogs] = useState([])
 
   useEffect(() => {
-    console.log('🎯 ChatScreen useEffect - Initializing...')
+    logger.log('🎯 ChatScreen useEffect - Initializing...')
     setInitStatus('loading_basic_data')
     
     // First, load basic data without Gun.js
@@ -621,10 +632,10 @@ function ChatScreen({ user, onLogout }) {
       setAllUsers(users)
       setMessages([]) // Start with empty messages - Gun.js will populate
       
-      console.log('📋 Basic data loaded successfully')
-      console.log('- Contacts:', savedContacts.length)
-      console.log('- Users:', users.length) 
-      console.log('- Messages: Starting fresh, will load from Gun.js')
+      logger.log('📋 Basic data loaded successfully')
+      logger.log('- Contacts:', savedContacts.length)
+      logger.log('- Users:', users.length) 
+      logger.log('- Messages: Starting fresh, will load from Gun.js')
       
       setInitStatus('basic_data_loaded')
       
@@ -634,7 +645,7 @@ function ChatScreen({ user, onLogout }) {
       }, 1000) // Delay Gun.js init to ensure basic UI loads first
       
     } catch (error) {
-      console.error('❌ Error loading basic data:', error)
+      logger.error('❌ Error loading basic data:', error)
       setChatError('Failed to load basic data: ' + error.message)
       setInitStatus('basic_data_failed')
     }
@@ -649,14 +660,14 @@ function ChatScreen({ user, onLogout }) {
           
           // Check if Gun.js is available
           if (typeof window.Gun === 'undefined') {
-            console.error('❌ Gun.js not loaded from CDN!')
+            logger.error('❌ Gun.js not loaded from CDN!')
             setInitStatus('gun_failed')
             setChatError('Gun.js library failed to load. Please refresh the page.')
             return
           }
           
-          console.log('✅ Gun.js library loaded successfully')
-          console.log('🔧 Gun.js version:', window.Gun.version || 'unknown')
+          logger.log('✅ Gun.js library loaded successfully')
+          logger.log('🔧 Gun.js version:', window.Gun.version || 'unknown')
           
           // Multiple Gun.js relay peers for better connectivity
           const gunPeers = [
@@ -667,7 +678,7 @@ function ChatScreen({ user, onLogout }) {
             'wss://peer.wallie.io/gun'
           ]
           
-          console.log('🌐 Initializing Gun.js with peers:', gunPeers)
+          logger.log('🌐 Initializing Gun.js with peers:', gunPeers)
           
           // Initialize Gun with simple configuration
           const gunInstance = window.Gun({
@@ -675,23 +686,23 @@ function ChatScreen({ user, onLogout }) {
             localStorage: false // Use memory only for now to avoid conflicts
           })
           
-          console.log('✅ Gun.js instance created:', gunInstance)
+          logger.log('✅ Gun.js instance created:', gunInstance)
           
           // Test basic Gun.js functionality immediately
           const testKey = 'gun_init_test'
           const testData = { test: true, timestamp: Date.now() }
           
           gunInstance.get(testKey).put(testData)
-          console.log('✅ Gun.js basic write test completed')
+          logger.log('✅ Gun.js basic write test completed')
           
           // Try to read it back
           gunInstance.get(testKey).once((data) => {
             if (data && data.test) {
-              console.log('✅ Gun.js read/write working!')
+              logger.log('✅ Gun.js read/write working!')
               setGun(gunInstance)
               setInitStatus('gun_initialized')
             } else {
-              console.log('⚠️ Gun.js write/read test failed, but continuing anyway')
+              logger.log('⚠️ Gun.js write/read test failed, but continuing anyway')
               setGun(gunInstance)
               setInitStatus('gun_initialized')
             }
@@ -700,14 +711,14 @@ function ChatScreen({ user, onLogout }) {
           // Fallback timer in case .once() doesn't fire
           setTimeout(() => {
             if (!gun) {
-              console.log('⚠️ Gun.js test timeout, but setting anyway')
+              logger.log('⚠️ Gun.js test timeout, but setting anyway')
               setGun(gunInstance)
               setInitStatus('gun_initialized')
             }
           }, 3000)
           
         } catch (error) {
-          console.error('❌ Gun.js initialization failed:', error)
+          logger.error('❌ Gun.js initialization failed:', error)
           setInitStatus('gun_failed')
           setChatError(`Gun.js initialization failed: ${error.message}`)
         }
@@ -720,28 +731,28 @@ function ChatScreen({ user, onLogout }) {
   // Enhanced Gun.js send function with channel support
   const sendP2PMessage = async (message, channelName = 'general_chat') => {
     if (!gun) {
-      console.log('❌ Gun.js not available')
+      logger.log('❌ Gun.js not available')
       return false
     }
 
     if (!message || !message.id || !message.text) {
-      console.error('❌ Invalid message format:', message)
+      logger.error('❌ Invalid message format:', message)
       return false
     }
 
     try {
       // Use unique key for each message to prevent replacement
       const messageKey = `msg_${message.id}`
-      console.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
+      logger.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
       // Put message with unique key in specific channel
       await gun.get(channelName).get(messageKey).put(message)
-      console.log('✅ Message sent to Gun.js with unique key')
+      logger.log('✅ Message sent to Gun.js with unique key')
       return true
     } catch (error) {
-      console.error('❌ Gun.js send failed:', error)
-      console.error('- Message:', message)
-      console.error('- Channel:', channelName)
+      logger.error('❌ Gun.js send failed:', error)
+      logger.error('- Message:', message)
+      logger.error('- Channel:', channelName)
       return false
     }
   }
@@ -762,24 +773,24 @@ function ChatScreen({ user, onLogout }) {
       type: activeContact ? 'private' : 'general'
     }
 
-    console.log('📤 SENDING MESSAGE TO GUN.JS:', messageToSend)
+    logger.log('📤 SENDING MESSAGE TO GUN.JS:', messageToSend)
 
     try {
       // Send to appropriate channel based on contact
       const channelName = activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
-      console.log('📡 Using channel:', channelName)
+      logger.log('📡 Using channel:', channelName)
 
       const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
       
       if (p2pSuccess) {
-        console.log('✅ Message sent via Gun.js successfully')
+        logger.log('✅ Message sent via Gun.js successfully')
       } else {
-        console.log('❌ Failed to send message via Gun.js')
+        logger.log('❌ Failed to send message via Gun.js')
       }
 
       setNewMessage('')
     } catch (error) {
-      console.error('❌ Error sending message:', error)
+      logger.error('❌ Error sending message:', error)
       alert('Failed to send message. Please try again.')
     }
   }
@@ -788,11 +799,11 @@ function ChatScreen({ user, onLogout }) {
   useEffect(() => {
     if (!gun) return
 
-    console.log('🔧 Setting up Gun.js listeners for general and private chats...')
+    logger.log('🔧 Setting up Gun.js listeners for general and private chats...')
 
     // Listen to general chat
     gun.get('general_chat').map().on((data, key) => {
-      console.log('📨 GENERAL CHAT - RAW DATA:', JSON.stringify(data, null, 2))
+      logger.log('📨 GENERAL CHAT - RAW DATA:', JSON.stringify(data, null, 2))
       handleIncomingMessage(data, key, 'general')
     })
 
@@ -801,40 +812,40 @@ function ChatScreen({ user, onLogout }) {
       // Listen to all possible private channels where this user might be involved
       contacts.forEach(contact => {
         const privateChannel = `private_${[user.id, contact.id].sort().join('_')}`
-        console.log('👥 Setting up private channel listener:', privateChannel)
+        logger.log('👥 Setting up private channel listener:', privateChannel)
         
         gun.get(privateChannel).map().on((data, key) => {
-          console.log('📨 PRIVATE CHAT - RAW DATA:', JSON.stringify(data, null, 2))
+          logger.log('📨 PRIVATE CHAT - RAW DATA:', JSON.stringify(data, null, 2))
           handleIncomingMessage(data, key, 'private')
         })
       })
     }
 
-    console.log('✅ Gun.js listeners ready for general and private chats')
+    logger.log('✅ Gun.js listeners ready for general and private chats')
   }, [gun, user?.id, contacts])
 
   // Handle incoming messages from any channel
   const handleIncomingMessage = (data, key, channelType) => {
     if (data && data.id && data.text && data.from) {
-      console.log(`✅ VALID ${channelType.toUpperCase()} MESSAGE - Adding to state:`, data.text, 'from:', data.from)
+      logger.log(`✅ VALID ${channelType.toUpperCase()} MESSAGE - Adding to state:`, data.text, 'from:', data.from)
       
       setMessages(prev => {
-        console.log('📊 Current messages before add:', prev.length)
+        logger.log('📊 Current messages before add:', prev.length)
         
         // Check if already exists
         const exists = prev.find(m => m.id === data.id)
         if (exists) {
-          console.log('⚠️ Message already exists, skipping')
+          logger.log('⚠️ Message already exists, skipping')
           return prev
         }
         
-        console.log('💾 Adding NEW message to state')
+        logger.log('💾 Adding NEW message to state')
         const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
-        console.log('📊 Messages after add:', updated.length)
+        logger.log('📊 Messages after add:', updated.length)
         return updated
       })
     } else {
-      console.log(`❌ INVALID ${channelType.toUpperCase()} MESSAGE - Missing required fields`)
+      logger.log(`❌ INVALID ${channelType.toUpperCase()} MESSAGE - Missing required fields`)
     }
   }
 
@@ -1163,9 +1174,9 @@ function ChatScreen({ user, onLogout }) {
         testChannels.forEach(async (channel) => {
           try {
             await gun.get(channel).set(testMessage)
-            console.log(`📡 Test message sent to: ${channel}`)
+            logger.log(`📡 Test message sent to: ${channel}`)
           } catch (e) {
-            console.error(`Failed to send to ${channel}:`, e)
+            logger.error(`Failed to send to ${channel}:`, e)
           }
         })
 
@@ -1302,7 +1313,7 @@ function ChatScreen({ user, onLogout }) {
 
     try {
       setTestLogs(prev => [...prev, '📡 Sending basic test data to Gun.js...'])
-      console.log('🔍 BASIC GUN TEST - Sending:', testData)
+      logger.log('🔍 BASIC GUN TEST - Sending:', testData)
       
       // Use simple put operation
       gun.get(testKey).put(testData)
@@ -1311,7 +1322,7 @@ function ChatScreen({ user, onLogout }) {
       // Try to read it back immediately
       setTimeout(() => {
         gun.get(testKey).once((data) => {
-          console.log('🔍 BASIC GUN TEST - Received back:', data)
+          logger.log('🔍 BASIC GUN TEST - Received back:', data)
           if (data && data.test === 'basic_connectivity') {
             setTestLogs(prev => [...prev, '✅ SUCCESS: Gun.js read/write working!'])
             setTestLogs(prev => [...prev, `📄 Data: ${data.message}`])
@@ -1324,7 +1335,7 @@ function ChatScreen({ user, onLogout }) {
       // Test live listener
       gun.get('live_test_channel').on((liveData, key) => {
         if (liveData && liveData.liveTest && liveData.from !== user.nickname) {
-          console.log('🔍 LIVE TEST - Received from another tab/device:', liveData)
+          logger.log('🔍 LIVE TEST - Received from another tab/device:', liveData)
           setTestLogs(prev => [...prev, `🎉 LIVE UPDATE: Message from ${liveData.from}`])
         }
       })
@@ -1342,18 +1353,18 @@ function ChatScreen({ user, onLogout }) {
       
     } catch (error) {
       setTestLogs(prev => [...prev, `❌ Basic Gun.js test failed: ${error.message}`])
-      console.error('Basic Gun.js test error:', error)
+      logger.error('Basic Gun.js test error:', error)
     }
   }
 
   // Debug function to test Gun.js availability (for console testing)
   const debugGunJS = () => {
-    console.log('🔍 DEBUGGING GUN.JS AVAILABILITY:')
-    console.log('- window.Gun available:', typeof window.Gun !== 'undefined')
-    console.log('- Current gun instance:', !!gun)
+    logger.log('🔍 DEBUGGING GUN.JS AVAILABILITY:')
+    logger.log('- window.Gun available:', typeof window.Gun !== 'undefined')
+    logger.log('- Current gun instance:', !!gun)
     
     if (typeof window.Gun !== 'undefined') {
-      console.log('- Gun.js version:', window.Gun.version || 'unknown')
+      logger.log('- Gun.js version:', window.Gun.version || 'unknown')
       
       try {
         // Create a test instance
@@ -1362,31 +1373,31 @@ function ChatScreen({ user, onLogout }) {
           localStorage: false
         })
         
-        console.log('✅ Test Gun.js instance created successfully')
+        logger.log('✅ Test Gun.js instance created successfully')
         
         // Test basic write
         const testKey = 'debug_test_' + Date.now()
         const testData = { debug: true, timestamp: Date.now() }
         
         testGun.get(testKey).put(testData)
-        console.log('✅ Test write completed')
+        logger.log('✅ Test write completed')
         
         // Test read
         setTimeout(() => {
           testGun.get(testKey).once((data) => {
             if (data && data.debug) {
-              console.log('✅ Test read successful - Gun.js is working!')
+              logger.log('✅ Test read successful - Gun.js is working!')
             } else {
-              console.log('❌ Test read failed - Gun.js not working properly')
+              logger.log('❌ Test read failed - Gun.js not working properly')
             }
           })
         }, 2000)
         
       } catch (error) {
-        console.error('❌ Gun.js test failed:', error)
+        logger.error('❌ Gun.js test failed:', error)
       }
     } else {
-      console.error('❌ Gun.js not loaded from CDN!')
+      logger.error('❌ Gun.js not loaded from CDN!')
     }
   }
 
@@ -1525,7 +1536,7 @@ function ChatScreen({ user, onLogout }) {
     setInviteLink(link)
     setShowInvite(true)
     
-    console.log('📤 Generated invite link:', link)
+    logger.log('📤 Generated invite link:', link)
     
     // Auto-add to pending contacts when generating invite
     addPendingContact(inviteData)
@@ -1550,7 +1561,7 @@ function ChatScreen({ user, onLogout }) {
     setContacts(updatedContacts)
     localStorage.setItem(`contacts_${user.id}`, JSON.stringify(updatedContacts))
     
-    console.log('👥 Added pending contact:', pendingContact)
+    logger.log('👥 Added pending contact:', pendingContact)
   }
 
   // Switch to different user
@@ -1892,8 +1903,8 @@ function ChatScreen({ user, onLogout }) {
               <span>📊 Total Messages: {messages.length} | From Gun.js</span>
               <button 
                 onClick={() => {
-                  console.log('🔍 ALL MESSAGES:', messages)
-                  console.log('🔍 DISPLAY MESSAGES:', displayMessages)
+                  logger.log('🔍 ALL MESSAGES:', messages)
+                  logger.log('🔍 DISPLAY MESSAGES:', displayMessages)
                   alert(`Total messages: ${messages.length}\nAll from Gun.js\nCheck console for details`)
                 }}
                 style={{
