@@ -104,27 +104,32 @@ function App() {
           logger.log('✅ Sodium ready for cryptography')
         }
 
+        // Load existing user data
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        setAllUsers(existingUsers)
+
         // Check for invite in URL
         const urlParams = new URLSearchParams(window.location.hash.replace('#', ''))
         const inviteParam = urlParams.get('invite')
+        
         if (inviteParam) {
           try {
             const inviteData = JSON.parse(atob(inviteParam))
             logger.log('📨 Invite detected from:', inviteData.from)
-            // Handle invite processing here if needed
+            // Store invite data for registration
+            sessionStorage.setItem('pendingInvite', JSON.stringify(inviteData))
+            setCurrentView('register')
+            return
           } catch (e) {
             logger.error('❌ Invalid invite format')
           }
         }
 
-        // Load existing user data
-        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-        setAllUsers(existingUsers)
-
-        if (existingUsers.length > 0) {
-          setCurrentView('login')
+        // If no invite and no users exist, show error
+        if (existingUsers.length === 0) {
+          setCurrentView('needInvite')
         } else {
-          setCurrentView('register')
+          setCurrentView('login')
         }
       } catch (error) {
         logger.error('❌ App initialization failed:', error)
@@ -314,8 +319,15 @@ function App() {
     }
   }, [contacts])
 
-  // Core functions
+  // Core functions - Invite-only registration
   const register = (nickname, pin) => {
+    // Check if there's a pending invite
+    const pendingInviteStr = sessionStorage.getItem('pendingInvite')
+    if (!pendingInviteStr) {
+      alert('❌ Registration requires an invitation. Please use an invite link.')
+      return false
+    }
+
     if (!nickname.trim() || !pin.trim()) {
       alert('Both nickname and PIN are required')
       return false
@@ -333,20 +345,45 @@ function App() {
       return false
     }
 
-    const newUser = {
-      id: Date.now(),
-      nickname: nickname.trim(),
-      pin: pin.trim(), // In production, this should be hashed
-      createdAt: Date.now()
+    try {
+      const inviteData = JSON.parse(pendingInviteStr)
+      
+      const newUser = {
+        id: Date.now(),
+        nickname: nickname.trim(),
+        pin: pin.trim(), // In production, this should be hashed
+        createdAt: Date.now(),
+        invitedBy: inviteData.from,
+        invitedById: inviteData.fromId
+      }
+      
+      const updatedUsers = [...allUsers, newUser]
+      setAllUsers(updatedUsers)
+      localStorage.setItem('users', JSON.stringify(updatedUsers))
+      
+      // Add the inviter as a contact
+      const inviterContact = {
+        id: inviteData.fromId,
+        nickname: inviteData.from,
+        status: 'active',
+        addedAt: Date.now()
+      }
+      
+      const newContacts = [inviterContact]
+      setContacts(newContacts)
+      localStorage.setItem(`contacts_${newUser.id}`, JSON.stringify(newContacts))
+      
+      // Clear pending invite
+      sessionStorage.removeItem('pendingInvite')
+      
+      setUser(newUser)
+      logger.log('✅ User registered via invite:', { nickname: newUser.nickname, invitedBy: inviteData.from })
+      return true
+    } catch (error) {
+      logger.error('❌ Error processing invite:', error)
+      alert('❌ Invalid invite data. Please try again.')
+      return false
     }
-    
-    const updatedUsers = [...allUsers, newUser]
-    setAllUsers(updatedUsers)
-    localStorage.setItem('users', JSON.stringify(updatedUsers))
-    
-    setUser(newUser)
-    logger.log('✅ User registered successfully:', { nickname: newUser.nickname, id: newUser.id })
-    return true
   }
 
   const login = (pin) => {
@@ -971,11 +1008,22 @@ function App() {
   }
 
   if (currentView === 'register') {
+    const pendingInvite = sessionStorage.getItem('pendingInvite')
+    let inviterName = 'someone'
+    try {
+      if (pendingInvite) {
+        const inviteData = JSON.parse(pendingInvite)
+        inviterName = inviteData.from
+      }
+    } catch (e) {
+      // Handle invalid invite
+    }
+
     return (
       <div className="screen">
         <div className="form">
-          <h1>🚀 Welcome to P2P Chat</h1>
-          <p>Create your account with a secure PIN</p>
+          <h1>📨 You're Invited!</h1>
+          <p>Complete your registration to join {inviterName}'s chat</p>
           <form onSubmit={(e) => {
             e.preventDefault()
             const nickname = e.target.nickname.value.trim()
@@ -1046,13 +1094,41 @@ function App() {
           <p style={{ textAlign: 'center', margin: '1rem 0', color: '#888' }}>
             Don't have an account?
           </p>
-          <button
-            onClick={() => setCurrentView('register')}
-            className="btn"
-            style={{ background: '#666' }}
-          >
-            ➕ Create New Account
-          </button>
+          <p style={{ textAlign: 'center', margin: '1rem 0', color: '#888', fontSize: '0.9rem' }}>
+            Need an account? Ask a friend for an invite link
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentView === 'needInvite') {
+    return (
+      <div className="screen">
+        <div className="form">
+          <h1>🚀 Decentralized P2P Chat</h1>
+          <p style={{ marginBottom: '2rem', textAlign: 'center', color: '#888' }}>
+            This is an invite-only chat application
+          </p>
+          <div style={{ 
+            background: '#333', 
+            padding: '1.5rem', 
+            borderRadius: '8px', 
+            marginBottom: '2rem',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ color: '#0066cc', marginBottom: '1rem' }}>🔑 Access Required</h3>
+            <p style={{ color: '#ccc', lineHeight: '1.5' }}>
+              To join this chat, you need an invitation link from an existing user.
+            </p>
+          </div>
+          <div style={{ textAlign: 'center', color: '#888', fontSize: '0.9rem' }}>
+            <p>✨ Features:</p>
+            <p>🌐 Fully decentralized P2P messaging</p>
+            <p>🔒 Private & secure conversations</p>
+            <p>📱 Works on all devices</p>
+            <p>⚡ Real-time synchronization</p>
+          </div>
         </div>
       </div>
     )
