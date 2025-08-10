@@ -1473,6 +1473,114 @@ function ChatScreen({ user, onLogout }) {
     }
   }, [])
 
+  // Clear current client data
+  const clearCurrentClientData = () => {
+    try {
+      setTestLogs(prev => [...prev, '🧹 Clearing current client data...'])
+      
+      const itemsToRemove = []
+      
+      // Clear current user's data
+      if (user?.id) {
+        itemsToRemove.push(`messages_${user.id}`)
+        itemsToRemove.push(`contacts_${user.id}`)
+        localStorage.removeItem(`messages_${user.id}`)
+        localStorage.removeItem(`contacts_${user.id}`)
+      }
+      
+      // Clear current user info
+      localStorage.removeItem('currentUser')
+      
+      // Clear any test data
+      const testKeys = ['test_user', 'test_messages', 'test_contacts', 'contacts_test']
+      testKeys.forEach(key => {
+        localStorage.removeItem(key)
+        itemsToRemove.push(key)
+      })
+      
+      // Reset current state
+      setMessages([])
+      setContacts([])
+      setActiveContact(null)
+      setNewMessage('')
+      
+      setTestLogs(prev => [...prev, 
+        `✅ Current client data cleared!`,
+        `📄 Removed: ${itemsToRemove.join(', ')}`,
+        `🔄 State reset to defaults`
+      ])
+      
+    } catch (error) {
+      setTestLogs(prev => [...prev, `❌ Failed to clear client data: ${error.message}`])
+    }
+  }
+
+  // Clear ALL clients data (nuclear option)
+  const clearAllClientsData = () => {
+    try {
+      setTestLogs(prev => [...prev, '💥 NUCLEAR CLEAR: Removing ALL client data...'])
+      
+      const allKeys = Object.keys(localStorage)
+      const removedKeys = []
+      
+      // Remove everything related to the app
+      allKeys.forEach(key => {
+        if (key.startsWith('messages_') || 
+            key.startsWith('contacts_') || 
+            key === 'users' || 
+            key === 'currentUser' ||
+            key.startsWith('test_')) {
+          localStorage.removeItem(key)
+          removedKeys.push(key)
+        }
+      })
+      
+      // Reset all state
+      setUser(null)
+      setMessages([])
+      setContacts([])
+      setActiveContact(null)
+      setNewMessage('')
+      setGun(null)
+      setInitStatus('starting')
+      
+      setTestLogs(prev => [...prev, 
+        `💥 ALL CLIENT DATA CLEARED!`,
+        `📄 Removed ${removedKeys.length} items:`,
+        ...removedKeys.map(key => `  - ${key}`),
+        `🔄 App state completely reset`
+      ])
+      
+    } catch (error) {
+      setTestLogs(prev => [...prev, `❌ Failed to clear all data: ${error.message}`])
+    }
+  }
+
+  // Reset app to fresh start (like first time opening)
+  const resetAppToFresh = () => {
+    try {
+      setTestLogs(prev => [...prev, '🔄 Resetting app to fresh start...'])
+      
+      // Clear all data
+      clearAllClientsData()
+      
+      // Wait a moment then reload
+      setTimeout(() => {
+        setTestLogs(prev => [...prev, 
+          '🔄 Reloading app in 2 seconds...',
+          '👋 This will take you back to registration screen'
+        ])
+        
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      }, 1000)
+      
+    } catch (error) {
+      setTestLogs(prev => [...prev, `❌ Failed to reset app: ${error.message}`])
+    }
+  }
+
   return (
     <div className="app">
       {/* Header */}
@@ -1967,6 +2075,36 @@ function ChatScreen({ user, onLogout }) {
                 padding: '0.6rem'
               }}>
                 👥 Create Test Users
+              </button>
+              <button onClick={clearCurrentClientData} className="btn" style={{ 
+                background: '#ff6b6b', 
+                color: '#fff', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
+                🧹 Clear Current User Data
+              </button>
+              <button onClick={clearAllClientsData} className="btn" style={{ 
+                background: '#dc3545', 
+                color: '#fff', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
+                💥 Clear ALL Data
+              </button>
+              <button onClick={resetAppToFresh} className="btn" style={{ 
+                background: '#0066cc', 
+                color: '#fff', 
+                flex: 1,
+                minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+                fontSize: '0.9rem',
+                padding: '0.6rem'
+              }}>
+                🔄 Reset App to Fresh Start
               </button>
             </div>
 
