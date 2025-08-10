@@ -628,67 +628,9 @@ function ChatScreen({ user, onLogout }) {
       
       setInitStatus('basic_data_loaded')
       
-      // Now try to initialize Gun.js
+      // Gun.js initialization moved to separate useEffect hook
       setTimeout(() => {
         setInitStatus('initializing_gun')
-        
-        if (window.Gun) {
-          console.log('🔫 Gun.js available, initializing P2P network...')
-          
-          try {
-            // Multiple relay servers for better connectivity
-            const gunPeers = [
-              'https://gun-manhattan.herokuapp.com/gun',
-              'https://gun-us.herokuapp.com/gun',
-              'https://gunjs.herokuapp.com/gun'
-            ]
-            
-            console.log('🌐 Attempting to connect to Gun.js peers:', gunPeers)
-            
-            const gunInstance = Gun({
-              peers: gunPeers,
-              localStorage: false,
-              // Removed all problematic options that cause "dare is not a function"
-              // radisk: false,
-              // WebRTC: { off: false },
-              // timeout: 10000,
-              // retry: 3
-            })
-            
-            // Test connectivity with simpler approach
-            setTimeout(() => {
-              console.log('🔍 Testing Gun.js connectivity...')
-              const testKey = `connectivity_test_${Date.now()}`
-              const testData = { 
-                test: true, 
-                timestamp: Date.now(),
-                user: user.nickname 
-              }
-              
-              try {
-                gunInstance.get(testKey).put(testData)
-                console.log('✅ Gun.js write test successful')
-                setInitStatus('gun_connected_verified')
-              } catch (testError) {
-                console.error('❌ Gun.js connectivity test failed:', testError)
-                setInitStatus('gun_connected_no_test')
-                setChatError('P2P connectivity test failed')
-              }
-            }, 2000)
-            
-            setGun(gunInstance)
-            setInitStatus('gun_initialized')
-            console.log('✅ Gun.js P2P network initialized with multiple peers')
-          } catch (error) {
-            console.error('❌ Failed to initialize Gun.js:', error)
-            setChatError('P2P network initialization failed: ' + error.message)
-            setInitStatus('gun_failed')
-          }
-        } else {
-          console.warn('⚠️ Gun.js not available, using localStorage only')
-          setChatError('P2P features unavailable - Gun.js not loaded')
-          setInitStatus('gun_unavailable')
-        }
       }, 1000) // Delay Gun.js init to ensure basic UI loads first
       
     } catch (error) {
@@ -697,6 +639,83 @@ function ChatScreen({ user, onLogout }) {
       setInitStatus('basic_data_failed')
     }
   }, [user.id])
+
+  // Gun.js setup with multiple peers for reliability
+  useEffect(() => {
+    if (initStatus === 'initializing_gun') {
+      const initializeGun = async () => {
+        try {
+          setInitStatus('gun_initializing')
+          
+          // Check if Gun.js is available
+          if (typeof window.Gun === 'undefined') {
+            console.error('❌ Gun.js not loaded from CDN!')
+            setInitStatus('gun_failed')
+            setChatError('Gun.js library failed to load. Please refresh the page.')
+            return
+          }
+          
+          console.log('✅ Gun.js library loaded successfully')
+          console.log('🔧 Gun.js version:', window.Gun.version || 'unknown')
+          
+          // Multiple Gun.js relay peers for better connectivity
+          const gunPeers = [
+            'https://gun-manhattan.herokuapp.com/gun',
+            'https://peer.wallie.io/gun',
+            'https://gun-us.herokuapp.com/gun',
+            'wss://gun-manhattan.herokuapp.com/gun',
+            'wss://peer.wallie.io/gun'
+          ]
+          
+          console.log('🌐 Initializing Gun.js with peers:', gunPeers)
+          
+          // Initialize Gun with simple configuration
+          const gunInstance = window.Gun({
+            peers: gunPeers,
+            localStorage: false // Use memory only for now to avoid conflicts
+          })
+          
+          console.log('✅ Gun.js instance created:', gunInstance)
+          
+          // Test basic Gun.js functionality immediately
+          const testKey = 'gun_init_test'
+          const testData = { test: true, timestamp: Date.now() }
+          
+          gunInstance.get(testKey).put(testData)
+          console.log('✅ Gun.js basic write test completed')
+          
+          // Try to read it back
+          gunInstance.get(testKey).once((data) => {
+            if (data && data.test) {
+              console.log('✅ Gun.js read/write working!')
+              setGun(gunInstance)
+              setInitStatus('gun_initialized')
+            } else {
+              console.log('⚠️ Gun.js write/read test failed, but continuing anyway')
+              setGun(gunInstance)
+              setInitStatus('gun_initialized')
+            }
+          })
+          
+          // Fallback timer in case .once() doesn't fire
+          setTimeout(() => {
+            if (!gun) {
+              console.log('⚠️ Gun.js test timeout, but setting anyway')
+              setGun(gunInstance)
+              setInitStatus('gun_initialized')
+            }
+          }, 3000)
+          
+        } catch (error) {
+          console.error('❌ Gun.js initialization failed:', error)
+          setInitStatus('gun_failed')
+          setChatError(`Gun.js initialization failed: ${error.message}`)
+        }
+      }
+      
+      initializeGun()
+    }
+  }, [initStatus])
 
   // Gun.js message listener (only if Gun is available)
   useEffect(() => {
@@ -1345,6 +1364,58 @@ function ChatScreen({ user, onLogout }) {
       console.error('Basic Gun.js test error:', error)
     }
   }
+
+  // Debug function to test Gun.js availability (for console testing)
+  const debugGunJS = () => {
+    console.log('🔍 DEBUGGING GUN.JS AVAILABILITY:')
+    console.log('- window.Gun available:', typeof window.Gun !== 'undefined')
+    console.log('- Current gun instance:', !!gun)
+    
+    if (typeof window.Gun !== 'undefined') {
+      console.log('- Gun.js version:', window.Gun.version || 'unknown')
+      
+      try {
+        // Create a test instance
+        const testGun = window.Gun({
+          peers: ['https://gun-manhattan.herokuapp.com/gun'],
+          localStorage: false
+        })
+        
+        console.log('✅ Test Gun.js instance created successfully')
+        
+        // Test basic write
+        const testKey = 'debug_test_' + Date.now()
+        const testData = { debug: true, timestamp: Date.now() }
+        
+        testGun.get(testKey).put(testData)
+        console.log('✅ Test write completed')
+        
+        // Test read
+        setTimeout(() => {
+          testGun.get(testKey).once((data) => {
+            if (data && data.debug) {
+              console.log('✅ Test read successful - Gun.js is working!')
+            } else {
+              console.log('❌ Test read failed - Gun.js not working properly')
+            }
+          })
+        }, 2000)
+        
+      } catch (error) {
+        console.error('❌ Gun.js test failed:', error)
+      }
+    } else {
+      console.error('❌ Gun.js not loaded from CDN!')
+    }
+  }
+
+  // Make debug function available globally for console testing
+  useEffect(() => {
+    window.debugGunJS = debugGunJS
+    return () => {
+      delete window.debugGunJS
+    }
+  }, [])
 
   return (
     <div className="app">
