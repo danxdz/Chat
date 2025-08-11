@@ -170,25 +170,10 @@ function App() {
         const hash = window.location.hash
         if (hash.startsWith('#invite=')) {
           const inviteToken = hash.replace('#invite=', '')
-          try {
-            // Try to verify it's a valid secure invite
-            console.log('📨 Secure invite detected, token length:', inviteToken.length)
-            
-            // Store the raw token for verification during registration
-            try {
-              sessionStorage.setItem('pendingInvite', inviteToken)
-              setCurrentView('register')
-              return
-            } catch (storageError) {
-              console.error('❌ Failed to store invite in sessionStorage:', storageError)
-              // Fallback: pass invite directly via state
-              setCurrentView('register')
-              return
-            }
-          } catch (e) {
-            logger.error('❌ Invalid secure invite format:', e)
-            alert('❌ Invalid invite link')
-          }
+          console.log('📨 Invite detected, going to simple registration')
+          // Set simple registration mode
+          setCurrentView('simpleRegister')
+          return
         }
 
         // If no invite and no users exist, show error
@@ -1717,6 +1702,84 @@ function App() {
             />
             <button type="submit" className="btn">
               🎫 Create Account
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentView === 'simpleRegister') {
+    // Get invite token directly from URL - no sessionStorage
+    const hash = window.location.hash
+    let inviteToken = null
+    let inviterName = 'someone'
+    
+    if (hash.startsWith('#invite=')) {
+      inviteToken = hash.replace('#invite=', '')
+      try {
+        const inviteData = JSON.parse(atob(inviteToken))
+        inviterName = inviteData.fromNick || inviteData.from || 'someone'
+      } catch (e) {
+        console.log('Could not parse invite name')
+      }
+    }
+    
+    return (
+      <div className="screen">
+        <DebugNotifications />
+        <div className="form">
+          <h1>📨 You're Invited!</h1>
+          <p>Complete your registration to join {inviterName}'s chat</p>
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            const nickname = e.target.nickname.value.trim()
+            const password = e.target.password.value.trim()
+            
+            if (nickname && password && inviteToken) {
+              try {
+                // Directly verify and register without sessionStorage
+                const inviteData = await verifySecureInvite(inviteToken)
+                const newUser = await createUserAccount(nickname, password, inviteData)
+                
+                // Update users list
+                const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+                const updatedUsers = [...existingUsers, newUser]
+                setAllUsers(updatedUsers)
+                localStorage.setItem('users', JSON.stringify(updatedUsers))
+                
+                // Mark invite as used
+                await markInviteUsed(inviteData.id)
+                
+                // Auto-login
+                setUser(newUser)
+                setCurrentView('chat')
+                alert('✅ Account created successfully!')
+              } catch (error) {
+                console.error('Registration failed:', error)
+                alert('❌ Registration failed: ' + error.message)
+              }
+            }
+          }}>
+            <input
+              name="nickname"
+              type="text"
+              placeholder="Your nickname"
+              required
+              autoFocus
+              className="input"
+              style={{ marginBottom: '1rem' }}
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Create a password (min 4 characters)"
+              required
+              className="input"
+              style={{ marginBottom: '1.5rem' }}
+            />
+            <button type="submit" className="btn">
+              ✨ Create Account
             </button>
           </form>
         </div>
