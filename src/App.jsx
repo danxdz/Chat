@@ -38,11 +38,13 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     logger.error('🚨 React Error Boundary caught an error:', error, errorInfo)
+    logger.error('🔍 Error stack:', error.stack)
     
-    // Clear sessionStorage if there's an initialization error
+    // Clear sessionStorage if there's an initialization error  
     if (error.message && error.message.includes('before initialization')) {
       console.log('🔧 Clearing sessionStorage due to initialization error')
       sessionStorage.clear()
+      // Don't clear localStorage to keep admin user
     }
   }
 
@@ -66,13 +68,23 @@ class ErrorBoundary extends Component {
               <button 
                 onClick={() => {
                   sessionStorage.clear()
+                  window.location.href = window.location.origin
+                }} 
+                className="btn"
+                style={{ background: '#ffc107', color: '#000' }}
+              >
+                🔧 Clear Session & Retry
+              </button>
+              <button 
+                onClick={() => {
+                  sessionStorage.clear()
                   localStorage.clear()
                   window.location.href = window.location.origin
                 }} 
                 className="btn"
                 style={{ background: '#ff6b6b' }}
               >
-                🗑️ Clear Data & Restart
+                🗑️ Full Reset
               </button>
               <button 
                 onClick={() => window.location.reload()} 
@@ -163,9 +175,16 @@ function App() {
             console.log('📨 Secure invite detected, token length:', inviteToken.length)
             
             // Store the raw token for verification during registration
-            sessionStorage.setItem('pendingInvite', inviteToken)
-            setCurrentView('register')
-            return
+            try {
+              sessionStorage.setItem('pendingInvite', inviteToken)
+              setCurrentView('register')
+              return
+            } catch (storageError) {
+              console.error('❌ Failed to store invite in sessionStorage:', storageError)
+              // Fallback: pass invite directly via state
+              setCurrentView('register')
+              return
+            }
           } catch (e) {
             logger.error('❌ Invalid secure invite format:', e)
             alert('❌ Invalid invite link')
@@ -458,7 +477,24 @@ function App() {
       console.log('🎯 REGISTER: Starting account creation for:', nickname)
       
       // Check if there's a pending invite
-      const pendingInviteStr = sessionStorage.getItem('pendingInvite')
+      let pendingInviteStr = null
+      try {
+        if (typeof Storage !== 'undefined' && window.sessionStorage) {
+          pendingInviteStr = sessionStorage.getItem('pendingInvite')
+        }
+      } catch (e) {
+        console.log('SessionStorage not available, checking URL hash')
+      }
+      
+      // Fallback to URL hash if sessionStorage failed
+      if (!pendingInviteStr) {
+        const hash = window.location.hash
+        if (hash.startsWith('#invite=')) {
+          pendingInviteStr = hash.replace('#invite=', '')
+          console.log('✅ REGISTER: Using invite from URL hash')
+        }
+      }
+      
       if (!pendingInviteStr) {
         alert('❌ Registration requires an invitation. Please use an invite link.')
         return false
@@ -1590,7 +1626,11 @@ function App() {
     let inviterName = 'someone'
     
     try {
-      pendingInvite = sessionStorage.getItem('pendingInvite')
+      // Defensive sessionStorage access
+      if (typeof Storage !== 'undefined' && window.sessionStorage) {
+        pendingInvite = sessionStorage.getItem('pendingInvite')
+      }
+      
       if (pendingInvite) {
         // pendingInvite is a raw Base64 token, need to decode it
         const inviteData = JSON.parse(atob(pendingInvite))
@@ -1598,9 +1638,19 @@ function App() {
         console.log('📨 Registration view - invite from:', inviterName)
       } else {
         console.log('📨 Registration view - no pending invite found')
-        // Redirect to home if no invite
-        setCurrentView('needInvite')
-        return null
+        // Also check URL hash as fallback
+        const hash = window.location.hash
+        if (hash.startsWith('#invite=')) {
+          const inviteToken = hash.replace('#invite=', '')
+          const inviteData = JSON.parse(atob(inviteToken))
+          inviterName = inviteData.fromNick || inviteData.from || 'someone'
+          pendingInvite = inviteToken
+          console.log('📨 Using invite from URL hash:', inviterName)
+        } else {
+          // Redirect to home if no invite
+          setCurrentView('needInvite')
+          return null
+        }
       }
     } catch (e) {
       // Handle invalid invite
