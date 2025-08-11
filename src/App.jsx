@@ -1601,6 +1601,37 @@ function App() {
               Ask a friend for an invite link
             </p>
           </div>
+          
+          <div style={{ 
+            marginTop: '1.5rem', 
+            padding: '1rem', 
+            background: 'rgba(255, 193, 7, 0.1)', 
+            border: '1px solid rgba(255, 193, 7, 0.3)',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#ffc107', fontSize: '0.8rem', marginBottom: '0.8rem' }}>
+              🎯 Demo Mode
+            </p>
+            <button 
+              onClick={createBootstrapUser}
+              style={{
+                padding: '0.6rem 1.2rem',
+                background: 'linear-gradient(135deg, #ffc107, #ff8f00)',
+                color: '#000',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
+              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              🚀 Create Admin
+            </button>
+          </div>
         </div>
       </div>
     )
