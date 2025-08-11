@@ -17,8 +17,8 @@ export async function deriveKeyFromPin(pin, saltBytes, sodium) {
     32,
     pinBytes,
     saltBytes,
-    sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
-    sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
+    sodium.crypto_pwhash_OPSLIMIT_MODERATE,
+    sodium.crypto_pwhash_MEMLIMIT_MODERATE,
     sodium.crypto_pwhash_ALG_ARGON2ID13
   )
   sodium.memzero(pinBytes)
