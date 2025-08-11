@@ -8,7 +8,9 @@ export default defineConfig({
     open: true
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    minify: false,
+    sourcemap: true
   },
   publicDir: 'public'
 })

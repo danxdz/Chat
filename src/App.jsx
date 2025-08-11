@@ -165,6 +165,21 @@ function App() {
         // Load existing user data
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
         setAllUsers(existingUsers)
+        
+        // Check if user was auto-logged in from registration
+        const currentUser = localStorage.getItem('currentUser')
+        if (currentUser) {
+          try {
+            const userData = JSON.parse(currentUser)
+            setUser(userData)
+            setCurrentView('chat')
+            localStorage.removeItem('currentUser') // Clean up
+            console.log('✅ Auto-logged in user from registration:', userData.nickname)
+            return
+          } catch (e) {
+            localStorage.removeItem('currentUser')
+          }
+        }
 
         // Check for invite in URL hash
         const hash = window.location.hash

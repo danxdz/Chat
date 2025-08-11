@@ -169,7 +169,7 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
     
     return {
       inviteId,
-      inviteUrl: `https://chat-brown-chi-22.vercel.app#invite=${btoa(JSON.stringify(signedInvite))}`,
+      inviteUrl: `https://chat-brown-chi-22.vercel.app/register.html#invite=${btoa(JSON.stringify(signedInvite))}`,
       expiresAt,
       expirationChoice
     }

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join P2P Chat</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .form {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            margin: 0 0 1rem 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        p {
+            margin: 0 0 2rem 0;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .input:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+        }
+        .btn {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: linear-gradient(135deg, #0066cc, #004499);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+        .error {
+            color: #ff6b6b;
+            margin-top: 1rem;
+            display: none;
+        }
+        .success {
+            color: #4CAF50;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="form">
+        <h1>📨 You're Invited!</h1>
+        <p id="inviter-name">Complete your registration to join the chat</p>
+        
+        <form id="register-form">
+            <input 
+                type="text" 
+                id="nickname" 
+                placeholder="Your nickname" 
+                required 
+                class="input"
+                autofocus
+            />
+            <input 
+                type="password" 
+                id="password" 
+                placeholder="Create a password (min 4 characters)" 
+                required 
+                class="input"
+                minlength="4"
+            />
+            <button type="submit" class="btn">✨ Create Account</button>
+        </form>
+        
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.520/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.520/sea.js"></script>
+    <script>
+        // Get invite from URL
+        const hash = window.location.hash;
+        let inviteToken = null;
+        let inviterName = 'someone';
+
+        if (hash.startsWith('#invite=')) {
+            inviteToken = hash.replace('#invite=', '');
+            try {
+                const inviteData = JSON.parse(atob(inviteToken));
+                inviterName = inviteData.fromNick || inviteData.from || 'someone';
+                document.getElementById('inviter-name').textContent = `Complete your registration to join ${inviterName}'s chat`;
+            } catch (e) {
+                console.error('Invalid invite token');
+            }
+        }
+
+        if (!inviteToken) {
+            document.getElementById('error').textContent = 'Invalid or missing invite link';
+            document.getElementById('error').style.display = 'block';
+        }
+
+        // Handle form submission
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nickname = document.getElementById('nickname').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+            
+            // Hide previous messages
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            if (!nickname || !password) {
+                errorDiv.textContent = 'Please fill in both fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (!inviteToken) {
+                errorDiv.textContent = 'No valid invite found';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                // Parse and verify invite
+                const inviteData = JSON.parse(atob(inviteToken));
+                
+                // Check expiration
+                if (Date.now() > inviteData.expiresAt) {
+                    throw new Error('Invite has expired');
+                }
+
+                // Create user identity
+                const identity = await Gun.SEA.pair();
+                const hashedPassword = await Gun.SEA.work(password, null, null, {name: 'SHA-256'});
+                
+                const newUser = {
+                    id: identity.pub,
+                    nickname: nickname,
+                    passwordHash: hashedPassword,
+                    privateKey: identity.priv,
+                    publicKey: identity.pub,
+                    createdAt: Date.now(),
+                    invitedBy: inviteData.fromId || null,
+                    inviterNickname: inviteData.fromNick || null,
+                    friends: inviteData.fromId ? [inviteData.fromId] : []
+                };
+
+                // Save to localStorage
+                const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+                const updatedUsers = [...existingUsers, newUser];
+                localStorage.setItem('users', JSON.stringify(updatedUsers));
+
+                successDiv.textContent = 'Account created successfully! Redirecting...';
+                successDiv.style.display = 'block';
+
+                // Auto-login and redirect
+                localStorage.setItem('currentUser', JSON.stringify(newUser));
+                
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Registration failed:', error);
+                errorDiv.textContent = 'Registration failed: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
