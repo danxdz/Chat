@@ -130,8 +130,10 @@ function App() {
   const [onlineUsers, setOnlineUsers] = useState(new Map())
   const [heartbeatInterval, setHeartbeatInterval] = useState(null)
 
-  // Debug notification system
+  // Debug notification system (only in development)
   const showDebugNotification = (message, type = 'info') => {
+    if (!isDev) return
+    
     const id = Date.now()
     const notification = { id, message, type, timestamp: Date.now() }
     setDebugNotifications(prev => [...prev, notification])
@@ -142,8 +144,10 @@ function App() {
     }, 4000)
   }
   
-  // Make debug function available globally
-  window.debugNotify = showDebugNotification
+  // Make debug function available globally (only in dev)
+  if (isDev) {
+    window.debugNotify = showDebugNotification
+  }
 
   // Gun.js peers for P2P networking - Updated working peers
   const gunPeers = [
@@ -181,15 +185,8 @@ function App() {
           }
         }
 
-        // Check for invite in URL hash
-        const hash = window.location.hash
-        if (hash.startsWith('#invite=')) {
-          const inviteToken = hash.replace('#invite=', '')
-          console.log('📨 Invite detected, going to simple registration')
-          // Set simple registration mode
-          setCurrentView('simpleRegister')
-          return
-        }
+        // Invite links now go to separate HTML page (/register.html)
+        // No need to handle them in React app
 
         // If no invite and no users exist, show error
         if (existingUsers.length === 0) {
@@ -471,103 +468,8 @@ function App() {
     }
   }, [contacts])
 
-  // Core functions - Invite-only registration
-  const register = async (nickname, password) => {
-    try {
-      console.log('🎯 REGISTER: Starting account creation for:', nickname)
-      
-      // Check if there's a pending invite
-      let pendingInviteStr = null
-      try {
-        if (typeof Storage !== 'undefined' && window.sessionStorage) {
-          pendingInviteStr = sessionStorage.getItem('pendingInvite')
-        }
-      } catch (e) {
-        console.log('SessionStorage not available, checking URL hash')
-      }
-      
-      // Fallback to URL hash if sessionStorage failed
-      if (!pendingInviteStr) {
-        const hash = window.location.hash
-        if (hash.startsWith('#invite=')) {
-          pendingInviteStr = hash.replace('#invite=', '')
-          console.log('✅ REGISTER: Using invite from URL hash')
-        }
-      }
-      
-      if (!pendingInviteStr) {
-        alert('❌ Registration requires an invitation. Please use an invite link.')
-        return false
-      }
-      console.log('✅ REGISTER: Pending invite found')
-
-      if (!nickname.trim() || !password.trim()) {
-        alert('Both nickname and password are required')
-        return false
-      }
-
-      if (password.length < 4) {
-        alert('Password must be at least 4 characters')
-        return false
-      }
-      console.log('✅ REGISTER: Input validation passed')
-
-      // Verify the secure invite
-      console.log('🔍 REGISTER: Verifying secure invite...')
-      const inviteData = await verifySecureInvite(pendingInviteStr)
-      console.log('✅ REGISTER: Invite verified successfully')
-      
-      // Check if nickname already exists
-      console.log('🔍 REGISTER: Checking nickname availability...')
-      const existingUser = allUsers.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
-      if (existingUser) {
-        alert('Nickname already exists. Please choose a different one.')
-        return false
-      }
-      console.log('✅ REGISTER: Nickname available')
-      
-      // Create new user account with secure crypto identity
-      console.log('👤 REGISTER: Creating user account...')
-      const newUser = await createUserAccount(nickname, password, inviteData)
-      console.log('✅ REGISTER: User account created successfully!')
-      
-      // Update users list
-      const updatedUsers = [...allUsers, newUser]
-      setAllUsers(updatedUsers)
-      localStorage.setItem('users', JSON.stringify(updatedUsers))
-      
-      // Mark invite as used (one-time use)
-      await markInviteUsed(inviteData.id)
-      
-      // Add the inviter as a friend (automatic friendship)
-      const newFriends = [{
-        id: inviteData.fromId,
-        nickname: inviteData.fromNick,
-        status: 'active',
-        addedAt: Date.now()
-      }]
-      setFriends(newFriends)
-      
-      // Clear pending invite
-      sessionStorage.removeItem('pendingInvite')
-      
-      setUser(newUser)
-      logger.log('✅ Secure registration completed:', { 
-        nickname: newUser.nickname, 
-        invitedBy: inviteData.fromNick,
-        cryptoId: newUser.id.substring(0, 16) + '...'
-      })
-      return true
-    } catch (error) {
-      console.error('❌ REGISTER: Account creation failed at step:', error)
-      console.error('❌ REGISTER: Full error details:', error.message)
-      console.error('❌ REGISTER: Error stack:', error.stack)
-      
-      logger.error('❌ Secure registration failed:', error)
-      alert('❌ Registration failed: ' + error.message + '\nCheck console for details.')
-      return false
-    }
-  }
+  // Registration now handled by separate HTML page (/register.html)
+  // This function is kept for compatibility but not used
 
   const login = async (nickname, password) => {
     if (!nickname.trim() || !password.trim()) {
@@ -1802,9 +1704,7 @@ function App() {
     )
   }
 
-  if (currentView === 'register') {
-    return <RegisterView />
-  }
+
 
   if (currentView === 'login') {
     return (
@@ -2093,37 +1993,41 @@ function App() {
     )
   }
 
-  // Debug Notifications Component
-  const DebugNotifications = () => (
-    <div style={{
-      position: 'fixed',
-      top: '10px',
-      left: '10px',
-      zIndex: 10000,
-      pointerEvents: 'none'
-    }}>
-      {debugNotifications.map((notif) => (
-        <div
-          key={notif.id}
-          style={{
-            background: notif.type === 'error' ? '#ff6666' : 
-                       notif.type === 'success' ? '#66ff66' : '#66bbff',
-            color: '#000',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            marginBottom: '4px',
-            fontSize: '12px',
-            maxWidth: '300px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            fontWeight: 'bold',
-            border: '1px solid rgba(0,0,0,0.2)'
-          }}
-        >
-          {notif.message}
-        </div>
-      ))}
-    </div>
-  )
+  // Debug Notifications Component (only in development)
+  const DebugNotifications = () => {
+    if (!isDev) return null
+    
+    return (
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        left: '10px',
+        zIndex: 10000,
+        pointerEvents: 'none'
+      }}>
+        {debugNotifications.map((notif) => (
+          <div
+            key={notif.id}
+            style={{
+              background: notif.type === 'error' ? '#ff6666' : 
+                         notif.type === 'success' ? '#66ff66' : '#66bbff',
+              color: '#000',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              marginBottom: '4px',
+              fontSize: '12px',
+              maxWidth: '300px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              fontWeight: 'bold',
+              border: '1px solid rgba(0,0,0,0.2)'
+            }}
+          >
+            {notif.message}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   if (currentView === 'chat') {
     return (
