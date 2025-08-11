@@ -315,14 +315,22 @@ function App() {
       
       // Decrypt message if it's encrypted
       let messageData = { ...data }
+      console.log('🔓 DECRYPTION DEBUG:', {
+        messageEncrypted: data.encrypted,
+        seaAvailable: !!(window.Gun && window.Gun.SEA),
+        encryptedText: data.encrypted ? data.text : 'not encrypted'
+      })
+      
       if (data.encrypted && window.Gun && window.Gun.SEA) {
         try {
           const channelName = channelType === 'private' ? `private_${[user.id, data.fromId].sort().join('_')}` : 'general_chat'
           const sharedKey = 'p2p-chat-key-' + channelName
           const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
           messageData.text = decryptedText
+          console.log('🔓 Message decrypted successfully!')
           logger.log('🔓 Message decrypted')
         } catch (e) {
+          console.log('⚠️ Decryption failed:', e.message)
           logger.log('⚠️ Decryption failed:', e.message)
           messageData.text = '[Encrypted message - cannot decrypt]'
         }
@@ -478,6 +486,14 @@ function App() {
       return updated
     })
     
+    // Add current user to online users immediately
+    setOnlineUsers(prev => {
+      const updated = new Map(prev)
+      updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
+      console.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
+      return updated
+    })
+    
     // Announce presence after a short delay to ensure Gun.js is ready
     setTimeout(() => {
       announcePresence('join', user)
@@ -566,6 +582,12 @@ function App() {
       
       // Encrypt message text if SEA is available
       let messageToSend = { ...message }
+      console.log('🔐 ENCRYPTION DEBUG:', {
+        gunAvailable: !!window.Gun,
+        seaAvailable: !!(window.Gun && window.Gun.SEA),
+        messageText: message.text
+      })
+      
       if (window.Gun && window.Gun.SEA) {
         try {
           // Use a simple shared key for now (in production, use proper key exchange)
@@ -573,13 +595,16 @@ function App() {
           const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
           messageToSend.text = encryptedText
           messageToSend.encrypted = true
+          console.log('🔐 Message encrypted successfully!')
           logger.log('🔐 Message encrypted')
         } catch (e) {
+          console.log('⚠️ Encryption failed:', e.message)
           logger.log('⚠️ Encryption failed, sending plain text:', e.message)
           messageToSend.encrypted = false
         }
       } else {
         messageToSend.encrypted = false
+        console.log('⚠️ SEA not available, sending plain text')
         logger.log('⚠️ SEA not available, sending plain text')
       }
 
