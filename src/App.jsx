@@ -86,6 +86,7 @@ function App() {
   const [showInvite, setShowInvite] = useState(false)
   const [showSecureInviteModal, setShowSecureInviteModal] = useState(false)
   const [friends, setFriends] = useState([])
+  const [debugNotifications, setDebugNotifications] = useState([])
   const [showTests, setShowTests] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
   const [testResults, setTestResults] = useState({})
