@@ -9,12 +9,12 @@ export const generatePermanentId = async () => {
   
   if (!window.Gun || !window.Gun.SEA) {
     console.error('❌ Gun.SEA not available')
-    alert('🔑 DEBUG: Gun.SEA not available')
+    if (window.debugNotify) window.debugNotify('❌ Gun.SEA not available', 'error')
     throw new Error('Gun.SEA not available')
   }
   
   console.log('🔧 Gun.SEA available, creating pair...')
-  alert('🔑 DEBUG: Starting Gun.SEA.pair()...')
+  if (window.debugNotify) window.debugNotify('🔑 Starting Gun.SEA.pair()...', 'info')
   
   try {
     // Gun.SEA.pair() might be callback-based in some versions
@@ -47,7 +47,7 @@ export const generatePermanentId = async () => {
       priv: identity.priv ? 'present' : 'missing'
     })
     
-    alert('✅ DEBUG: Gun.SEA.pair() SUCCESS!')
+    if (window.debugNotify) window.debugNotify('✅ Gun.SEA.pair() SUCCESS!', 'success')
     
     return {
       id: identity.pub, // Public key as permanent ID
@@ -56,7 +56,7 @@ export const generatePermanentId = async () => {
     }
   } catch (error) {
     console.error('❌ Failed to generate Gun.SEA pair:', error)
-    alert('❌ DEBUG: Gun.SEA.pair() FAILED: ' + error.message)
+    if (window.debugNotify) window.debugNotify('❌ Gun.SEA.pair() FAILED: ' + error.message, 'error')
     throw error
   }
 }
@@ -67,18 +67,18 @@ export const generatePermanentId = async () => {
 export const createUserAccount = async (nickname, password, inviteData = null) => {
   try {
     console.log('👤 Creating user account for:', nickname)
-    alert('👤 DEBUG: Starting user account creation for: ' + nickname)
+    if (window.debugNotify) window.debugNotify('👤 Creating account: ' + nickname, 'info')
     
     const identity = await generatePermanentId()
     console.log('🔑 Identity created successfully')
-    alert('🔑 DEBUG: Identity created successfully!')
+    if (window.debugNotify) window.debugNotify('🔑 Identity created!', 'success')
     
     // Hash password for storage (never store plain text)
     console.log('🔐 Hashing password...')
-    alert('🔐 DEBUG: Starting password hash...')
+    if (window.debugNotify) window.debugNotify('🔐 Hashing password...', 'info')
     const hashedPassword = await hashPassword(password)
     console.log('🔐 Password hashed successfully')
-    alert('🔐 DEBUG: Password hashed successfully!')
+    if (window.debugNotify) window.debugNotify('🔐 Password hashed!', 'success')
     
     const userAccount = {
       id: identity.id, // Permanent cryptographic ID
@@ -97,12 +97,12 @@ export const createUserAccount = async (nickname, password, inviteData = null) =
       nickname: nickname
     })
     
-    alert('✅ DEBUG: User account created completely!')
+    if (window.debugNotify) window.debugNotify('✅ Account created!', 'success')
     return userAccount
     
   } catch (error) {
     console.error('❌ Failed to create user account:', error)
-    alert('❌ DEBUG: createUserAccount FAILED: ' + error.message)
+    if (window.debugNotify) window.debugNotify('❌ Account creation failed: ' + error.message, 'error')
     throw error
   }
 }

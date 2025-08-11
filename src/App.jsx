@@ -99,6 +99,21 @@ function App() {
   const [onlineUsers, setOnlineUsers] = useState(new Map())
   const [heartbeatInterval, setHeartbeatInterval] = useState(null)
 
+  // Debug notification system
+  const showDebugNotification = (message, type = 'info') => {
+    const id = Date.now()
+    const notification = { id, message, type, timestamp: Date.now() }
+    setDebugNotifications(prev => [...prev, notification])
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+      setDebugNotifications(prev => prev.filter(n => n.id !== id))
+    }, 4000)
+  }
+  
+  // Make debug function available globally
+  window.debugNotify = showDebugNotification
+
   // Gun.js peers for P2P networking - Updated working peers
   const gunPeers = [
     'https://relay.peer.ooo/gun',
