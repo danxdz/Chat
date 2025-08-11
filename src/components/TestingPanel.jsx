@@ -223,12 +223,13 @@ export default function TestingPanel({
           borderRadius: '4px',
           border: '1px solid rgba(255, 193, 7, 0.3)'
         }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#ffc107' }}>ℹ️ P2P Message Info:</h3>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#ffc107' }}>ℹ️ User Storage System:</h3>
           <div style={{ fontSize: '0.8rem', lineHeight: '1.4', color: '#e0e0e0' }}>
-            <div>🔐 <strong>Encryption:</strong> Messages are now encrypted using Gun SEA</div>
-            <div>📡 <strong>P2P Network:</strong> Messages persist on Gun.js peer network</div>
-            <div>🗑️ <strong>Clearing:</strong> Cannot fully clear P2P data (by design)</div>
-            <div>🌐 <strong>Decentralized:</strong> Data exists on multiple peers globally</div>
+            <div>👤 <strong>User Accounts:</strong> Stored in browser localStorage</div>
+            <div>📡 <strong>Online Presence:</strong> Stored in Gun.js `user_presence` channel</div>
+            <div>🔐 <strong>Messages:</strong> Encrypted & stored on Gun.js P2P network</div>
+            <div>🗑️ <strong>Why clearing fails:</strong> P2P data persists on other peers</div>
+            <div>🌐 <strong>Solution:</strong> Data reappears when peers reconnect</div>
           </div>
         </div>
 

@@ -1249,44 +1249,73 @@ function App() {
   }
 
   const clearGunJSData = async () => {
-    if (confirm('Attempt to clear Gun.js P2P data? Note: This may not clear data on other peers, but will reset local Gun.js state.')) {
+    if (confirm('🗑️ ADVANCED CLEAR: This will try to clear ALL P2P data including user presence. Note: Data on other peers may persist and re-sync later. Continue?')) {
       try {
         if (!gun) {
           alert('Gun.js not available')
           return
         }
         
+        console.log('🗑️ ADVANCED CLEAR: Starting comprehensive data clearing...')
         logger.log('🗑️ Attempting to clear Gun.js data...')
         
-        // Clear local messages
-        setMessages([])
-        
-        // Clear online users
-        setOnlineUsers(new Map())
-        
-        // Try to put null/empty data in Gun.js (this is limited in P2P)
-        try {
-          await gun.get('general_chat').put(null)
-          await gun.get('chat_messages').put(null) 
-          await gun.get('user_presence').put(null)
-          logger.log('✅ Attempted to clear Gun.js channels')
-        } catch (e) {
-          logger.log('⚠️ Could not clear Gun.js channels (expected in P2P):', e.message)
+        // Announce leave for current user
+        if (user) {
+          await announcePresence('leave')
+          console.log('📡 Announced user departure')
         }
         
-        // Force state reset
+        // Clear all local React state
         setMessages([])
         setOnlineUsers(new Map())
+        setContacts([])
+        setMessageDeliveryStatus(new Map())
+        setConnectionStatus(new Map())
+        setLastSeen(new Map())
+        console.log('🧹 Cleared all local React state')
         
-        alert('Local Gun.js state cleared. P2P network data may persist on other peers. Page will reload to reinitialize.')
+        // Clear all localStorage related to users and app
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('user_') || key.includes('contacts_') || key.includes('chat_') || key.includes('p2p')) {
+            localStorage.removeItem(key)
+            console.log(`🗑️ Removed localStorage: ${key}`)
+          }
+        })
+        
+        // Try to clear Gun.js channels (limited effectiveness in P2P)
+        const channelsToClear = ['general_chat', 'chat_messages', 'user_presence']
+        for (const channel of channelsToClear) {
+          try {
+            // Try multiple clearing methods
+            await gun.get(channel).put(null)
+            await gun.get(channel).put({})
+            await gun.get(channel).map().put(null)
+            console.log(`🗑️ Attempted to clear channel: ${channel}`)
+            logger.log(`✅ Attempted to clear Gun.js channel: ${channel}`)
+          } catch (e) {
+            console.log(`⚠️ Limited clearing for channel ${channel}:`, e.message)
+            logger.log(`⚠️ Could not clear Gun.js channel ${channel} (expected in P2P):`, e.message)
+          }
+        }
+        
+        // Clear any existing heartbeat
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval)
+          setHeartbeatInterval(null)
+          console.log('💓 Stopped heartbeat')
+        }
+        
+        console.log('⚠️ P2P LIMITATION: Data may reappear from other peers')
+        alert('Advanced clear completed. P2P network data may persist on other peers and reappear. Page will reload to reinitialize.')
         
         setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+          window.location.href = window.location.origin
+        }, 2000)
         
       } catch (error) {
+        console.error('❌ Error clearing Gun.js data:', error)
         logger.error('❌ Error clearing Gun.js data:', error)
-        alert('Error clearing Gun.js data. Check console.')
+        alert('Error clearing Gun.js data: ' + error.message)
       }
     }
   }
