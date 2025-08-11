@@ -1571,11 +1571,13 @@ function App() {
     let inviterName = 'someone'
     try {
       if (pendingInvite) {
-        const inviteData = JSON.parse(pendingInvite)
-        inviterName = inviteData.from
+        // pendingInvite is a raw Base64 token, need to decode it
+        const inviteData = JSON.parse(atob(pendingInvite))
+        inviterName = inviteData.fromNick || inviteData.from || 'someone'
       }
     } catch (e) {
       // Handle invalid invite
+      console.log('Could not parse invite for display name:', e.message)
     }
 
     return (
