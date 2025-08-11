@@ -85,12 +85,10 @@ function App() {
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState(new Map())
   const [lastSeen, setLastSeen] = useState(new Map())
 
-  // Gun.js peers for P2P networking
+  // Gun.js peers for P2P networking - Updated working peers
   const gunPeers = [
-    'https://gun-manhattan.herokuapp.com/gun',
-    'https://gunjs.herokuapp.com/gun',
-    'wss://gun-us.herokuapp.com/gun',
-    'wss://gunjs.herokuapp.com/gun',
+    'https://relay.peer.ooo/gun',
+    'https://gun-eu.herokuapp.com/gun',
     'https://peer.wallie.io/gun'
   ]
 

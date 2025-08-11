@@ -26,67 +26,81 @@ export default function Header({
 
   return (
     <div className="header" style={{ 
-      padding: '0.5rem 1rem', 
-      background: '#2d2d2d', 
-      borderBottom: '1px solid #555',
+      padding: '0.8rem 1rem', 
+      background: 'rgba(0, 0, 0, 0.9)', 
+      backdropFilter: 'blur(20px)',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: '0.5rem',
-      minHeight: '60px'
+      gap: '1rem',
+      minHeight: '60px',
+      position: 'relative',
+      zIndex: 100
     }}>
-      {/* Left side - User info and status */}
+      {/* Left side - Simplified user info */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: '0.5rem', 
-        flex: '1', 
-        minWidth: '200px',
-        maxWidth: 'calc(100% - 220px)'
+        gap: '1rem', 
+        flex: '1',
+        minWidth: 0 // Allow flex item to shrink
       }}>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '0.5rem',
-          background: 'rgba(255, 255, 255, 0.05)',
-          padding: '0.4rem 0.8rem',
-          borderRadius: '8px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          gap: '0.8rem',
+          background: 'rgba(255, 255, 255, 0.08)',
+          padding: '0.6rem 1rem',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(10px)'
         }}>
           <div style={{ 
-            width: '8px', 
-            height: '8px', 
+            width: '10px', 
+            height: '10px', 
             borderRadius: '50%', 
             background: '#4CAF50',
-            flexShrink: 0 
+            flexShrink: 0,
+            boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)'
           }}></div>
           <span style={{ 
-            fontSize: '0.9rem', 
-            fontWeight: '500',
-            color: '#ffffff'
+            fontSize: '1rem', 
+            fontWeight: '600',
+            color: '#ffffff',
+            whiteSpace: 'nowrap'
           }}>
             {user.nickname}
           </span>
         </div>
         
-        <div style={{ flex: 1, fontSize: '0.8rem', overflow: 'hidden' }}>
-          <div style={{ color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {activeContact ? `Chat with ${activeContact.nickname}` : 'General Chat'}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          minWidth: 0,
+          flex: 1
+        }}>
+          <div style={{ 
+            color: '#ffffff', 
+            fontSize: '0.9rem',
+            fontWeight: '500',
+            whiteSpace: 'nowrap', 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis' 
+          }}>
+            {activeContact ? `💬 ${activeContact.nickname}` : '🌐 General Chat'}
           </div>
-          <div style={{ fontSize: '0.7rem', color: '#666', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>Status: {initStatus}</span>
+          <div style={{ 
+            fontSize: '0.7rem', 
+            color: 'rgba(255, 255, 255, 0.6)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.8rem' 
+          }}>
+            <span>{initStatus}</span>
             {connectedPeers > 0 && (
-              <span style={{ color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+              <span style={{ color: '#4CAF50' }}>
                 🟢 {connectedPeers} peers
-              </span>
-            )}
-            {activeContact && (
-              <span style={{ 
-                color: connectionStatus.get(activeContact.id) === 'connected' ? '#4CAF50' : '#666',
-                fontSize: '0.6rem'
-              }}>
-                {connectionStatus.get(activeContact.id) === 'connected' ? '● online' : '○ offline'}
               </span>
             )}
           </div>
@@ -96,76 +110,141 @@ export default function Header({
       {/* Right side - Minimalist actions */}
       <div className="action-buttons" style={{ 
         display: 'flex', 
-        gap: '0.5rem', 
+        gap: '0.8rem', 
         alignItems: 'center',
         flexShrink: 0,
         position: 'relative'
       }}>
         <button 
           onClick={onShowInvite} 
-          className="btn" 
           style={{ 
-            background: '#0066cc', 
-            border: 'none',
-            color: 'white',
-            padding: '0.5rem 0.7rem',
-            borderRadius: '4px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#ffffff',
+            padding: '0.8rem',
+            borderRadius: '12px',
             cursor: 'pointer',
-            fontSize: '0.8rem',
-            minHeight: '36px',
-            whiteSpace: 'nowrap',
+            fontSize: '1.2rem',
+            width: '44px',
+            height: '44px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.3rem'
+            justifyContent: 'center',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)'
           }}
           title="Generate invite link"
+          onMouseOver={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.15)'
+            e.target.style.transform = 'translateY(-2px)'
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)'
+            e.target.style.transform = 'translateY(0)'
+          }}
         >
-          📤 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Invite</span>
+          📤
         </button>
         
         <button 
-          onClick={onShowTests}
-          className="btn" 
+          onClick={() => setShowDevMenu(!showDevMenu)}
           style={{ 
-            background: '#28a745', 
-            border: 'none',
-            color: 'white',
-            padding: '0.5rem 0.7rem',
-            borderRadius: '4px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#ffffff',
+            padding: '0.8rem',
+            borderRadius: '12px',
             cursor: 'pointer',
-            fontSize: '0.8rem',
-            minHeight: '36px',
-            whiteSpace: 'nowrap',
+            fontSize: '1.2rem',
+            width: '44px',
+            height: '44px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.3rem'
+            justifyContent: 'center',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)'
           }}
-          title="Run tests and diagnostics"
+          title="Developer menu"
+          onMouseOver={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.15)'
+            e.target.style.transform = 'translateY(-2px)'
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)'
+            e.target.style.transform = 'translateY(0)'
+          }}
         >
-          🧪 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Tests</span>
+          ⚙️
         </button>
         
-        <button 
-          onClick={onLogout} 
-          className="btn" 
-          style={{ 
-            background: '#dc3545', 
-            border: 'none',
-            color: 'white',
-            padding: '0.5rem 0.7rem',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            minHeight: '36px',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}
-          title="Logout and return to registration"
-        >
-          🚪 <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Logout</span>
-        </button>
+        {showDevMenu && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: '12px',
+            zIndex: 1002,
+            minWidth: '160px',
+            marginTop: '0.5rem',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            overflow: 'hidden'
+          }}>
+            <button
+              onClick={() => {
+                onShowTests()
+                setShowDevMenu(false)
+              }}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                padding: '1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              🧪 Run Tests
+            </button>
+            
+            <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.1)', margin: '0 1rem' }}></div>
+            
+            <button
+              onClick={() => {
+                onLogout()
+                setShowDevMenu(false)
+              }}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: '#ff6b6b',
+                padding: '1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255, 107, 107, 0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              🚪 Logout
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
