@@ -85,6 +85,7 @@ function App() {
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState(new Map())
   const [lastSeen, setLastSeen] = useState(new Map())
   const [onlineUsers, setOnlineUsers] = useState(new Map())
+  const [heartbeatInterval, setHeartbeatInterval] = useState(null)
 
   // Gun.js peers for P2P networking - Updated working peers
   const gunPeers = [
@@ -249,9 +250,12 @@ function App() {
     // IRC-style presence listener
     logger.log('👥 Setting up presence listener')
     gun.get('user_presence').map().on((data, key) => {
+      logger.log('👥 Raw presence data received:', JSON.stringify(data), 'key:', key)
       if (data && data.userId && data.nickname && data.action) {
-        logger.log('👤 Presence update:', data.nickname, data.action)
+        logger.log('✅ Valid presence update:', data.nickname, data.action, 'from user:', data.userId)
         handlePresenceUpdate(data)
+      } else {
+        logger.log('❌ Invalid presence data:', data)
       }
     })
 
@@ -261,14 +265,17 @@ function App() {
   // Handle presence updates (IRC-style join/leave)
   const handlePresenceUpdate = (data) => {
     const { userId, nickname, action, timestamp } = data
+    logger.log(`🔄 Processing presence update: ${nickname} ${action}`)
     
     // Update online users list
     setOnlineUsers(prev => {
       const updated = new Map(prev)
       if (action === 'join' || action === 'heartbeat') {
         updated.set(userId, { nickname, lastSeen: timestamp })
+        logger.log(`➕ Added user to online list: ${nickname} (${updated.size} total)`)
       } else if (action === 'leave') {
         updated.delete(userId)
+        logger.log(`➖ Removed user from online list: ${nickname} (${updated.size} total)`)
       }
       return updated
     })
@@ -448,15 +455,38 @@ function App() {
     setUser(user)
     logger.log('✅ User logged in:', user.nickname)
     
+    // Add current user to online list immediately
+    setOnlineUsers(prev => {
+      const updated = new Map(prev)
+      updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
+      logger.log(`➕ Added current user to online list: ${user.nickname}`)
+      return updated
+    })
+    
     // Announce presence after a short delay to ensure Gun.js is ready
     setTimeout(() => {
-      announcePresence('join')
+      announcePresence('join', user)
+      
+      // Start heartbeat to maintain presence
+      const interval = setInterval(() => {
+        announcePresence('heartbeat', user)
+      }, 30000) // Every 30 seconds
+      
+      setHeartbeatInterval(interval)
+      logger.log('💓 Started presence heartbeat')
     }, 1000)
     
     return true
   }
 
   const logout = () => {
+    // Stop heartbeat
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval)
+      setHeartbeatInterval(null)
+      logger.log('💓 Stopped presence heartbeat')
+    }
+    
     // Announce leaving before logout
     if (user) {
       announcePresence('leave')
@@ -472,20 +502,25 @@ function App() {
   }
 
   // IRC-style presence management
-  const announcePresence = async (action = 'join') => {
-    if (!gun || !user) return
+  const announcePresence = async (action = 'join', userData = null) => {
+    const currentUser = userData || user
+    if (!gun || !currentUser) {
+      logger.log(`❌ Cannot announce presence: gun=${!!gun}, user=${!!currentUser}`)
+      return
+    }
     
     const presenceData = {
-      userId: user.id,
-      nickname: user.nickname,
+      userId: currentUser.id,
+      nickname: currentUser.nickname,
       action: action, // 'join', 'leave', 'heartbeat'
       timestamp: Date.now(),
-      channel: activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
+      channel: 'general_chat' // Always use general for now
     }
     
     try {
+      logger.log(`📡 Announcing presence: ${action} for ${currentUser.nickname}`, presenceData)
       await gun.get('user_presence').set(presenceData)
-      logger.log(`📡 Announced presence: ${action} for ${user.nickname}`)
+      logger.log(`✅ Presence announced successfully`)
     } catch (error) {
       logger.error('❌ Failed to announce presence:', error)
     }
