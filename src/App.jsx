@@ -482,6 +482,12 @@ function App() {
     }
 
     try {
+      // Debug: Show what users exist
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      console.log('🔍 LOGIN DEBUG - Available users:', allUsers.length)
+      console.log('👥 User nicknames:', allUsers.map(u => u.nickname))
+      console.log('🎯 Trying to login as:', nickname)
+
       const user = await ircLogin(nickname, password)
       setUser(user)
       
@@ -536,7 +542,14 @@ function App() {
       return true
     } catch (error) {
       logger.error('❌ IRC login failed:', error)
-      alert('❌ Login failed: ' + error.message)
+      
+      // Enhanced error message with debugging info
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      if (allUsers.length === 0) {
+        alert('❌ No users found! Please create an admin account first.')
+      } else {
+        alert(`❌ Login failed: ${error.message}\n\nAvailable users: ${allUsers.map(u => u.nickname).join(', ')}`)
+      }
       return false
     }
   }
@@ -545,10 +558,32 @@ function App() {
   const createBootstrapUser = async () => {
     try {
       console.log('🎯 Creating bootstrap admin user...')
+      
+      // First, check what users currently exist
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      console.log('📊 Current users before creation:', existingUsers.length)
+      
+      // Check if Admin already exists
+      const existingAdmin = existingUsers.find(u => u.nickname.toLowerCase() === 'admin')
+      if (existingAdmin) {
+        console.log('👤 Admin user already exists, logging in...')
+        setUser(existingAdmin)
+        setCurrentView('chat')
+        alert('✅ Admin user already exists! Logged in successfully.')
+        return
+      }
+      
       const bootstrapUser = await createUserAccount('Admin', 'admin123', null)
-      const users = [bootstrapUser]
-      setAllUsers(users)
-      localStorage.setItem('users', JSON.stringify(users))
+      console.log('👤 Bootstrap user created:', bootstrapUser)
+      
+      const updatedUsers = [...existingUsers, bootstrapUser]
+      setAllUsers(updatedUsers)
+      localStorage.setItem('users', JSON.stringify(updatedUsers))
+      
+      // Verify it was saved
+      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      console.log('💾 Users after save:', savedUsers.length)
+      console.log('🔍 Saved users:', savedUsers.map(u => u.nickname))
       
       // Auto-login the bootstrap user
       setUser(bootstrapUser)
@@ -556,9 +591,11 @@ function App() {
       
       console.log('🎯 Bootstrap admin user created successfully')
       console.log('📋 Login credentials: Admin / admin123')
+      alert('✅ Admin user created!\nLogin: Admin\nPassword: admin123\n\nYou are now logged in!')
       
     } catch (error) {
       console.error('❌ Failed to create bootstrap user:', error)
+      console.error('❌ Error details:', error)
       alert('❌ Failed to create bootstrap user: ' + error.message)
     }
   }
@@ -1435,9 +1472,22 @@ function App() {
       console.log('👥 ALL USERS IN DATABASE:', users)
       console.log('📊 Total users:', users.length)
       users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.nickname} (ID: ${user.id})`)
+        console.log(`${index + 1}. ${user.nickname} (ID: ${user.id?.substring(0, 16)}...)`)
       })
       return users
+    }
+    
+    window.checkLocalStorage = () => {
+      console.log('🔍 LOCALSTORAGE DEBUG:')
+      console.log('- users key exists:', localStorage.getItem('users') !== null)
+      console.log('- users value:', localStorage.getItem('users'))
+      console.log('- parsed users:', JSON.parse(localStorage.getItem('users') || '[]'))
+      
+      console.log('\n📱 ALL LOCALSTORAGE KEYS:')
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        console.log(`${i + 1}. ${key}: ${localStorage.getItem(key)?.substring(0, 100)}...`)
+      }
     }
     
     window.createAdminUser = async () => {
