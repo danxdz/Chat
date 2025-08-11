@@ -204,12 +204,20 @@ function App() {
         setGun(gunInstance)
         
         // Monitor peer connections
-        setInterval(() => {
+        const peerMonitorInterval = setInterval(() => {
           if (gunInstance && gunInstance._.opt && gunInstance._.opt.peers) {
             const peerCount = Object.keys(gunInstance._.opt.peers).length
             setConnectedPeers(peerCount)
           }
         }, 5000)
+
+        // Return cleanup function
+        return () => {
+          clearInterval(peerMonitorInterval)
+          if (gunInstance && gunInstance.off) {
+            gunInstance.off()
+          }
+        }
 
       } catch (error) {
         logger.error('❌ Gun.js initialization failed:', error)
@@ -218,7 +226,8 @@ function App() {
       }
     }
 
-    initializeGun()
+    const cleanup = initializeGun()
+    return cleanup
   }, [user])
 
   // Load user data when user changes
