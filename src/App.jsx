@@ -426,36 +426,46 @@ function App() {
 
   // Core functions - Invite-only registration
   const register = async (nickname, password) => {
-    // Check if there's a pending invite
-    const pendingInviteStr = sessionStorage.getItem('pendingInvite')
-    if (!pendingInviteStr) {
-      alert('❌ Registration requires an invitation. Please use an invite link.')
-      return false
-    }
-
-    if (!nickname.trim() || !password.trim()) {
-      alert('Both nickname and password are required')
-      return false
-    }
-
-    if (password.length < 4) {
-      alert('Password must be at least 4 characters')
-      return false
-    }
-
     try {
+      console.log('🎯 REGISTER: Starting account creation for:', nickname)
+      
+      // Check if there's a pending invite
+      const pendingInviteStr = sessionStorage.getItem('pendingInvite')
+      if (!pendingInviteStr) {
+        alert('❌ Registration requires an invitation. Please use an invite link.')
+        return false
+      }
+      console.log('✅ REGISTER: Pending invite found')
+
+      if (!nickname.trim() || !password.trim()) {
+        alert('Both nickname and password are required')
+        return false
+      }
+
+      if (password.length < 4) {
+        alert('Password must be at least 4 characters')
+        return false
+      }
+      console.log('✅ REGISTER: Input validation passed')
+
       // Verify the secure invite
+      console.log('🔍 REGISTER: Verifying secure invite...')
       const inviteData = await verifySecureInvite(pendingInviteStr)
+      console.log('✅ REGISTER: Invite verified successfully')
       
       // Check if nickname already exists
+      console.log('🔍 REGISTER: Checking nickname availability...')
       const existingUser = allUsers.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
       if (existingUser) {
         alert('Nickname already exists. Please choose a different one.')
         return false
       }
+      console.log('✅ REGISTER: Nickname available')
       
       // Create new user account with secure crypto identity
+      console.log('👤 REGISTER: Creating user account...')
       const newUser = await createUserAccount(nickname, password, inviteData)
+      console.log('✅ REGISTER: User account created successfully!')
       
       // Update users list
       const updatedUsers = [...allUsers, newUser]
@@ -485,8 +495,12 @@ function App() {
       })
       return true
     } catch (error) {
+      console.error('❌ REGISTER: Account creation failed at step:', error)
+      console.error('❌ REGISTER: Full error details:', error.message)
+      console.error('❌ REGISTER: Error stack:', error.stack)
+      
       logger.error('❌ Secure registration failed:', error)
-      alert('❌ ' + error.message)
+      alert('❌ Registration failed: ' + error.message + '\nCheck console for details.')
       return false
     }
   }
@@ -1578,13 +1592,27 @@ function App() {
           <p>Complete your registration to join {inviterName}'s chat</p>
           <form onSubmit={async (e) => {
             e.preventDefault()
+            console.log('📝 FORM: Registration form submitted')
+            
             const nickname = e.target.nickname.value.trim()
             const password = e.target.password.value.trim()
+            console.log('📝 FORM: Form data:', { nickname, passwordLength: password.length })
+            
             if (nickname && password) {
-              const success = await register(nickname, password)
-              if (success) {
-                // Registration successful, will automatically login
+              console.log('📝 FORM: Calling register function...')
+              try {
+                const success = await register(nickname, password)
+                console.log('📝 FORM: Register result:', success)
+                if (success) {
+                  console.log('📝 FORM: Registration successful, will automatically login')
+                }
+              } catch (error) {
+                console.error('📝 FORM: Registration form error:', error)
+                alert('Form submission error: ' + error.message)
               }
+            } else {
+              console.log('📝 FORM: Missing nickname or password')
+              alert('Please fill in both nickname and password')
             }
           }}>
             <input
