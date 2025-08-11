@@ -84,6 +84,7 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState(new Map())
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState(new Map())
   const [lastSeen, setLastSeen] = useState(new Map())
+  const [onlineUsers, setOnlineUsers] = useState(new Map())
 
   // Gun.js peers for P2P networking - Updated working peers
   const gunPeers = [
@@ -245,8 +246,56 @@ function App() {
       })
     }
 
-    logger.log('✅ Gun.js listeners ready for general and private chats')
+    // IRC-style presence listener
+    logger.log('👥 Setting up presence listener')
+    gun.get('user_presence').map().on((data, key) => {
+      if (data && data.userId && data.nickname && data.action) {
+        logger.log('👤 Presence update:', data.nickname, data.action)
+        handlePresenceUpdate(data)
+      }
+    })
+
+    logger.log('✅ Gun.js listeners ready for general, private chats, and presence')
   }, [gun, user?.id, contacts])
+
+  // Handle presence updates (IRC-style join/leave)
+  const handlePresenceUpdate = (data) => {
+    const { userId, nickname, action, timestamp } = data
+    
+    // Update online users list
+    setOnlineUsers(prev => {
+      const updated = new Map(prev)
+      if (action === 'join' || action === 'heartbeat') {
+        updated.set(userId, { nickname, lastSeen: timestamp })
+      } else if (action === 'leave') {
+        updated.delete(userId)
+      }
+      return updated
+    })
+    
+    // Add IRC-style system message for join/leave (but not for current user)
+    if (userId !== user?.id && (action === 'join' || action === 'leave')) {
+      const systemMessage = {
+        id: `system_${timestamp}_${userId}_${action}`,
+        text: `${nickname} has ${action === 'join' ? 'joined' : 'left'} the channel`,
+        from: 'System',
+        fromId: 'system',
+        to: 'General',
+        toId: 'general',
+        timestamp: timestamp,
+        type: 'system',
+        isSystemMessage: true
+      }
+      
+      setMessages(prev => {
+        // Check if already exists
+        const exists = prev.find(m => m.id === systemMessage.id)
+        if (exists) return prev
+        
+        return [...prev, systemMessage].sort((a, b) => a.timestamp - b.timestamp)
+      })
+    }
+  }
 
   // Handle incoming messages from any channel
   const handleIncomingMessage = (data, key, channelType) => {
@@ -398,16 +447,48 @@ function App() {
 
     setUser(user)
     logger.log('✅ User logged in:', user.nickname)
+    
+    // Announce presence after a short delay to ensure Gun.js is ready
+    setTimeout(() => {
+      announcePresence('join')
+    }, 1000)
+    
     return true
   }
 
   const logout = () => {
+    // Announce leaving before logout
+    if (user) {
+      announcePresence('leave')
+    }
+    
     setUser(null)
     setMessages([])
     setContacts([])
     setActiveContact(null)
+    setOnlineUsers(new Map())
     setCurrentView('login')
     logger.log('✅ User logged out')
+  }
+
+  // IRC-style presence management
+  const announcePresence = async (action = 'join') => {
+    if (!gun || !user) return
+    
+    const presenceData = {
+      userId: user.id,
+      nickname: user.nickname,
+      action: action, // 'join', 'leave', 'heartbeat'
+      timestamp: Date.now(),
+      channel: activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
+    }
+    
+    try {
+      await gun.get('user_presence').set(presenceData)
+      logger.log(`📡 Announced presence: ${action} for ${user.nickname}`)
+    } catch (error) {
+      logger.error('❌ Failed to announce presence:', error)
+    }
   }
 
   const sendP2PMessage = async (message, channelName = 'general_chat') => {
@@ -1216,23 +1297,24 @@ function App() {
         />
 
         <div className="main-layout">
-          <ContactSidebar
-            contacts={contacts}
-            activeContact={activeContact}
-            connectionStatus={connectionStatus}
-            lastSeen={lastSeen}
-            onContactSelect={setActiveContact}
-            onAddContact={() => {
-              const nickname = prompt('Enter contact nickname:')
-              if (nickname) {
-                addContact({
-                  nickname: nickname.trim(),
-                  id: Date.now(),
-                  status: 'active'
-                })
-              }
-            }}
-          />
+                  <ContactSidebar
+          contacts={contacts}
+          activeContact={activeContact}
+          connectionStatus={connectionStatus}
+          lastSeen={lastSeen}
+          onlineUsers={onlineUsers}
+          onContactSelect={setActiveContact}
+          onAddContact={() => {
+            const nickname = prompt('Enter contact nickname:')
+            if (nickname) {
+              addContact({
+                nickname: nickname.trim(),
+                id: Date.now(),
+                status: 'active'
+              })
+            }
+          }}
+        />
 
           <ChatArea
             chatError={chatError}

@@ -3,6 +3,7 @@ export default function ContactSidebar({
   activeContact, 
   connectionStatus, 
   lastSeen,
+  onlineUsers,
   onContactSelect, 
   onAddContact 
 }) {
@@ -20,118 +21,144 @@ export default function ContactSidebar({
     return `${days}d ago`
   }
 
+  // Convert online users Map to array for display
+  const onlineUsersList = Array.from(onlineUsers.entries()).map(([id, userData]) => ({
+    id,
+    nickname: userData.nickname,
+    lastSeen: userData.lastSeen,
+    isOnline: true
+  }))
+
   return (
     <div className="sidebar" style={{ 
-      width: window.innerWidth < 768 ? '100%' : '250px',
+      width: window.innerWidth < 768 ? '100%' : '280px',
       height: window.innerWidth < 768 ? '120px' : 'auto',
-      background: '#333', 
-      borderRight: window.innerWidth < 768 ? 'none' : '1px solid #555',
-      borderBottom: window.innerWidth < 768 ? '1px solid #555' : 'none',
-      padding: '0.5rem',
+      background: 'rgba(0, 0, 0, 0.8)', 
+      backdropFilter: 'blur(10px)',
+      borderRight: window.innerWidth < 768 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+      borderBottom: window.innerWidth < 768 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+      padding: '1rem',
       overflowY: 'auto'
     }}>
-      <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.9rem' }}>
-        Contacts ({contacts.length})
-      </h3>
-      
-      <div className={window.innerWidth < 480 ? "contacts-horizontal" : "contacts-container"} style={{ 
+      {/* IRC-style online users list */}
+      <div style={{ 
         display: 'flex', 
-        gap: '0.3rem', 
-        flexWrap: window.innerWidth < 480 ? 'nowrap' : 'wrap',
-        overflowX: window.innerWidth < 480 ? 'auto' : 'visible'
+        alignItems: 'center', 
+        gap: '0.5rem',
+        marginBottom: '1rem',
+        padding: '0.8rem',
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
-        {/* General Chat Button */}
-        <button
-          className="contact-button"
-          onClick={() => onContactSelect(null)}
-          style={{
-            padding: '0.4rem 0.6rem',
-            background: !activeContact ? '#0066cc' : '#444',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            color: '#fff',
-            border: 'none',
-            fontSize: '0.8rem',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}
-        >
-          💬 General
-        </button>
+        <div style={{ 
+          width: '8px', 
+          height: '8px', 
+          borderRadius: '50%', 
+          background: '#4CAF50',
+          boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)' 
+        }}></div>
+        <h3 style={{ margin: 0, color: '#fff', fontSize: '1rem', fontWeight: '600' }}>
+          Online Users ({onlineUsersList.length})
+        </h3>
+      </div>
+      
+      {/* General Chat Button */}
+      <button
+        onClick={() => onContactSelect(null)}
+        style={{
+          width: '100%',
+          padding: '0.8rem',
+          background: !activeContact ? 'rgba(0, 102, 204, 0.8)' : 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          color: '#fff',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          fontSize: '0.9rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.8rem',
+          transition: 'all 0.2s ease',
+          backdropFilter: 'blur(5px)'
+        }}
+        onMouseOver={(e) => {
+          if (!activeContact) return
+          e.target.style.background = 'rgba(255, 255, 255, 0.1)'
+        }}
+        onMouseOut={(e) => {
+          if (!activeContact) return
+          e.target.style.background = 'rgba(255, 255, 255, 0.05)'
+        }}
+      >
+        <span style={{ fontSize: '1.2rem' }}>🌐</span>
+        <span style={{ fontWeight: '600' }}>General Chat</span>
+        <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+          {onlineUsersList.length} online
+        </span>
+      </button>
 
-        {/* Contact List */}
-        {contacts.map(contact => {
-          const status = connectionStatus.get(contact.id) || 'disconnected'
-          const lastSeenTime = lastSeen.get(contact.id)
-          const statusIcon = status === 'connected' ? '🟢' : status === 'connecting' ? '🟡' : '🔴'
-          
-          return (
-            <button
-              key={contact.id}
-              className="contact-button"
-              onClick={() => onContactSelect(contact)}
-              title={`${contact.nickname} - ${status} ${lastSeenTime ? '(last seen ' + formatLastSeen(lastSeenTime) + ')' : ''}`}
-              style={{
-                padding: '0.4rem 0.6rem',
-                background: activeContact?.id === contact.id ? '#0066cc' : '#444',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                color: '#fff',
-                border: 'none',
-                fontSize: '0.8rem',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                flexShrink: 0,
-                flexDirection: 'column',
-                minWidth: window.innerWidth < 480 ? '80px' : 'auto'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <span>{statusIcon}</span>
-                <span>{contact.nickname}</span>
-                {contact.status === 'pending' && (
-                  <span style={{ color: '#ffc107' }}>⏳</span>
-                )}
+      {/* IRC-style Online Users List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {onlineUsersList.map(user => (
+          <div
+            key={user.id}
+            style={{
+              padding: '0.8rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.8rem',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ 
+              width: '10px', 
+              height: '10px', 
+              borderRadius: '50%', 
+              background: '#4CAF50',
+              flexShrink: 0,
+              boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)',
+              animation: 'pulse 2s infinite'
+            }}></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ 
+                fontWeight: '600', 
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {user.nickname}
               </div>
-              {status === 'disconnected' && lastSeenTime && (
-                <span style={{ 
-                  fontSize: '0.6rem', 
-                  color: '#888',
-                  display: window.innerWidth < 480 ? 'none' : 'block'
-                }}>
-                  {formatLastSeen(lastSeenTime)}
-                </span>
-              )}
-            </button>
-          )
-        })}
-
-        {/* Add Contact Button */}
-        <button 
-          className="contact-button"
-          onClick={onAddContact}
-          style={{
-            padding: '0.4rem 0.6rem',
-            background: '#28a745',
-            border: 'none',
-            color: 'white',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}
-        >
-          ➕ <span style={{ display: window.innerWidth < 480 ? 'none' : 'inline' }}>Add</span>
-        </button>
+              <div style={{ 
+                fontSize: '0.7rem', 
+                color: 'rgba(255, 255, 255, 0.6)',
+                marginTop: '0.2rem'
+              }}>
+                online • {formatLastSeen(user.lastSeen)}
+                             </div>
+             </div>
+           </div>
+        ))}
+        
+        {onlineUsersList.length === 0 && (
+          <div style={{
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontSize: '0.9rem'
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
+            <div>No users online</div>
+            <div style={{ fontSize: '0.8rem', marginTop: '0.3rem' }}>
+              Users will appear here when they join
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

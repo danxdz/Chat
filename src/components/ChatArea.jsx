@@ -87,39 +87,68 @@ export default function ChatArea({
             </small>
           </div>
         ) : (
-          displayMessages.map(message => (
-            <div key={message.id} className="message-bubble" style={{ 
-              marginBottom: '0.5rem',
-              padding: '0.5rem',
-              background: message.fromId === user.id ? '#0066cc' : '#444',
-              borderRadius: '8px',
-              maxWidth: '85%',
-              marginLeft: message.fromId === user.id ? 'auto' : '0',
-              marginRight: message.fromId === user.id ? '0' : 'auto',
-              fontSize: '0.9rem'
-            }}>
-              <div className="message-header" style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.25rem' }}>
-                {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
-                {message.type === 'private' && <span style={{ color: '#ffc107' }}> [Private]</span>}
-                {message.fromId === user.id && (
-                  <span style={{ float: 'right', fontSize: '0.6rem' }}>
-                    {(() => {
-                      const deliveryStatus = messageDeliveryStatus.get(message.id)
-                      if (!deliveryStatus) return '⏳'
-                      switch (deliveryStatus.status) {
-                        case 'sending': return '⏳'
-                        case 'sent': return '✓'
-                        case 'delivered': return '✓✓'
-                        case 'failed': return '❌'
-                        default: return '⏳'
-                      }
-                    })()}
-                  </span>
-                )}
+          displayMessages.map(message => {
+            // IRC-style system messages
+            if (message.isSystemMessage) {
+              return (
+                <div key={message.id} style={{
+                  textAlign: 'center',
+                  margin: '0.8rem 0',
+                  padding: '0.5rem',
+                  fontSize: '0.8rem',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontStyle: 'italic',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <span style={{ color: '#4CAF50' }}>*</span> {message.text} <span style={{ color: '#4CAF50' }}>*</span>
+                </div>
+              )
+            }
+            
+            // Regular messages
+            return (
+              <div key={message.id} className="message-bubble" style={{ 
+                marginBottom: '0.5rem',
+                padding: '0.8rem',
+                background: message.fromId === user.id ? 'rgba(0, 102, 204, 0.8)' : 'rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                maxWidth: '85%',
+                marginLeft: message.fromId === user.id ? 'auto' : '0',
+                marginRight: message.fromId === user.id ? '0' : 'auto',
+                fontSize: '0.9rem',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(5px)'
+              }}>
+                <div className="message-header" style={{ 
+                  fontSize: '0.7rem', 
+                  color: 'rgba(255, 255, 255, 0.7)', 
+                  marginBottom: '0.4rem',
+                  fontWeight: '500'
+                }}>
+                  {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
+                  {message.type === 'private' && <span style={{ color: '#ffc107' }}> 🔒 Private</span>}
+                  {message.fromId === user.id && (
+                    <span style={{ float: 'right', fontSize: '0.6rem' }}>
+                      {(() => {
+                        const deliveryStatus = messageDeliveryStatus.get(message.id)
+                        if (!deliveryStatus) return '⏳'
+                        switch (deliveryStatus.status) {
+                          case 'sending': return '⏳'
+                          case 'sent': return '✓'
+                          case 'delivered': return '✓✓'
+                          case 'failed': return '❌'
+                          default: return '⏳'
+                        }
+                      })()}
+                    </span>
+                  )}
+                </div>
+                <div style={{ color: '#ffffff', lineHeight: '1.4' }}>{message.text}</div>
               </div>
-              <div>{message.text}</div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 
