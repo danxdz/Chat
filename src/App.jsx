@@ -1621,43 +1621,45 @@ function App() {
     )
   }
 
-  if (currentView === 'register') {
-    let pendingInvite = null
-    let inviterName = 'someone'
+  // Simple invite register component
+  const RegisterView = () => {
+    const [inviterName, setInviterName] = useState('someone')
+    const [inviteToken, setInviteToken] = useState(null)
     
-    try {
-      // Defensive sessionStorage access
-      if (typeof Storage !== 'undefined' && window.sessionStorage) {
-        pendingInvite = sessionStorage.getItem('pendingInvite')
-      }
+    useEffect(() => {
+      // Get invite token from URL or sessionStorage
+      let token = null
+      const hash = window.location.hash
       
-      if (pendingInvite) {
-        // pendingInvite is a raw Base64 token, need to decode it
-        const inviteData = JSON.parse(atob(pendingInvite))
-        inviterName = inviteData.fromNick || inviteData.from || 'someone'
-        console.log('📨 Registration view - invite from:', inviterName)
+      if (hash.startsWith('#invite=')) {
+        token = hash.replace('#invite=', '')
+        console.log('📨 Got invite from URL')
       } else {
-        console.log('📨 Registration view - no pending invite found')
-        // Also check URL hash as fallback
-        const hash = window.location.hash
-        if (hash.startsWith('#invite=')) {
-          const inviteToken = hash.replace('#invite=', '')
-          const inviteData = JSON.parse(atob(inviteToken))
-          inviterName = inviteData.fromNick || inviteData.from || 'someone'
-          pendingInvite = inviteToken
-          console.log('📨 Using invite from URL hash:', inviterName)
-        } else {
-          // Redirect to home if no invite
-          setCurrentView('needInvite')
-          return null
+        try {
+          token = sessionStorage.getItem('pendingInvite')
+          console.log('📨 Got invite from session')
+        } catch (e) {
+          console.log('❌ SessionStorage error:', e)
         }
       }
-    } catch (e) {
-      // Handle invalid invite
-      console.error('❌ Could not parse invite for display name:', e.message)
-      alert('❌ Invalid invite link. Redirecting to home.')
-      setCurrentView('needInvite')
-      return null
+      
+      if (token) {
+        try {
+          const data = JSON.parse(atob(token))
+          setInviterName(data.fromNick || data.from || 'someone')
+          setInviteToken(token)
+        } catch (e) {
+          console.error('❌ Invalid invite token:', e)
+          setCurrentView('needInvite')
+        }
+      } else {
+        console.log('❌ No invite found')
+        setCurrentView('needInvite')
+      }
+    }, [])
+    
+    if (!inviteToken) {
+      return <div>Loading...</div>
     }
 
     return (
@@ -1677,6 +1679,10 @@ function App() {
             if (nickname && password) {
               console.log('📝 FORM: Calling register function...')
               try {
+                // Store invite token in sessionStorage for register function
+                if (inviteToken) {
+                  sessionStorage.setItem('pendingInvite', inviteToken)
+                }
                 const success = await register(nickname, password)
                 console.log('📝 FORM: Register result:', success)
                 if (success) {
@@ -1716,6 +1722,10 @@ function App() {
         </div>
       </div>
     )
+  }
+
+  if (currentView === 'register') {
+    return <RegisterView />
   }
 
   if (currentView === 'login') {
