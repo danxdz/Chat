@@ -796,7 +796,7 @@ function App() {
     }
     
     const encodedInvite = btoa(JSON.stringify(inviteData))
-    const inviteUrl = `${window.location.origin}${window.location.pathname}#invite=${encodedInvite}`
+    const inviteUrl = `https://chat-brown-chi-22.vercel.app#invite=${encodedInvite}`
     
     setInviteLink(inviteUrl)
     
@@ -929,7 +929,7 @@ function App() {
     try {
       const testInviteData = { from: user.nickname, fromId: user.id, timestamp: Date.now() }
       const encodedInvite = btoa(JSON.stringify(testInviteData))
-      const testInviteUrl = `${window.location.origin}#invite=${encodedInvite}`
+      const testInviteUrl = `https://chat-brown-chi-22.vercel.app#invite=${encodedInvite}`
       
       // Try to parse it back
       const parsedData = JSON.parse(atob(encodedInvite))
