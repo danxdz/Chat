@@ -17,30 +17,8 @@ export const generatePermanentId = async () => {
   if (window.debugNotify) window.debugNotify('🔑 Starting Gun.SEA.pair()...', 'info')
   
   try {
-    // Gun.SEA.pair() might be callback-based in some versions
-    const identity = await new Promise((resolve, reject) => {
-      try {
-        const result = window.Gun.SEA.pair()
-        
-        // If it's a promise, handle it
-        if (result && typeof result.then === 'function') {
-          result.then(resolve).catch(reject)
-        } 
-        // If it's callback-based or immediate result
-        else if (result && result.pub && result.priv) {
-          resolve(result)
-        }
-        // If no result, use callback approach
-        else {
-          window.Gun.SEA.pair((err, pair) => {
-            if (err) reject(err)
-            else resolve(pair)
-          })
-        }
-      } catch (err) {
-        reject(err)
-      }
-    })
+    // Simple direct call - Gun.SEA.pair() should return a promise in 0.2020.520
+    const identity = await window.Gun.SEA.pair()
     
     console.log('✅ Identity generated:', {
       pub: identity.pub?.substring(0, 16) + '...',
@@ -169,30 +147,8 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
       createdAt: Date.now()
     }
     
-    // Cryptographically sign the invite (handle callback/promise)
-    const signature = await new Promise((resolve, reject) => {
-      try {
-        const result = window.Gun.SEA.sign(JSON.stringify(inviteData), user.privateKey)
-        
-        // If it's a promise, handle it
-        if (result && typeof result.then === 'function') {
-          result.then(resolve).catch(reject)
-        }
-        // If it's a direct result
-        else if (result) {
-          resolve(result)
-        }
-        // If no result, try callback approach
-        else {
-          window.Gun.SEA.sign(JSON.stringify(inviteData), user.privateKey, (err, sig) => {
-            if (err) reject(err)
-            else resolve(sig)
-          })
-        }
-      } catch (err) {
-        reject(err)
-      }
-    })
+    // Simple direct call for Gun.SEA.sign
+    const signature = await window.Gun.SEA.sign(JSON.stringify(inviteData), user.privateKey)
     
     const signedInvite = {
       ...inviteData,
@@ -264,30 +220,8 @@ export const verifySecureInvite = async (inviteToken) => {
       fromId: inviteData.fromId
     })
     
-    // Gun.SEA.verify might also be callback-based
-    const signatureValid = await new Promise((resolve, reject) => {
-      try {
-        const result = window.Gun.SEA.verify(signature, originalMessage, inviteData.fromId)
-        
-        // If it's a promise, handle it
-        if (result && typeof result.then === 'function') {
-          result.then(resolve).catch(reject)
-        }
-        // If it's a direct boolean result
-        else if (typeof result === 'boolean') {
-          resolve(result)
-        }
-        // If no result, try callback approach
-        else {
-          window.Gun.SEA.verify(signature, originalMessage, inviteData.fromId, (err, valid) => {
-            if (err) reject(err)
-            else resolve(valid)
-          })
-        }
-      } catch (err) {
-        reject(err)
-      }
-    })
+    // Simple direct call for Gun.SEA.verify
+    const signatureValid = await window.Gun.SEA.verify(signature, originalMessage, inviteData.fromId)
     
     console.log('🔐 Signature verification result:', signatureValid)
     

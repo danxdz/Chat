@@ -362,23 +362,7 @@ function App() {
         try {
           const channelName = channelType === 'private' ? `private_${[user.id, data.fromId].sort().join('_')}` : 'general_chat'
           const sharedKey = 'p2p-chat-key-' + channelName
-          const decryptedText = await new Promise((resolve, reject) => {
-            try {
-              const result = window.Gun.SEA.decrypt(data.text, sharedKey)
-              if (result && typeof result.then === 'function') {
-                result.then(resolve).catch(reject)
-              } else if (result !== undefined) {
-                resolve(result)
-              } else {
-                window.Gun.SEA.decrypt(data.text, sharedKey, (err, decrypted) => {
-                  if (err) reject(err)
-                  else resolve(decrypted)
-                })
-              }
-            } catch (err) {
-              reject(err)
-            }
-          })
+          const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
           messageData.text = decryptedText
           console.log('🔓 Message decrypted successfully!')
           logger.log('🔓 Message decrypted')
@@ -762,23 +746,7 @@ function App() {
         try {
           // Use a simple shared key for now (in production, use proper key exchange)
           const sharedKey = 'p2p-chat-key-' + channelName
-          const encryptedText = await new Promise((resolve, reject) => {
-            try {
-              const result = window.Gun.SEA.encrypt(message.text, sharedKey)
-              if (result && typeof result.then === 'function') {
-                result.then(resolve).catch(reject)
-              } else if (result !== undefined) {
-                resolve(result)
-              } else {
-                window.Gun.SEA.encrypt(message.text, sharedKey, (err, encrypted) => {
-                  if (err) reject(err)
-                  else resolve(encrypted)
-                })
-              }
-            } catch (err) {
-              reject(err)
-            }
-          })
+          const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
           messageToSend.text = encryptedText
           messageToSend.encrypted = true
           console.log('🔐 Message encrypted successfully!')
@@ -1612,6 +1580,7 @@ function App() {
 
     return (
       <div className="screen">
+        <DebugNotifications />
         <div className="form">
           <h1>📨 You're Invited!</h1>
           <p>Complete your registration to join {inviterName}'s chat</p>
@@ -1954,9 +1923,42 @@ function App() {
     )
   }
 
+  // Debug Notifications Component
+  const DebugNotifications = () => (
+    <div style={{
+      position: 'fixed',
+      top: '10px',
+      left: '10px',
+      zIndex: 10000,
+      pointerEvents: 'none'
+    }}>
+      {debugNotifications.map((notif) => (
+        <div
+          key={notif.id}
+          style={{
+            background: notif.type === 'error' ? '#ff6666' : 
+                       notif.type === 'success' ? '#66ff66' : '#66bbff',
+            color: '#000',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            marginBottom: '4px',
+            fontSize: '12px',
+            maxWidth: '300px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            fontWeight: 'bold',
+            border: '1px solid rgba(0,0,0,0.2)'
+          }}
+        >
+          {notif.message}
+        </div>
+      ))}
+    </div>
+  )
+
   if (currentView === 'chat') {
     return (
       <div className="app">
+        <DebugNotifications />
         <Header
           user={user}
           activeContact={activeContact}
