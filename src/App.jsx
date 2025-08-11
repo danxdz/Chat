@@ -1244,7 +1244,7 @@ function App() {
             activeContact={activeContact}
             newMessage={newMessage}
             messageDeliveryStatus={messageDeliveryStatus}
-            onMessageChange={setNewMessage}
+            onMessageChange={(e) => setNewMessage(e.target.value)}
             onSendMessage={sendMessage}
           />
         </div>
