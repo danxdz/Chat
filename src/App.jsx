@@ -38,6 +38,12 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     logger.error('🚨 React Error Boundary caught an error:', error, errorInfo)
+    
+    // Clear sessionStorage if there's an initialization error
+    if (error.message && error.message.includes('before initialization')) {
+      console.log('🔧 Clearing sessionStorage due to initialization error')
+      sessionStorage.clear()
+    }
   }
 
   render() {
@@ -56,13 +62,26 @@ class ErrorBoundary extends Component {
             }}>
               {this.state.error?.toString()}
             </pre>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="btn"
-              style={{ background: '#dc3545' }}
-            >
-              🔄 Reload App
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => {
+                  sessionStorage.clear()
+                  localStorage.clear()
+                  window.location.href = window.location.origin
+                }} 
+                className="btn"
+                style={{ background: '#ff6b6b' }}
+              >
+                🗑️ Clear Data & Restart
+              </button>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="btn"
+                style={{ background: '#dc3545' }}
+              >
+                🔄 Reload App
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -1567,17 +1586,28 @@ function App() {
   }
 
   if (currentView === 'register') {
-    const pendingInvite = sessionStorage.getItem('pendingInvite')
+    let pendingInvite = null
     let inviterName = 'someone'
+    
     try {
+      pendingInvite = sessionStorage.getItem('pendingInvite')
       if (pendingInvite) {
         // pendingInvite is a raw Base64 token, need to decode it
         const inviteData = JSON.parse(atob(pendingInvite))
         inviterName = inviteData.fromNick || inviteData.from || 'someone'
+        console.log('📨 Registration view - invite from:', inviterName)
+      } else {
+        console.log('📨 Registration view - no pending invite found')
+        // Redirect to home if no invite
+        setCurrentView('needInvite')
+        return null
       }
     } catch (e) {
       // Handle invalid invite
-      console.log('Could not parse invite for display name:', e.message)
+      console.error('❌ Could not parse invite for display name:', e.message)
+      alert('❌ Invalid invite link. Redirecting to home.')
+      setCurrentView('needInvite')
+      return null
     }
 
     return (
