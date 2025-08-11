@@ -176,10 +176,23 @@ export const verifySecureInvite = async (inviteToken) => {
     }
     
     // Verify cryptographic signature
+    // Reconstruct the original message that was signed (without signature field)
+    const { signature, ...originalData } = inviteData
+    const originalMessage = JSON.stringify(originalData)
+    
+    console.log('🔐 Verifying signature:', {
+      messageLength: originalMessage.length,
+      signatureExists: !!signature,
+      fromId: inviteData.fromId
+    })
+    
     const signatureValid = await window.Gun.SEA.verify(
-      inviteData.signature, 
+      signature, 
+      originalMessage,
       inviteData.fromId
     )
+    
+    console.log('🔐 Signature verification result:', signatureValid)
     
     if (!signatureValid) {
       throw new Error('Invalid invite signature - possible forgery')

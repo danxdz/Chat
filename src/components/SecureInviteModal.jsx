@@ -63,15 +63,29 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
           backdropFilter: 'blur(20px)',
           borderRadius: '16px',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '2rem',
-          maxWidth: '500px',
+          padding: window.innerWidth < 400 ? '1rem' : '2rem',
+          maxWidth: window.innerWidth < 400 ? '95vw' : '500px',
           width: '100%',
-          color: '#fff'
+          color: '#fff',
+          maxHeight: window.innerWidth < 400 ? '90vh' : 'auto',
+          overflow: 'auto'
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎫</div>
-            <h2 style={{ margin: '0 0 0.5rem 0', color: '#4CAF50' }}>Secure Invite Created!</h2>
-            <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: window.innerWidth < 400 ? '1rem' : '1.5rem' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 400 ? '2rem' : '3rem', 
+              marginBottom: window.innerWidth < 400 ? '0.3rem' : '0.5rem' 
+            }}>🎫</div>
+            <h2 style={{ 
+              margin: '0 0 0.5rem 0', 
+              color: '#4CAF50',
+              fontSize: window.innerWidth < 400 ? '1.2rem' : '1.5rem'
+            }}>Secure Invite Created!</h2>
+            <p style={{ 
+              margin: 0, 
+              color: 'rgba(255, 255, 255, 0.7)', 
+              fontSize: window.innerWidth < 400 ? '0.8rem' : '0.9rem',
+              lineHeight: '1.3'
+            }}>
               Cryptographically signed • Expires in {expirationChoice} • One-time use
             </p>
           </div>
@@ -194,15 +208,28 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
         backdropFilter: 'blur(20px)',
         borderRadius: '16px',
         border: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '2rem',
-        maxWidth: '400px',
+        padding: window.innerWidth < 400 ? '1rem' : '2rem',
+        maxWidth: window.innerWidth < 400 ? '95vw' : '400px',
         width: '100%',
-        color: '#fff'
+        color: '#fff',
+        maxHeight: window.innerWidth < 400 ? '90vh' : 'auto',
+        overflow: 'auto'
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔐</div>
-          <h2 style={{ margin: '0 0 0.5rem 0' }}>Create Secure Invite</h2>
-          <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: window.innerWidth < 400 ? '1rem' : '1.5rem' }}>
+          <div style={{ 
+            fontSize: window.innerWidth < 400 ? '2rem' : '3rem', 
+            marginBottom: window.innerWidth < 400 ? '0.3rem' : '0.5rem' 
+          }}>🔐</div>
+          <h2 style={{ 
+            margin: '0 0 0.5rem 0',
+            fontSize: window.innerWidth < 400 ? '1.2rem' : '1.5rem'
+          }}>Create Secure Invite</h2>
+          <p style={{ 
+            margin: 0, 
+            color: 'rgba(255, 255, 255, 0.7)', 
+            fontSize: window.innerWidth < 400 ? '0.8rem' : '0.9rem',
+            lineHeight: '1.3'
+          }}>
             Cryptographically signed • One-time use • Choose expiration
           </p>
         </div>
