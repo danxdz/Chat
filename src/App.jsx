@@ -1051,51 +1051,184 @@ function App() {
     }
   }
 
-  const clearCurrentClientData = () => {
-    if (confirm('Clear all data for current user? This cannot be undone.')) {
-      localStorage.removeItem(`contacts_${user.id}`)
-      setContacts([])
-      setMessages([])
-      setOnlineUsers(new Map())
-      setMessageDeliveryStatus(new Map())
-      setConnectionStatus(new Map())
-      setLastSeen(new Map())
-      logger.log('✅ Current client data cleared')
-      alert('Current client data cleared successfully!')
+  const clearCurrentClientData = async () => {
+    if (confirm('Clear all data for current user? This will remove messages, contacts, and reset everything. This cannot be undone.')) {
+      try {
+        // Clear localStorage
+        localStorage.removeItem(`contacts_${user.id}`)
+        
+        // Clear all state
+        setContacts([])
+        setMessages([])
+        setOnlineUsers(new Map())
+        setMessageDeliveryStatus(new Map())
+        setConnectionStatus(new Map())
+        setLastSeen(new Map())
+        
+        // Try to clear Gun.js data (this won't work for P2P data, but we can try)
+        if (gun) {
+          logger.log('🗑️ Attempting to clear Gun.js data...')
+          // Clear general chat messages visible to this user
+          setMessages([])
+          
+          // Announce leaving to clean up presence
+          if (user) {
+            await announcePresence('leave')
+          }
+        }
+        
+        logger.log('✅ Current client data cleared')
+        alert('Current client data cleared! Messages from Gun.js P2P network may still be visible to other users.')
+        
+        // Force a refresh to see changes
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
+        
+      } catch (error) {
+        logger.error('❌ Error clearing data:', error)
+        alert('Error clearing some data. Check console for details.')
+      }
     }
   }
 
-  const clearAllClientsData = () => {
-    if (confirm('Clear ALL user data? This will remove all users, contacts, and messages. This cannot be undone.')) {
-      // Clear localStorage
-      localStorage.clear()
-      
-      // Clear all state
-      setAllUsers([])
-      setContacts([])
-      setMessages([])
-      setOnlineUsers(new Map())
-      setMessageDeliveryStatus(new Map())
-      setConnectionStatus(new Map())
-      setLastSeen(new Map())
-      setUser(null)
-      setCurrentView('needInvite')
-      
-      logger.log('✅ All client data cleared')
-      alert('All client data cleared! App reset to fresh state.')
+  const clearAllClientsData = async () => {
+    if (confirm('Clear ALL user data? This will completely reset the app and remove all local data. Gun.js P2P messages may persist on the network. Continue?')) {
+      try {
+        // Stop heartbeat if running
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval)
+          setHeartbeatInterval(null)
+        }
+        
+        // Announce leaving if user is logged in
+        if (user && gun) {
+          await announcePresence('leave')
+        }
+        
+        // Clear localStorage completely
+        localStorage.clear()
+        sessionStorage.clear()
+        
+        // Clear all state
+        setAllUsers([])
+        setContacts([])
+        setMessages([])
+        setOnlineUsers(new Map())
+        setMessageDeliveryStatus(new Map())
+        setConnectionStatus(new Map())
+        setLastSeen(new Map())
+        setUser(null)
+        setGun(null)
+        setCurrentView('needInvite')
+        setInitStatus('App Reset')
+        
+        logger.log('✅ All client data cleared - complete reset')
+        alert('Complete reset successful! The page will reload in 2 seconds.')
+        
+        // Force complete page reload after a delay
+        setTimeout(() => {
+          window.location.href = window.location.href.split('#')[0] // Remove hash
+        }, 2000)
+        
+      } catch (error) {
+        logger.error('❌ Error during complete reset:', error)
+        alert('Error during reset. Force refreshing page...')
+        setTimeout(() => window.location.reload(), 1000)
+      }
     }
   }
 
-  const resetAppToFresh = () => {
-    if (confirm('Reset entire app to fresh state? This cannot be undone.')) {
-      localStorage.clear()
-      window.location.reload()
+  const resetAppToFresh = async () => {
+    if (confirm('HARD RESET: This will completely restart the app and clear everything including browser cache. Continue?')) {
+      try {
+        // Stop heartbeat if running
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval)
+          setHeartbeatInterval(null)
+        }
+        
+        // Announce leaving if user is logged in
+        if (user && gun) {
+          await announcePresence('leave')
+        }
+        
+        // Clear all storage
+        localStorage.clear()
+        sessionStorage.clear()
+        
+        // Clear IndexedDB if it exists (Gun.js sometimes uses it)
+        if ('indexedDB' in window) {
+          try {
+            const databases = await indexedDB.databases()
+            databases.forEach(db => {
+              indexedDB.deleteDatabase(db.name)
+            })
+          } catch (e) {
+            logger.log('Could not clear IndexedDB:', e)
+          }
+        }
+        
+        logger.log('🔄 Hard reset initiated')
+        alert('Hard reset in progress... Page will reload completely.')
+        
+        // Hard reload with cache clear
+        window.location.href = window.location.origin + window.location.pathname
+        
+      } catch (error) {
+        logger.error('❌ Error during hard reset:', error)
+        // Fallback to simple reload
+        window.location.reload(true)
+      }
     }
   }
 
   const forceReload = () => {
     if (confirm('Force reload the app? This will refresh the page.')) {
       window.location.reload()
+    }
+  }
+
+  const clearGunJSData = async () => {
+    if (confirm('Attempt to clear Gun.js P2P data? Note: This may not clear data on other peers, but will reset local Gun.js state.')) {
+      try {
+        if (!gun) {
+          alert('Gun.js not available')
+          return
+        }
+        
+        logger.log('🗑️ Attempting to clear Gun.js data...')
+        
+        // Clear local messages
+        setMessages([])
+        
+        // Clear online users
+        setOnlineUsers(new Map())
+        
+        // Try to put null/empty data in Gun.js (this is limited in P2P)
+        try {
+          await gun.get('general_chat').put(null)
+          await gun.get('chat_messages').put(null) 
+          await gun.get('user_presence').put(null)
+          logger.log('✅ Attempted to clear Gun.js channels')
+        } catch (e) {
+          logger.log('⚠️ Could not clear Gun.js channels (expected in P2P):', e.message)
+        }
+        
+        // Force state reset
+        setMessages([])
+        setOnlineUsers(new Map())
+        
+        alert('Local Gun.js state cleared. P2P network data may persist on other peers. Page will reload to reinitialize.')
+        
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+        
+      } catch (error) {
+        logger.error('❌ Error clearing Gun.js data:', error)
+        alert('Error clearing Gun.js data. Check console.')
+      }
     }
   }
 
@@ -1128,6 +1261,7 @@ function App() {
     window.clearAllClientsData = clearAllClientsData
     window.resetAppToFresh = resetAppToFresh
     window.forceReload = forceReload
+    window.clearGunJSData = clearGunJSData
   }, [user])
 
   // Render different views
@@ -1405,6 +1539,7 @@ function App() {
           onClearAllClients={clearAllClientsData}
           onResetApp={resetAppToFresh}
           onForceReload={forceReload}
+          onClearGunJS={clearGunJSData}
         />
 
         <InviteModal

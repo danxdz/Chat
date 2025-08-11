@@ -17,7 +17,8 @@ export default function TestingPanel({
   onClearCurrentClient, 
   onClearAllClients, 
   onResetApp,
-  onForceReload
+  onForceReload,
+  onClearGunJS
 }) {
   if (!isVisible) return null
 
@@ -142,6 +143,16 @@ export default function TestingPanel({
 
         {/* Additional Dev Tools */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button onClick={onClearGunJS} className="btn" style={{ 
+            background: '#ff6b35', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            🔫 Clear Gun.js Data
+          </button>
           <button onClick={onForceReload} className="btn" style={{ 
             background: '#28a745', 
             color: '#fff', 
@@ -158,6 +169,8 @@ export default function TestingPanel({
             - User Agent: ${navigator.userAgent.substring(0, 50)}...
             - Location: ${window.location.href}
             - Local Storage Items: ${Object.keys(localStorage).length}
+            - Messages in State: ${messages.length}
+            - Gun.js Status: ${gun ? 'Connected' : 'Not Connected'}
             `)
           }} className="btn" style={{ 
             background: '#6f42c1', 
