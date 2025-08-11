@@ -337,7 +337,23 @@ function App() {
         try {
           const channelName = channelType === 'private' ? `private_${[user.id, data.fromId].sort().join('_')}` : 'general_chat'
           const sharedKey = 'p2p-chat-key-' + channelName
-          const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
+          const decryptedText = await new Promise((resolve, reject) => {
+            try {
+              const result = window.Gun.SEA.decrypt(data.text, sharedKey)
+              if (result && typeof result.then === 'function') {
+                result.then(resolve).catch(reject)
+              } else if (result !== undefined) {
+                resolve(result)
+              } else {
+                window.Gun.SEA.decrypt(data.text, sharedKey, (err, decrypted) => {
+                  if (err) reject(err)
+                  else resolve(decrypted)
+                })
+              }
+            } catch (err) {
+              reject(err)
+            }
+          })
           messageData.text = decryptedText
           console.log('🔓 Message decrypted successfully!')
           logger.log('🔓 Message decrypted')
@@ -707,7 +723,23 @@ function App() {
         try {
           // Use a simple shared key for now (in production, use proper key exchange)
           const sharedKey = 'p2p-chat-key-' + channelName
-          const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
+          const encryptedText = await new Promise((resolve, reject) => {
+            try {
+              const result = window.Gun.SEA.encrypt(message.text, sharedKey)
+              if (result && typeof result.then === 'function') {
+                result.then(resolve).catch(reject)
+              } else if (result !== undefined) {
+                resolve(result)
+              } else {
+                window.Gun.SEA.encrypt(message.text, sharedKey, (err, encrypted) => {
+                  if (err) reject(err)
+                  else resolve(encrypted)
+                })
+              }
+            } catch (err) {
+              reject(err)
+            }
+          })
           messageToSend.text = encryptedText
           messageToSend.encrypted = true
           console.log('🔐 Message encrypted successfully!')
