@@ -47,7 +47,7 @@ body {
     margin-top: 52px !important;
     height: calc(100vh - 52px) !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important; /* Side by side on desktop */
   }
   
   /* Ensure chat area takes available space but leaves room for input */
