@@ -9,10 +9,12 @@ export const generatePermanentId = async () => {
   
   if (!window.Gun || !window.Gun.SEA) {
     console.error('❌ Gun.SEA not available')
+    alert('🔑 DEBUG: Gun.SEA not available')
     throw new Error('Gun.SEA not available')
   }
   
   console.log('🔧 Gun.SEA available, creating pair...')
+  alert('🔑 DEBUG: Starting Gun.SEA.pair()...')
   
   try {
     // Gun.SEA.pair() might be callback-based in some versions
@@ -45,6 +47,8 @@ export const generatePermanentId = async () => {
       priv: identity.priv ? 'present' : 'missing'
     })
     
+    alert('✅ DEBUG: Gun.SEA.pair() SUCCESS!')
+    
     return {
       id: identity.pub, // Public key as permanent ID
       privateKey: identity.priv, // For signing invites
@@ -52,6 +56,7 @@ export const generatePermanentId = async () => {
     }
   } catch (error) {
     console.error('❌ Failed to generate Gun.SEA pair:', error)
+    alert('❌ DEBUG: Gun.SEA.pair() FAILED: ' + error.message)
     throw error
   }
 }
@@ -62,14 +67,18 @@ export const generatePermanentId = async () => {
 export const createUserAccount = async (nickname, password, inviteData = null) => {
   try {
     console.log('👤 Creating user account for:', nickname)
+    alert('👤 DEBUG: Starting user account creation for: ' + nickname)
     
     const identity = await generatePermanentId()
     console.log('🔑 Identity created successfully')
+    alert('🔑 DEBUG: Identity created successfully!')
     
     // Hash password for storage (never store plain text)
     console.log('🔐 Hashing password...')
+    alert('🔐 DEBUG: Starting password hash...')
     const hashedPassword = await hashPassword(password)
     console.log('🔐 Password hashed successfully')
+    alert('🔐 DEBUG: Password hashed successfully!')
     
     const userAccount = {
       id: identity.id, // Permanent cryptographic ID
@@ -88,10 +97,12 @@ export const createUserAccount = async (nickname, password, inviteData = null) =
       nickname: nickname
     })
     
+    alert('✅ DEBUG: User account created completely!')
     return userAccount
     
   } catch (error) {
     console.error('❌ Failed to create user account:', error)
+    alert('❌ DEBUG: createUserAccount FAILED: ' + error.message)
     throw error
   }
 }
@@ -223,6 +234,7 @@ export const verifySecureInvite = async (inviteToken) => {
       tokenStart: inviteToken.substring(0, 20) + '...',
       tokenEnd: '...' + inviteToken.substring(inviteToken.length - 20)
     })
+    alert('🔍 DEBUG: Starting invite verification...')
     
     const inviteData = JSON.parse(atob(inviteToken))
     console.log('✅ Invite token decoded successfully:', {
@@ -280,6 +292,7 @@ export const verifySecureInvite = async (inviteToken) => {
     console.log('🔐 Signature verification result:', signatureValid)
     
     if (!signatureValid) {
+      alert('❌ DEBUG: Signature verification FAILED!')
       throw new Error('Invalid invite signature - possible forgery')
     }
     
@@ -289,10 +302,12 @@ export const verifySecureInvite = async (inviteToken) => {
       validUntil: new Date(inviteData.expiresAt).toLocaleString()
     })
     
+    alert('✅ DEBUG: Invite verification SUCCESS!')
     return inviteData
     
   } catch (error) {
     console.error('❌ Invite verification failed:', error)
+    alert('❌ DEBUG: verifySecureInvite FAILED: ' + error.message)
     throw error
   }
 }
