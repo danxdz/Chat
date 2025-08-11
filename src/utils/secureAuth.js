@@ -152,7 +152,18 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
  */
 export const verifySecureInvite = async (inviteToken) => {
   try {
+    console.log('🔍 VERIFYING INVITE TOKEN:', {
+      tokenLength: inviteToken.length,
+      tokenStart: inviteToken.substring(0, 20) + '...',
+      tokenEnd: '...' + inviteToken.substring(inviteToken.length - 20)
+    })
+    
     const inviteData = JSON.parse(atob(inviteToken))
+    console.log('✅ Invite token decoded successfully:', {
+      id: inviteData.id,
+      fromNick: inviteData.fromNick,
+      expiresAt: new Date(inviteData.expiresAt).toLocaleString()
+    })
     
     // Check expiration
     if (Date.now() > inviteData.expiresAt) {

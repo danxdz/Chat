@@ -119,20 +119,21 @@ function App() {
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
         setAllUsers(existingUsers)
 
-        // Check for invite in URL
-        const urlParams = new URLSearchParams(window.location.hash.replace('#', ''))
-        const inviteParam = urlParams.get('invite')
-        
-        if (inviteParam) {
+        // Check for invite in URL hash
+        const hash = window.location.hash
+        if (hash.startsWith('#invite=')) {
+          const inviteToken = hash.replace('#invite=', '')
           try {
-            const inviteData = JSON.parse(atob(inviteParam))
-            logger.log('📨 Invite detected from:', inviteData.from)
-            // Store invite data for registration
-            sessionStorage.setItem('pendingInvite', JSON.stringify(inviteData))
+            // Try to verify it's a valid secure invite
+            console.log('📨 Secure invite detected, token length:', inviteToken.length)
+            
+            // Store the raw token for verification during registration
+            sessionStorage.setItem('pendingInvite', inviteToken)
             setCurrentView('register')
             return
           } catch (e) {
-            logger.error('❌ Invalid invite format')
+            logger.error('❌ Invalid secure invite format:', e)
+            alert('❌ Invalid invite link')
           }
         }
 
