@@ -478,6 +478,27 @@ function App() {
     setUser(user)
     logger.log('✅ User logged in:', user.nickname)
     
+    // Test encryption availability immediately after login
+    console.log('🔐 ENCRYPTION TEST AT LOGIN:', {
+      gunAvailable: !!window.Gun,
+      seaAvailable: !!(window.Gun && window.Gun.SEA),
+      seaObject: window.Gun ? window.Gun.SEA : 'Gun not available'
+    })
+    
+    // Quick encryption test
+    if (window.Gun && window.Gun.SEA) {
+      window.Gun.SEA.encrypt('test message', 'test key').then(encrypted => {
+        console.log('🔐 ENCRYPTION TEST SUCCESS:', encrypted)
+        return window.Gun.SEA.decrypt(encrypted, 'test key')
+      }).then(decrypted => {
+        console.log('🔓 DECRYPTION TEST SUCCESS:', decrypted)
+      }).catch(err => {
+        console.error('❌ ENCRYPTION TEST FAILED:', err)
+      })
+    } else {
+      console.error('❌ Gun SEA not available for testing')
+    }
+    
     // Add current user to online list immediately
     setOnlineUsers(prev => {
       const updated = new Map(prev)
@@ -646,6 +667,12 @@ function App() {
   const sendMessage = async (e) => {
     if (e) e.preventDefault() // Handle form submission
     if (!newMessage.trim()) return
+
+    console.log('📤 SEND MESSAGE CALLED:', {
+      messageText: newMessage.trim(),
+      activeContact: activeContact?.nickname || 'General',
+      userNickname: user.nickname
+    })
 
     const messageToSend = {
       id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
