@@ -4,6 +4,15 @@ import ContactSidebar from './components/ContactSidebar'
 import ChatArea from './components/ChatArea'
 import TestingPanel from './components/TestingPanel'
 import InviteModal from './components/InviteModal'
+import SecureInviteModal from './components/SecureInviteModal'
+import { 
+  ircLogin, 
+  createUserAccount, 
+  verifySecureInvite, 
+  markInviteUsed, 
+  changeNickname, 
+  getFriendsList 
+} from './utils/secureAuth'
 
 // Smart logging system - only logs in development
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
@@ -75,6 +84,8 @@ function App() {
   const [initStatus, setInitStatus] = useState('Initializing...')
   const [gun, setGun] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
+  const [showSecureInviteModal, setShowSecureInviteModal] = useState(false)
+  const [friends, setFriends] = useState([])
   const [showTests, setShowTests] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
   const [testResults, setTestResults] = useState({})
@@ -397,7 +408,7 @@ function App() {
   }, [contacts])
 
   // Core functions - Invite-only registration
-  const register = (nickname, pin) => {
+  const register = async (nickname, password) => {
     // Check if there's a pending invite
     const pendingInviteStr = sessionStorage.getItem('pendingInvite')
     if (!pendingInviteStr) {
@@ -405,130 +416,152 @@ function App() {
       return false
     }
 
-    if (!nickname.trim() || !pin.trim()) {
-      alert('Both nickname and PIN are required')
+    if (!nickname.trim() || !password.trim()) {
+      alert('Both nickname and password are required')
       return false
     }
 
-    if (pin.length < 4) {
-      alert('PIN must be at least 4 characters')
-      return false
-    }
-
-    // Check if nickname already exists
-    const existingUser = allUsers.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
-    if (existingUser) {
-      alert('Nickname already exists. Please choose a different one.')
+    if (password.length < 4) {
+      alert('Password must be at least 4 characters')
       return false
     }
 
     try {
-      const inviteData = JSON.parse(pendingInviteStr)
+      // Verify the secure invite
+      const inviteData = await verifySecureInvite(pendingInviteStr)
       
-      const newUser = {
-        id: Date.now(),
-        nickname: nickname.trim(),
-        pin: pin.trim(), // In production, this should be hashed
-        createdAt: Date.now(),
-        invitedBy: inviteData.from,
-        invitedById: inviteData.fromId
+      // Check if nickname already exists
+      const existingUser = allUsers.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())
+      if (existingUser) {
+        alert('Nickname already exists. Please choose a different one.')
+        return false
       }
       
+      // Create new user account with secure crypto identity
+      const newUser = await createUserAccount(nickname, password, inviteData)
+      
+      // Update users list
       const updatedUsers = [...allUsers, newUser]
       setAllUsers(updatedUsers)
       localStorage.setItem('users', JSON.stringify(updatedUsers))
       
-      // Add the inviter as a contact
-      const inviterContact = {
+      // Mark invite as used (one-time use)
+      await markInviteUsed(inviteData.id)
+      
+      // Add the inviter as a friend (automatic friendship)
+      const newFriends = [{
         id: inviteData.fromId,
-        nickname: inviteData.from,
+        nickname: inviteData.fromNick,
         status: 'active',
         addedAt: Date.now()
-      }
-      
-      const newContacts = [inviterContact]
-      setContacts(newContacts)
-      localStorage.setItem(`contacts_${newUser.id}`, JSON.stringify(newContacts))
+      }]
+      setFriends(newFriends)
       
       // Clear pending invite
       sessionStorage.removeItem('pendingInvite')
       
       setUser(newUser)
-      logger.log('✅ User registered via invite:', { nickname: newUser.nickname, invitedBy: inviteData.from })
+      logger.log('✅ Secure registration completed:', { 
+        nickname: newUser.nickname, 
+        invitedBy: inviteData.fromNick,
+        cryptoId: newUser.id.substring(0, 16) + '...'
+      })
       return true
     } catch (error) {
-      logger.error('❌ Error processing invite:', error)
-      alert('❌ Invalid invite data. Please try again.')
+      logger.error('❌ Secure registration failed:', error)
+      alert('❌ ' + error.message)
       return false
     }
   }
 
-  const login = (pin) => {
-    if (!pin.trim()) {
-      alert('PIN is required')
+  const login = async (nickname, password) => {
+    if (!nickname.trim() || !password.trim()) {
+      alert('Nickname and password are required')
       return false
     }
 
-    const user = allUsers.find(u => u.pin === pin.trim())
-    if (!user) {
-      alert('Invalid PIN. Please try again.')
-      return false
-    }
-
-    setUser(user)
-    logger.log('✅ User logged in:', user.nickname)
+    try {
+      const user = await ircLogin(nickname, password)
+      setUser(user)
+      
+      // Load user's friends
+      const userFriends = getFriendsList(user, allUsers)
+      setFriends(userFriends)
+      
+      logger.log('✅ IRC-style login successful:', user.nickname)
     
-    // Test encryption availability immediately after login
-    console.log('🔐 ENCRYPTION TEST AT LOGIN:', {
-      gunAvailable: !!window.Gun,
-      seaAvailable: !!(window.Gun && window.Gun.SEA),
-      seaObject: window.Gun ? window.Gun.SEA : 'Gun not available'
-    })
-    
-    // Quick encryption test
-    if (window.Gun && window.Gun.SEA) {
-      window.Gun.SEA.encrypt('test message', 'test key').then(encrypted => {
-        console.log('🔐 ENCRYPTION TEST SUCCESS:', encrypted)
-        return window.Gun.SEA.decrypt(encrypted, 'test key')
-      }).then(decrypted => {
-        console.log('🔓 DECRYPTION TEST SUCCESS:', decrypted)
-      }).catch(err => {
-        console.error('❌ ENCRYPTION TEST FAILED:', err)
+      // Test encryption availability immediately after login
+      console.log('🔐 ENCRYPTION TEST AT LOGIN:', {
+        gunAvailable: !!window.Gun,
+        seaAvailable: !!(window.Gun && window.Gun.SEA),
+        seaObject: window.Gun ? window.Gun.SEA : 'Gun not available'
       })
-    } else {
-      console.error('❌ Gun SEA not available for testing')
+      
+      // Quick encryption test
+      if (window.Gun && window.Gun.SEA) {
+        window.Gun.SEA.encrypt('test message', 'test key').then(encrypted => {
+          console.log('🔐 ENCRYPTION TEST SUCCESS:', encrypted)
+          return window.Gun.SEA.decrypt(encrypted, 'test key')
+        }).then(decrypted => {
+          console.log('🔓 DECRYPTION TEST SUCCESS:', decrypted)
+        }).catch(err => {
+          console.error('❌ ENCRYPTION TEST FAILED:', err)
+        })
+      } else {
+        console.error('❌ Gun SEA not available for testing')
+      }
+      
+      // Add current user to online list immediately
+      setOnlineUsers(prev => {
+        const updated = new Map(prev)
+        updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
+        console.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
+        return updated
+      })
+      
+      // Announce presence after a short delay to ensure Gun.js is ready
+      setTimeout(() => {
+        announcePresence('join', user)
+        
+        // Start heartbeat to maintain presence
+        const interval = setInterval(() => {
+          announcePresence('heartbeat', user)
+        }, 30000) // Every 30 seconds
+        
+        setHeartbeatInterval(interval)
+        logger.log('💓 Started presence heartbeat')
+      }, 1000)
+      
+      return true
+    } catch (error) {
+      logger.error('❌ IRC login failed:', error)
+      alert('❌ Login failed: ' + error.message)
+      return false
     }
-    
-    // Add current user to online list immediately
-    setOnlineUsers(prev => {
-      const updated = new Map(prev)
-      updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
-      logger.log(`➕ Added current user to online list: ${user.nickname}`)
-      return updated
-    })
-    
-    // Add current user to online users immediately
-    setOnlineUsers(prev => {
-      const updated = new Map(prev)
-      updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
-      console.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
-      return updated
-    })
-    
-    // Announce presence after a short delay to ensure Gun.js is ready
-    setTimeout(() => {
-      announcePresence('join', user)
-      
-      // Start heartbeat to maintain presence
-      const interval = setInterval(() => {
-        announcePresence('heartbeat', user)
-      }, 30000) // Every 30 seconds
-      
-      setHeartbeatInterval(interval)
-      logger.log('💓 Started presence heartbeat')
-    }, 1000)
-    
-    return true
+  }
+
+  // Add nickname change function
+  const handleNicknameChange = async () => {
+    const newNickname = prompt('Enter your new nickname:', user.nickname)
+    if (newNickname && newNickname.trim() !== user.nickname) {
+      try {
+        const updatedUser = await changeNickname(user, newNickname.trim(), gun)
+        setUser(updatedUser)
+        
+        // Update user in localStorage
+        const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        const userIndex = allUsers.findIndex(u => u.id === user.id)
+        if (userIndex !== -1) {
+          allUsers[userIndex] = updatedUser
+          setAllUsers(allUsers)
+          localStorage.setItem('users', JSON.stringify(allUsers))
+        }
+        
+        alert(`✅ Nickname changed to "${newNickname.trim()}"`)
+      } catch (error) {
+        alert(`❌ Failed to change nickname: ${error.message}`)
+      }
+    }
   }
 
   const logout = () => {
@@ -547,6 +580,7 @@ function App() {
     setUser(null)
     setMessages([])
     setContacts([])
+    setFriends([])
     setActiveContact(null)
     setOnlineUsers(new Map())
     setCurrentView('login')
@@ -1408,12 +1442,12 @@ function App() {
         <div className="form">
           <h1>📨 You're Invited!</h1>
           <p>Complete your registration to join {inviterName}'s chat</p>
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault()
             const nickname = e.target.nickname.value.trim()
-            const pin = e.target.pin.value.trim()
-            if (nickname && pin) {
-              const success = register(nickname, pin)
+            const password = e.target.password.value.trim()
+            if (nickname && password) {
+              const success = await register(nickname, password)
               if (success) {
                 // Registration successful, will automatically login
               }
@@ -1429,16 +1463,16 @@ function App() {
               style={{ marginBottom: '1rem' }}
             />
             <input
-              name="pin"
+              name="password"
               type="password"
-              placeholder="Create a PIN (min 4 characters)"
+              placeholder="Create a password (min 4 characters)"
               required
               className="input"
               minLength={4}
               style={{ marginBottom: '1rem' }}
             />
             <button type="submit" className="btn">
-              Create Account
+              🎫 Create Account
             </button>
           </form>
         </div>
@@ -1484,31 +1518,40 @@ function App() {
               margin: 0,
               fontWeight: '300'
             }}>
-              Enter your PIN to continue
+              IRC-style login • Nickname + Password
             </p>
           </div>
           
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault()
-            const pin = e.target.pin.value.trim()
-            if (pin) {
-              const success = login(pin)
+            const nickname = e.target.nickname.value.trim()
+            const password = e.target.password.value.trim()
+            if (nickname && password) {
+              const success = await login(nickname, password)
               if (success) {
                 // Login successful, will automatically navigate to chat
               }
             }
           }}>
             <input
-              name="pin"
-              type="password"
-              placeholder="Enter your PIN"
+              name="nickname"
+              type="text"
+              placeholder="Your nickname"
               required
               autoFocus
+              className="input"
+              style={{ marginBottom: '1rem' }}
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Your password"
+              required
               className="input"
               style={{ marginBottom: '1.5rem' }}
             />
             <button type="submit" className="btn">
-              Sign In
+              🔑 Sign In
             </button>
           </form>
           
@@ -1596,27 +1639,26 @@ function App() {
           initStatus={initStatus}
           connectedPeers={connectedPeers}
           connectionStatus={connectionStatus}
-          onShowInvite={() => setShowInvite(true)}
+          onShowInvite={() => setShowSecureInviteModal(true)}
           onShowTests={() => setShowTests(true)}
+          onChangeNickname={handleNicknameChange}
           onLogout={logout}
         />
 
         <div className="main-layout">
                   <ContactSidebar
-          contacts={contacts}
+          contacts={friends}
           activeContact={activeContact}
           connectionStatus={connectionStatus}
           lastSeen={lastSeen}
           onlineUsers={onlineUsers}
           onContactSelect={setActiveContact}
           onAddContact={() => {
-            const nickname = prompt('Enter contact nickname:')
+            const nickname = prompt('Enter friend nickname:')
             if (nickname) {
-              addContact({
-                nickname: nickname.trim(),
-                id: Date.now(),
-                status: 'active'
-              })
+              // In the new system, friends are added via invites
+              alert('Friends are added by sending them a secure invite!')
+              setShowSecureInviteModal(true)
             }
           }}
         />
@@ -1664,6 +1706,18 @@ function App() {
           onGenerateInvite={generateInvite}
           onCopyInvite={copyInvite}
         />
+
+        {showSecureInviteModal && (
+          <SecureInviteModal
+            user={user}
+            gun={gun}
+            onClose={() => setShowSecureInviteModal(false)}
+            onInviteCreated={(invite) => {
+              console.log('🎫 Secure invite created:', invite)
+              // Could add more logic here if needed
+            }}
+          />
+        )}
       </div>
     )
   }

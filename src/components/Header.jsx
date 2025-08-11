@@ -8,6 +8,7 @@ export default function Header({
   connectionStatus,
   onShowInvite, 
   onShowTests, 
+  onChangeNickname,
   onLogout
 }) {
   const [showDevMenu, setShowDevMenu] = useState(false)
@@ -215,6 +216,31 @@ export default function Header({
               onMouseOut={(e) => e.target.style.background = 'transparent'}
             >
               🧪 Run Tests
+            </button>
+            
+            <button
+              onClick={() => {
+                onChangeNickname()
+                setShowDevMenu(false)
+              }}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                padding: '1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              ✏️ Change Nickname
             </button>
             
             <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.1)', margin: '0 1rem' }}></div>
