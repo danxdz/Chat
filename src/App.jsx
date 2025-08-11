@@ -1663,6 +1663,44 @@ function App() {
             </button>
           </form>
           
+          {/* Quick Admin Creation */}
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '0.8rem', 
+            background: 'rgba(255, 193, 7, 0.15)', 
+            border: '1px solid rgba(255, 193, 7, 0.4)',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <p style={{ 
+              color: '#ffc107', 
+              fontSize: '0.8rem', 
+              margin: '0 0 0.6rem 0',
+              fontWeight: '500'
+            }}>
+              Need admin access?
+            </p>
+            <button 
+              onClick={createBootstrapUser}
+              style={{
+                padding: '0.6rem 1.2rem',
+                background: 'linear-gradient(135deg, #ffc107, #ff8f00)',
+                color: '#000',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                width: '100%'
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+              onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              🚀 Create Admin Account
+            </button>
+          </div>
+          
           <div style={{ 
             marginTop: '2rem', 
             padding: '1.5rem',
