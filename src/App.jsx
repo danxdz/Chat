@@ -1505,12 +1505,14 @@ function App() {
   if (currentView === 'login') {
     return (
       <div style={{ 
-        height: '100vh', 
+        minHeight: '100vh', 
         display: 'flex', 
-        alignItems: 'center', 
+        alignItems: 'flex-start', 
         justifyContent: 'center',
-        padding: '2rem',
-        background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)'
+        padding: '1rem',
+        paddingTop: '2rem',
+        background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+        overflow: 'auto'
       }}>
         <div style={{
           width: '100%',
@@ -1519,14 +1521,18 @@ function App() {
           backdropFilter: 'blur(20px)',
           borderRadius: '20px',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '3rem 2rem',
+          padding: window.innerWidth < 400 ? '2rem 1.5rem' : '3rem 2rem',
           textAlign: 'center',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+          marginBottom: '2rem'
         }}>
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔑</div>
+          <div style={{ marginBottom: window.innerWidth < 400 ? '1.5rem' : '2rem' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 400 ? '2.5rem' : '3rem', 
+              marginBottom: window.innerWidth < 400 ? '0.5rem' : '1rem' 
+            }}>🔑</div>
             <h1 style={{ 
-              fontSize: '1.8rem', 
+              fontSize: window.innerWidth < 400 ? '1.5rem' : '1.8rem', 
               fontWeight: '600', 
               margin: '0 0 0.5rem 0',
               color: '#ffffff',
@@ -1603,14 +1609,19 @@ function App() {
           </div>
           
           <div style={{ 
-            marginTop: '1.5rem', 
-            padding: '1rem', 
+            marginTop: window.innerWidth < 400 ? '1rem' : '1.5rem', 
+            padding: window.innerWidth < 400 ? '0.8rem' : '1rem', 
             background: 'rgba(255, 193, 7, 0.1)', 
             border: '1px solid rgba(255, 193, 7, 0.3)',
             borderRadius: '8px',
             textAlign: 'center'
           }}>
-            <p style={{ color: '#ffc107', fontSize: '0.8rem', marginBottom: '0.8rem' }}>
+            <p style={{ 
+              color: '#ffc107', 
+              fontSize: window.innerWidth < 400 ? '0.75rem' : '0.8rem', 
+              marginBottom: window.innerWidth < 400 ? '0.6rem' : '0.8rem',
+              margin: '0 0 0.6rem 0'
+            }}>
               🎯 Demo Mode
             </p>
             <button 
