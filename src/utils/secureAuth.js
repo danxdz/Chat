@@ -5,15 +5,54 @@
  * Generate a permanent user ID using Gun.SEA
  */
 export const generatePermanentId = async () => {
+  console.log('🔑 Generating permanent ID...')
+  
   if (!window.Gun || !window.Gun.SEA) {
+    console.error('❌ Gun.SEA not available')
     throw new Error('Gun.SEA not available')
   }
   
-  const identity = await window.Gun.SEA.pair()
-  return {
-    id: identity.pub, // Public key as permanent ID
-    privateKey: identity.priv, // For signing invites
-    publicKey: identity.pub // For verification
+  console.log('🔧 Gun.SEA available, creating pair...')
+  
+  try {
+    // Gun.SEA.pair() might be callback-based in some versions
+    const identity = await new Promise((resolve, reject) => {
+      try {
+        const result = window.Gun.SEA.pair()
+        
+        // If it's a promise, handle it
+        if (result && typeof result.then === 'function') {
+          result.then(resolve).catch(reject)
+        } 
+        // If it's callback-based or immediate result
+        else if (result && result.pub && result.priv) {
+          resolve(result)
+        }
+        // If no result, use callback approach
+        else {
+          window.Gun.SEA.pair((err, pair) => {
+            if (err) reject(err)
+            else resolve(pair)
+          })
+        }
+      } catch (err) {
+        reject(err)
+      }
+    })
+    
+    console.log('✅ Identity generated:', {
+      pub: identity.pub?.substring(0, 16) + '...',
+      priv: identity.priv ? 'present' : 'missing'
+    })
+    
+    return {
+      id: identity.pub, // Public key as permanent ID
+      privateKey: identity.priv, // For signing invites
+      publicKey: identity.pub // For verification
+    }
+  } catch (error) {
+    console.error('❌ Failed to generate Gun.SEA pair:', error)
+    throw error
   }
 }
 
@@ -22,10 +61,15 @@ export const generatePermanentId = async () => {
  */
 export const createUserAccount = async (nickname, password, inviteData = null) => {
   try {
+    console.log('👤 Creating user account for:', nickname)
+    
     const identity = await generatePermanentId()
+    console.log('🔑 Identity created successfully')
     
     // Hash password for storage (never store plain text)
+    console.log('🔐 Hashing password...')
     const hashedPassword = await hashPassword(password)
+    console.log('🔐 Password hashed successfully')
     
     const userAccount = {
       id: identity.id, // Permanent cryptographic ID
