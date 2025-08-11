@@ -540,6 +540,28 @@ function App() {
     }
   }
 
+  // Bootstrap function to create first admin user for demo
+  const createBootstrapUser = async () => {
+    try {
+      console.log('🎯 Creating bootstrap admin user...')
+      const bootstrapUser = await createUserAccount('Admin', 'admin123', null)
+      const users = [bootstrapUser]
+      setAllUsers(users)
+      localStorage.setItem('users', JSON.stringify(users))
+      
+      // Auto-login the bootstrap user
+      setUser(bootstrapUser)
+      setCurrentView('chat')
+      
+      console.log('🎯 Bootstrap admin user created successfully')
+      console.log('📋 Login credentials: Admin / admin123')
+      
+    } catch (error) {
+      console.error('❌ Failed to create bootstrap user:', error)
+      alert('❌ Failed to create bootstrap user: ' + error.message)
+    }
+  }
+
   // Add nickname change function
   const handleNicknameChange = async () => {
     const newNickname = prompt('Enter your new nickname:', user.nickname)
@@ -1610,6 +1632,37 @@ function App() {
             <p>🔒 Private & secure conversations</p>
             <p>📱 Works on all devices</p>
             <p>⚡ Real-time synchronization</p>
+          </div>
+          
+          <div style={{ 
+            marginTop: '2rem', 
+            padding: '1rem', 
+            background: 'rgba(255, 193, 7, 0.1)', 
+            border: '1px solid rgba(255, 193, 7, 0.3)',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#ffc107', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              🎯 Demo Mode: Create admin account to generate invite links
+            </p>
+            <button 
+              onClick={createBootstrapUser}
+              style={{
+                padding: '0.8rem 1.5rem',
+                background: 'linear-gradient(135deg, #ffc107, #ff8f00)',
+                color: '#000',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
+              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              🚀 Create Admin Account
+            </button>
           </div>
         </div>
       </div>
