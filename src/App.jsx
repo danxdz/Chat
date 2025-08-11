@@ -305,7 +305,7 @@ function App() {
   }
 
   // Handle incoming messages from any channel
-  const handleIncomingMessage = (data, key, channelType) => {
+  const handleIncomingMessage = async (data, key, channelType) => {
     if (data && data.id && data.text && data.from) {
       // Prevent double messages from current user (they already see their message locally)
       if (data.fromId === user.id) {
@@ -313,7 +313,22 @@ function App() {
         return
       }
       
-      logger.log(`✅ VALID ${channelType.toUpperCase()} MESSAGE - Adding to state:`, data.text, 'from:', data.from)
+      // Decrypt message if it's encrypted
+      let messageData = { ...data }
+      if (data.encrypted && window.Gun && window.Gun.SEA) {
+        try {
+          const channelName = channelType === 'private' ? `private_${[user.id, data.fromId].sort().join('_')}` : 'general_chat'
+          const sharedKey = 'p2p-chat-key-' + channelName
+          const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
+          messageData.text = decryptedText
+          logger.log('🔓 Message decrypted')
+        } catch (e) {
+          logger.log('⚠️ Decryption failed:', e.message)
+          messageData.text = '[Encrypted message - cannot decrypt]'
+        }
+      }
+      
+      logger.log(`✅ VALID ${channelType.toUpperCase()} MESSAGE - Adding to state:`, messageData.text, 'from:', messageData.from)
       
       setMessages(prev => {
         logger.log('📊 Current messages before add:', prev.length)
@@ -326,7 +341,7 @@ function App() {
         }
         
         logger.log('💾 Adding NEW message to state')
-        const updated = [...prev, data].sort((a, b) => a.timestamp - b.timestamp)
+        const updated = [...prev, messageData].sort((a, b) => a.timestamp - b.timestamp)
         logger.log('📊 Messages after add:', updated.length)
         return updated
       })
@@ -549,8 +564,27 @@ function App() {
       const messageKey = `msg_${message.id}`
       logger.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
+      // Encrypt message text if SEA is available
+      let messageToSend = { ...message }
+      if (window.Gun && window.Gun.SEA) {
+        try {
+          // Use a simple shared key for now (in production, use proper key exchange)
+          const sharedKey = 'p2p-chat-key-' + channelName
+          const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
+          messageToSend.text = encryptedText
+          messageToSend.encrypted = true
+          logger.log('🔐 Message encrypted')
+        } catch (e) {
+          logger.log('⚠️ Encryption failed, sending plain text:', e.message)
+          messageToSend.encrypted = false
+        }
+      } else {
+        messageToSend.encrypted = false
+        logger.log('⚠️ SEA not available, sending plain text')
+      }
+
       // Put message using set to ensure it appears in map() listeners
-      await gun.get(channelName).set(message)
+      await gun.get(channelName).set(messageToSend)
       
       // Update delivery status to sent
       setMessageDeliveryStatus(prev => {

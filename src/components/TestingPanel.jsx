@@ -210,8 +210,25 @@ export default function TestingPanel({
             <div>📋 Contacts: {contacts.length}</div>
             <div>💬 Messages: {messages.length}</div>
             <div>🔫 Gun.js: {gun ? '🟢 Connected' : '🔴 Not Connected'}</div>
+            <div>🔐 Encryption: {window.Gun && window.Gun.SEA ? '🟢 Available' : '🔴 Not Available'}</div>
             <div>⚡ Status: {initStatus}</div>
             {chatError && <div style={{ color: '#ff6b6b' }}>⚠️ Error: {chatError}</div>}
+          </div>
+        </div>
+
+        <div style={{ 
+          marginBottom: '1rem', 
+          padding: '1rem', 
+          background: 'rgba(255, 193, 7, 0.1)', 
+          borderRadius: '4px',
+          border: '1px solid rgba(255, 193, 7, 0.3)'
+        }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#ffc107' }}>ℹ️ P2P Message Info:</h3>
+          <div style={{ fontSize: '0.8rem', lineHeight: '1.4', color: '#e0e0e0' }}>
+            <div>🔐 <strong>Encryption:</strong> Messages are now encrypted using Gun SEA</div>
+            <div>📡 <strong>P2P Network:</strong> Messages persist on Gun.js peer network</div>
+            <div>🗑️ <strong>Clearing:</strong> Cannot fully clear P2P data (by design)</div>
+            <div>🌐 <strong>Decentralized:</strong> Data exists on multiple peers globally</div>
           </div>
         </div>
 
