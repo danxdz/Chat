@@ -1429,6 +1429,35 @@ function App() {
       }
     }
 
+    // Debug functions
+    window.showAllUsers = () => {
+      const users = JSON.parse(localStorage.getItem('users') || '[]')
+      console.log('👥 ALL USERS IN DATABASE:', users)
+      console.log('📊 Total users:', users.length)
+      users.forEach((user, index) => {
+        console.log(`${index + 1}. ${user.nickname} (ID: ${user.id})`)
+      })
+      return users
+    }
+    
+    window.createAdminUser = async () => {
+      try {
+        console.log('🎯 Creating fresh admin user...')
+        const adminUser = await createUserAccount('Admin', 'admin123', null)
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        const updatedUsers = [...existingUsers, adminUser]
+        setAllUsers(updatedUsers)
+        localStorage.setItem('users', JSON.stringify(updatedUsers))
+        console.log('✅ Admin user created successfully')
+        console.log('🔑 Login: Admin / admin123')
+        alert('✅ Admin user created!\nLogin: Admin\nPassword: admin123')
+        return adminUser
+      } catch (error) {
+        console.error('❌ Failed to create admin user:', error)
+        alert('❌ Failed: ' + error.message)
+      }
+    }
+    
     window.clearCurrentClientData = clearCurrentClientData
     window.clearAllClientsData = clearAllClientsData
     window.resetAppToFresh = resetAppToFresh
@@ -1625,24 +1654,50 @@ function App() {
             }}>
               🎯 Demo Mode
             </p>
-            <button 
-              onClick={createBootstrapUser}
-              style={{
-                padding: '0.6rem 1.2rem',
-                background: 'linear-gradient(135deg, #ffc107, #ff8f00)',
-                color: '#000',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                fontWeight: '600',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
-              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
-            >
-              🚀 Create Admin
-            </button>
+                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+               <button 
+                 onClick={createBootstrapUser}
+                 style={{
+                   padding: '0.6rem 1rem',
+                   background: 'linear-gradient(135deg, #ffc107, #ff8f00)',
+                   color: '#000',
+                   border: 'none',
+                   borderRadius: '6px',
+                   cursor: 'pointer',
+                   fontSize: '0.8rem',
+                   fontWeight: '600',
+                   transition: 'all 0.2s ease',
+                   flex: 1
+                 }}
+                 onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
+                 onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+               >
+                 🚀 Create Admin
+               </button>
+               <button 
+                 onClick={() => {
+                   if (confirm('🗑️ Clear all user data and reset app?')) {
+                     localStorage.clear()
+                     sessionStorage.clear()
+                     window.location.reload()
+                   }
+                 }}
+                 style={{
+                   padding: '0.6rem 0.8rem',
+                   background: 'rgba(255, 107, 107, 0.2)',
+                   color: '#ff6b6b',
+                   border: '1px solid rgba(255, 107, 107, 0.3)',
+                   borderRadius: '6px',
+                   cursor: 'pointer',
+                   fontSize: '0.8rem',
+                   transition: 'all 0.2s ease'
+                 }}
+                 onMouseOver={(e) => e.target.style.background = 'rgba(255, 107, 107, 0.3)'}
+                 onMouseOut={(e) => e.target.style.background = 'rgba(255, 107, 107, 0.2)'}
+               >
+                 🗑️
+               </button>
+             </div>
           </div>
         </div>
       </div>
