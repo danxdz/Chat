@@ -1021,25 +1021,45 @@ function App() {
       localStorage.removeItem(`contacts_${user.id}`)
       setContacts([])
       setMessages([])
+      setOnlineUsers(new Map())
+      setMessageDeliveryStatus(new Map())
+      setConnectionStatus(new Map())
+      setLastSeen(new Map())
       logger.log('✅ Current client data cleared')
+      alert('Current client data cleared successfully!')
     }
   }
 
   const clearAllClientsData = () => {
     if (confirm('Clear ALL user data? This will remove all users, contacts, and messages. This cannot be undone.')) {
+      // Clear localStorage
       localStorage.clear()
+      
+      // Clear all state
       setAllUsers([])
       setContacts([])
       setMessages([])
+      setOnlineUsers(new Map())
+      setMessageDeliveryStatus(new Map())
+      setConnectionStatus(new Map())
+      setLastSeen(new Map())
       setUser(null)
-      setCurrentView('register')
+      setCurrentView('needInvite')
+      
       logger.log('✅ All client data cleared')
+      alert('All client data cleared! App reset to fresh state.')
     }
   }
 
   const resetAppToFresh = () => {
     if (confirm('Reset entire app to fresh state? This cannot be undone.')) {
       localStorage.clear()
+      window.location.reload()
+    }
+  }
+
+  const forceReload = () => {
+    if (confirm('Force reload the app? This will refresh the page.')) {
       window.location.reload()
     }
   }
@@ -1072,6 +1092,7 @@ function App() {
     window.clearCurrentClientData = clearCurrentClientData
     window.clearAllClientsData = clearAllClientsData
     window.resetAppToFresh = resetAppToFresh
+    window.forceReload = forceReload
   }, [user])
 
   // Render different views
@@ -1348,6 +1369,7 @@ function App() {
           onClearCurrentClient={clearCurrentClientData}
           onClearAllClients={clearAllClientsData}
           onResetApp={resetAppToFresh}
+          onForceReload={forceReload}
         />
 
         <InviteModal

@@ -16,7 +16,8 @@ export default function TestingPanel({
   onTestBasicGun,
   onClearCurrentClient, 
   onClearAllClients, 
-  onResetApp 
+  onResetApp,
+  onForceReload
 }) {
   if (!isVisible) return null
 
@@ -136,6 +137,37 @@ export default function TestingPanel({
             padding: '0.6rem'
           }}>
             🔄 Reset App to Fresh Start
+          </button>
+        </div>
+
+        {/* Additional Dev Tools */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button onClick={onForceReload} className="btn" style={{ 
+            background: '#28a745', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            ↻ Force Reload Page
+          </button>
+          <button onClick={() => {
+            alert(`Deploy Info:
+            - Last Build: ${new Date().toLocaleString()}
+            - User Agent: ${navigator.userAgent.substring(0, 50)}...
+            - Location: ${window.location.href}
+            - Local Storage Items: ${Object.keys(localStorage).length}
+            `)
+          }} className="btn" style={{ 
+            background: '#6f42c1', 
+            color: '#fff', 
+            flex: 1,
+            minWidth: window.innerWidth < 480 ? '100%' : 'auto',
+            fontSize: '0.9rem',
+            padding: '0.6rem'
+          }}>
+            ℹ️ Debug Info
           </button>
         </div>
 
