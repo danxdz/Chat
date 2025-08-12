@@ -325,7 +325,7 @@ function App() {
     // Also listen to online_users for better tracking
     gun.get('online_users').map().on((data, userId) => {
       console.log('🔵 Online user update:', userId, data)
-      if (data && data.nickname && data.isOnline) {
+      if (data && data.nickname && data.isOnline === true) {
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.set(userId, data)
@@ -335,16 +335,37 @@ function App() {
           console.log('📋 All online users:', Array.from(updated.entries()).map(([id, u]) => u.nickname))
           return updated
         })
-      } else {
-        // User went offline or data is null
+      } else if (data && data.isOnline === false) {
+        // User explicitly went offline
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.delete(userId)
-          console.log('❌ User offline:', userId, '- Total:', updated.size)
+          console.log('❌ User went offline:', data.nickname, '- Total:', updated.size)
           return updated
         })
       }
     })
+    
+    // Listen for friendships updates
+    if (user) {
+      gun.get('friendships').get(user.id).map().on((friendData, friendId) => {
+        if (friendData && friendData.friendNick) {
+          console.log('👥 New friendship detected:', friendData)
+          setFriends(prev => {
+            // Check if friend already exists
+            if (prev.find(f => f.id === friendId)) return prev
+            
+            const newFriend = {
+              id: friendId,
+              nickname: friendData.friendNick,
+              addedAt: friendData.addedAt
+            }
+            console.log('➕ Adding friend:', newFriend)
+            return [...prev, newFriend]
+          })
+        }
+      })
+    }
 
     logger.log('✅ Gun.js listeners ready for general, private chats, and presence')
   }, [gun, user?.id, contacts])
@@ -679,24 +700,31 @@ function App() {
     }
     
     try {
-      logger.log(`📡 Announcing presence: ${action} for ${currentUser.nickname}`, presenceData)
+      console.log(`📡 Announcing presence: ${action} for ${currentUser.nickname}`, presenceData)
       // Use put instead of set for proper updates
       await gun.get('user_presence').get(currentUser.id).put(presenceData)
       
       // Also update the online_users node for better tracking
       if (action === 'join' || action === 'heartbeat') {
-        await gun.get('online_users').get(currentUser.id).put({
+        const onlineData = {
           nickname: currentUser.nickname,
           lastSeen: Date.now(),
           isOnline: true
-        })
+        }
+        await gun.get('online_users').get(currentUser.id).put(onlineData)
+        console.log('✅ Updated online_users:', currentUser.nickname, onlineData)
       } else if (action === 'leave') {
-        await gun.get('online_users').get(currentUser.id).put(null)
+        await gun.get('online_users').get(currentUser.id).put({
+          nickname: currentUser.nickname,
+          lastSeen: Date.now(),
+          isOnline: false
+        })
+        console.log('👋 User marked offline:', currentUser.nickname)
       }
       
-      logger.log(`✅ Presence announced successfully`)
+      console.log(`✅ Presence announced successfully for ${currentUser.nickname}`)
     } catch (error) {
-      logger.error('❌ Failed to announce presence:', error)
+      console.error('❌ Failed to announce presence:', error)
     }
   }
 

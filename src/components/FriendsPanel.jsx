@@ -33,12 +33,9 @@ export default function FriendsPanel({
         {friends.length === 0 ? (
           <div className="no-friends">
             <p>No friends added yet</p>
-            <button 
-              className="btn"
-              onClick={onSendInvite}
-            >
-              Send Invite
-            </button>
+            <p style={{ fontSize: '0.85rem', color: '#999' }}>
+              Send an invite to add friends
+            </p>
           </div>
         ) : (
           friends.map(friend => (
@@ -60,8 +57,9 @@ export default function FriendsPanel({
       <button 
         className="btn add-friend-btn"
         onClick={onSendInvite}
+        style={{ marginTop: '1rem' }}
       >
-        📨 Send Invite
+        📨 Send New Invite
       </button>
     </div>
   )
