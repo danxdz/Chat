@@ -29,13 +29,7 @@ export default function ContactSidebar({
     isOnline: true
   }))
 
-  // Debug logging
-  console.log('👥 ContactSidebar Debug:', {
-    onlineUsersMapSize: onlineUsers.size,
-    onlineUsersEntries: Array.from(onlineUsers.entries()),
-    onlineUsersList: onlineUsersList,
-    onlineUsersListLength: onlineUsersList.length
-  })
+
 
   return (
     <div className="sidebar">
