@@ -11,11 +11,6 @@ export default function TestingPanel({
 }) {
   if (!isVisible) return null
 
-  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
-  
-  // Only show in development
-  if (!isDev) return null
-
   return (
     <div style={{
       position: 'fixed',
@@ -56,67 +51,89 @@ export default function TestingPanel({
           </button>
         </div>
         
-        {/* Connection Status */}
-        <div style={{
-          background: '#333',
-          padding: '1rem',
-          borderRadius: '4px',
-          marginBottom: '1rem'
-        }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>📡 Status</h3>
-          <div style={{ fontSize: '0.9rem', color: '#888' }}>
-            <div>User: {user?.nickname || 'Not logged in'}</div>
-            <div>Gun.js: {gun ? '✅ Connected' : '❌ Disconnected'}</div>
-            <div>{initStatus}</div>
+        {/* Simple Dev Tools */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          
+          {/* Clear Data Button */}
+          <button 
+            onClick={() => {
+              if (confirm('Clear all data and restart? This will delete everything!')) {
+                // Clear all localStorage
+                localStorage.clear()
+                sessionStorage.clear()
+                // Reload the page
+                window.location.reload()
+              }
+            }}
+            style={{
+              padding: '15px',
+              background: '#ff4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            🗑️ Clear All Data & Restart
+          </button>
+          
+          {/* Restart App Button */}
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '15px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            🔄 Restart App
+          </button>
+          
+          {/* Clear Messages Only */}
+          <button 
+            onClick={() => {
+              if (gun) {
+                gun.get('general_chat').put(null)
+                gun.get('chat_messages').put(null)
+              }
+              alert('Messages cleared!')
+              onClose()
+            }}
+            style={{
+              padding: '15px',
+              background: '#2196F3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            💬 Clear Messages Only
+          </button>
+          
+          {/* Status Info */}
+          <div style={{
+            padding: '10px',
+            background: '#1a1a1a',
+            borderRadius: '8px',
+            fontSize: '14px',
+            color: '#888'
+          }}>
+            <div>👤 User: {user?.nickname || 'Not logged in'}</div>
+            <div>🔗 Gun.js: {gun ? 'Connected' : 'Disconnected'}</div>
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div style={{ marginBottom: '1rem' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>⚡ Quick Actions</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <button 
-              onClick={onSendTestMessage} 
-              className="btn" 
-              style={{ background: '#0066cc', width: '100%' }}
-            >
-              📤 Send Test Message
-            </button>
-            
-            <button 
-              onClick={onClearCurrentClient} 
-              className="btn" 
-              style={{ background: '#ffc107', color: '#000', width: '100%' }}
-            >
-              🧹 Clear Current Session
-            </button>
-            
-            <button 
-              onClick={onClearAllClients} 
-              className="btn" 
-              style={{ background: '#ff6b6b', width: '100%' }}
-            >
-              🗑️ Clear All Data
-            </button>
-            
-            <button 
-              onClick={onForceReload} 
-              className="btn" 
-              style={{ background: '#666', width: '100%' }}
-            >
-              🔄 Reload App
-            </button>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div style={{
-          fontSize: '0.8rem',
-          color: '#666',
-          textAlign: 'center',
-          marginTop: '1rem'
-        }}>
-          Dev tools are only visible in development mode
         </div>
       </div>
     </div>
