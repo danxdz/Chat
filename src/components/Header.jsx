@@ -36,8 +36,11 @@ export default function Header({
       alignItems: 'center',
       gap: '1rem',
       minHeight: '60px',
-      position: 'relative',
-      zIndex: 100
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1000
     }}>
       {/* Left side - Simplified user info */}
       <div style={{ 
