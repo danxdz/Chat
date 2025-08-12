@@ -260,32 +260,7 @@ export const markInviteUsed = async (inviteId) => {
   }
 }
 
-/**
- * Add mutual friends when invite is used
- */
-export const addMutualFriends = async (inviterId, inviterNick, newUserId, newUserNick) => {
-  try {
-    // Update inviter's friend list in Gun.js
-    if (window.gun) {
-      await window.gun.get('friendships').get(inviterId).get(newUserId).put({
-        friendId: newUserId,
-        friendNick: newUserNick,
-        addedAt: Date.now()
-      })
-      
-      // Also update new user's friend list
-      await window.gun.get('friendships').get(newUserId).get(inviterId).put({
-        friendId: inviterId,
-        friendNick: inviterNick,
-        addedAt: Date.now()
-      })
-      
-      console.log('✅ Mutual friendship created:', inviterNick, '<->', newUserNick)
-    }
-  } catch (error) {
-    console.error('❌ Failed to create mutual friendship:', error)
-  }
-}
+
 
 /**
  * Change user nickname and notify friends
@@ -357,6 +332,59 @@ const hashPassword = async (password) => {
 const verifyPassword = async (password, hash) => {
   const passwordHash = await hashPassword(password)
   return passwordHash === hash
+}
+
+/**
+ * Add mutual friends when invite is accepted
+ */
+export const addMutualFriends = async (inviterId, newUserId) => {
+  try {
+    console.log('👥 Adding mutual friends:', { inviterId, newUserId })
+    
+    // Get existing users
+    const users = JSON.parse(localStorage.getItem('users') || '[]')
+    
+    // Find both users
+    const inviterIndex = users.findIndex(u => u.id === inviterId)
+    const newUserIndex = users.findIndex(u => u.id === newUserId)
+    
+    if (inviterIndex === -1 || newUserIndex === -1) {
+      console.error('Could not find users for mutual friend add')
+      return false
+    }
+    
+    // Add each other as friends
+    if (!users[inviterIndex].friends) users[inviterIndex].friends = []
+    if (!users[newUserIndex].friends) users[newUserIndex].friends = []
+    
+    if (!users[inviterIndex].friends.includes(newUserId)) {
+      users[inviterIndex].friends.push(newUserId)
+    }
+    if (!users[newUserIndex].friends.includes(inviterId)) {
+      users[newUserIndex].friends.push(inviterId)
+    }
+    
+    // Save updated users
+    localStorage.setItem('users', JSON.stringify(users))
+    
+    // Update Gun.js friendships
+    if (window.gun) {
+      await window.gun.get('friendships').get(inviterId).get(newUserId).put({
+        status: 'friends',
+        since: Date.now()
+      })
+      await window.gun.get('friendships').get(newUserId).get(inviterId).put({
+        status: 'friends',
+        since: Date.now()
+      })
+    }
+    
+    console.log('✅ Mutual friends added successfully')
+    return true
+  } catch (error) {
+    console.error('❌ Failed to add mutual friends:', error)
+    return false
+  }
 }
 
 /**

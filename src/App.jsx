@@ -177,6 +177,12 @@ function App() {
             setUser(savedUser)
             setCurrentView('chat')
             console.log('✅ Auto-logged in as:', savedUser.nickname)
+            // Announce presence for auto-login
+            setTimeout(() => {
+              if (window.gun) {
+                announcePresence('join', savedUser)
+              }
+            }, 1000)
             return
           } else {
             // Session invalid, clear it
@@ -556,6 +562,13 @@ function App() {
       // Load user's friends
       const userFriends = getFriendsList(user, allUsers)
       setFriends(userFriends)
+      
+      // Announce presence after successful login
+      setTimeout(() => {
+        if (gun) {
+          announcePresence('join', user)
+        }
+      }, 500)
       
       logger.log('✅ IRC-style login successful:', user.nickname)
     
@@ -1595,7 +1608,7 @@ function App() {
     const isMobile = window.innerWidth <= 480
     
     return (
-      <div className="app" style={{ paddingTop: '60px' }}>
+      <div className="app">
         <DebugNotifications />
         <Header
           user={user}
