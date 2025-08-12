@@ -6,6 +6,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [isCreating, setIsCreating] = useState(false)
   const [createdInvite, setCreatedInvite] = useState(null)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const expirationOptions = [
     { value: '60s', label: '60 seconds', icon: '⚡' },
@@ -37,7 +38,8 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text)
-      // Could add a toast notification here
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy to clipboard:', err)
     }
