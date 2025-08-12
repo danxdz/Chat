@@ -38,131 +38,45 @@ export default function ContactSidebar({
   })
 
   return (
-    <div className="sidebar" style={{ 
-      width: window.innerWidth < 768 ? '100%' : '280px',
-      height: window.innerWidth < 768 ? '120px' : 'auto',
-      background: 'rgba(0, 0, 0, 0.8)', 
-      backdropFilter: 'blur(10px)',
-      borderRight: window.innerWidth < 768 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-      borderBottom: window.innerWidth < 768 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-      padding: '1rem',
-      overflowY: 'auto'
-    }}>
+    <div className="sidebar">
       {/* IRC-style online users list */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem',
-        marginBottom: '1rem',
-        padding: '0.8rem',
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '8px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
-        <div style={{ 
-          width: '8px', 
-          height: '8px', 
-          borderRadius: '50%', 
-          background: '#4CAF50',
-          boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)' 
-        }}></div>
-        <h3 style={{ margin: 0, color: '#fff', fontSize: '1rem', fontWeight: '600' }}>
-          Online Users ({onlineUsersList.length})
-        </h3>
+      <div className="online-users-header">
+        <div className="online-indicator"></div>
+        <h3>Online Users ({onlineUsersList.length})</h3>
       </div>
       
       {/* General Chat Button */}
       <button
         onClick={() => onContactSelect(null)}
-        style={{
-          width: '100%',
-          padding: '0.8rem',
-          background: !activeContact ? 'rgba(0, 102, 204, 0.8)' : 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          color: '#fff',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          fontSize: '0.9rem',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.8rem',
-          transition: 'all 0.2s ease',
-          backdropFilter: 'blur(5px)'
-        }}
-        onMouseOver={(e) => {
-          if (!activeContact) return
-          e.target.style.background = 'rgba(255, 255, 255, 0.1)'
-        }}
-        onMouseOut={(e) => {
-          if (!activeContact) return
-          e.target.style.background = 'rgba(255, 255, 255, 0.05)'
-        }}
+        className={`general-chat-button ${!activeContact ? 'active' : ''}`}
       >
-        <span style={{ fontSize: '1.2rem' }}>🌐</span>
-        <span style={{ fontWeight: '600' }}>General Chat</span>
-        <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <span>🌐</span>
+        <span>General Chat</span>
+        <span className="online-count">
           {onlineUsersList.length} online
         </span>
       </button>
 
       {/* IRC-style Online Users List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="online-users-list">
         {onlineUsersList.map(user => (
           <div
             key={user.id}
-            style={{
-              padding: '0.8rem',
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.8rem',
-              transition: 'all 0.2s ease'
-            }}
+            className="online-user-item"
           >
-            <div style={{ 
-              width: '10px', 
-              height: '10px', 
-              borderRadius: '50%', 
-              background: '#4CAF50',
-              flexShrink: 0,
-              boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)',
-              animation: 'pulse 2s infinite'
-            }}></div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ 
-                fontWeight: '600', 
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {user.nickname}
-              </div>
-              <div style={{ 
-                fontSize: '0.7rem', 
-                color: 'rgba(255, 255, 255, 0.6)',
-                marginTop: '0.2rem'
-              }}>
-                online • {formatLastSeen(user.lastSeen)}
-                             </div>
-             </div>
-           </div>
+            <div className="online-indicator"></div>
+            <div className="user-info">
+              <div className="nickname">{user.nickname}</div>
+              <div className="status">online • {formatLastSeen(user.lastSeen)}</div>
+            </div>
+          </div>
         ))}
         
         {onlineUsersList.length === 0 && (
-          <div style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'rgba(255, 255, 255, 0.5)',
-            fontSize: '0.9rem'
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
+          <div className="no-users-online">
+            <div>👥</div>
             <div>No users online</div>
-            <div style={{ fontSize: '0.8rem', marginTop: '0.3rem' }}>
+            <div>
               Users will appear here when they join
             </div>
           </div>
