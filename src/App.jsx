@@ -345,11 +345,23 @@ function App() {
       handleIncomingMessage(data, key, 'general')
     })
 
-    // Listen to private chats for current user
-    if (user?.id) {
+    // Listen to private chats for current user with all friends
+    if (user?.id && friends) {
+      // Set up listeners for all friends
+      friends.forEach(friend => {
+        const privateChannel = `private_${[user.id, friend.id].sort().join('_')}`
+        logger.log('👥 Setting up private channel listener for friend:', friend.nickname, privateChannel)
+        
+        gun.get(privateChannel).map().on((data, key) => {
+          logger.log('📨 PRIVATE CHAT from', friend.nickname, '- RAW DATA:', JSON.stringify(data, null, 2))
+          handleIncomingMessage(data, key, 'private')
+        })
+      })
+      
+      // Also set up for contacts (backward compatibility)
       contacts.forEach(contact => {
         const privateChannel = `private_${[user.id, contact.id].sort().join('_')}`
-        logger.log('👥 Setting up private channel listener:', privateChannel)
+        logger.log('👥 Setting up private channel listener for contact:', privateChannel)
         
         gun.get(privateChannel).map().on((data, key) => {
           logger.log('📨 PRIVATE CHAT - RAW DATA:', JSON.stringify(data, null, 2))
@@ -416,7 +428,7 @@ function App() {
     }
 
     logger.log('✅ Gun.js listeners ready for general, private chats, and presence')
-  }, [gun, user?.id, contacts])
+  }, [gun, user?.id, contacts, friends])
 
   // Handle presence updates (IRC-style join/leave)
   const handlePresenceUpdate = (data) => {
