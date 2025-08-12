@@ -262,9 +262,27 @@ export default function MobileLayout({
                       border: '1px solid #333',
                       color: '#ccc'
                     }}>
-                      <div>Invite #{invite.id?.slice(-6) || i}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>
+                            From: {invite.fromNick || 'Unknown'}
+                          </div>
+                          <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                            ID: #{invite.id?.slice(-6) || i}
+                          </div>
+                        </div>
+                        <div style={{ 
+                          padding: '4px 8px',
+                          background: invite.status === 'used' ? '#666' : '#4CAF50',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          color: 'white'
+                        }}>
+                          {invite.status === 'used' ? 'Used' : 'Waiting'}
+                        </div>
+                      </div>
                       <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                        {invite.expiresAt ? `Expires: ${new Date(invite.expiresAt).toLocaleString()}` : 'Pending'}
+                        {invite.expiresAt ? `Expires: ${new Date(invite.expiresAt).toLocaleString()}` : 'No expiration'}
                       </div>
                     </div>
                   ))}
@@ -291,8 +309,14 @@ export default function MobileLayout({
                     <div
                       key={i}
                       onClick={() => {
-                        onContactSelect({ nickname: friend.nickname })
+                        // Set friend as active contact for private chat
+                        onContactSelect({
+                          id: friend.id,
+                          nickname: friend.nickname,
+                          type: 'private'
+                        })
                         setMobileView('chat')
+                        console.log('💬 Starting chat with:', friend.nickname)
                       }}
                       style={{
                         background: '#1a1a1a',

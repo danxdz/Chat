@@ -318,6 +318,20 @@ function App() {
     if (!gun || !user) return
 
     logger.log('🔧 Setting up Gun.js listeners for general and private chats...')
+    
+    // Listen for friend updates
+    gun.get('friendships').get(user.id).map().on((data, key) => {
+      if (data && data.status === 'friends') {
+        console.log('🤝 New friend detected:', key)
+        // Reload friends list
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        const currentUser = existingUsers.find(u => u.id === user.id)
+        if (currentUser) {
+          const friendsList = getFriendsList(currentUser, existingUsers)
+          setFriends(friendsList)
+        }
+      }
+    })
 
     // Listen to general chat
     gun.get('general_chat').map().on((data, key) => {
@@ -1224,12 +1238,39 @@ function App() {
                 
                 // Update users list
                 const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+                
+                // Add mutual friends - new user and inviter
+                if (inviteData.fromId) {
+                  // Add inviter to new user's friends
+                  if (!newUser.friends) newUser.friends = []
+                  if (!newUser.friends.includes(inviteData.fromId)) {
+                    newUser.friends.push(inviteData.fromId)
+                  }
+                  
+                  // Add new user to inviter's friends
+                  const inviterIndex = existingUsers.findIndex(u => u.id === inviteData.fromId)
+                  if (inviterIndex !== -1) {
+                    if (!existingUsers[inviterIndex].friends) {
+                      existingUsers[inviterIndex].friends = []
+                    }
+                    if (!existingUsers[inviterIndex].friends.includes(newUser.id)) {
+                      existingUsers[inviterIndex].friends.push(newUser.id)
+                    }
+                    console.log('✅ Added mutual friendship:', inviteData.fromNick, '<->', nickname)
+                  }
+                }
+                
                 const updatedUsers = [...existingUsers, newUser]
                 setAllUsers(updatedUsers)
                 localStorage.setItem('users', JSON.stringify(updatedUsers))
                 
-                // Mark invite as used
+                // Mark invite as used and remove from pending
                 await markInviteUsed(inviteData.id)
+                
+                // Remove from pending invites
+                const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+                const updatedInvites = pendingInvites.filter(inv => inv.id !== inviteData.id)
+                localStorage.setItem('pendingInvites', JSON.stringify(updatedInvites))
                 
                 // Auto-login
                 setUser(newUser)
