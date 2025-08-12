@@ -261,6 +261,33 @@ export const markInviteUsed = async (inviteId) => {
 }
 
 /**
+ * Add mutual friends when invite is used
+ */
+export const addMutualFriends = async (inviterId, inviterNick, newUserId, newUserNick) => {
+  try {
+    // Update inviter's friend list in Gun.js
+    if (window.gun) {
+      await window.gun.get('friendships').get(inviterId).get(newUserId).put({
+        friendId: newUserId,
+        friendNick: newUserNick,
+        addedAt: Date.now()
+      })
+      
+      // Also update new user's friend list
+      await window.gun.get('friendships').get(newUserId).get(inviterId).put({
+        friendId: inviterId,
+        friendNick: inviterNick,
+        addedAt: Date.now()
+      })
+      
+      console.log('✅ Mutual friendship created:', inviterNick, '<->', newUserNick)
+    }
+  } catch (error) {
+    console.error('❌ Failed to create mutual friendship:', error)
+  }
+}
+
+/**
  * Change user nickname and notify friends
  */
 export const changeNickname = async (user, newNickname, gun) => {
