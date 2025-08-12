@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { createSecureInvite } from '../utils/secureAuth'
 
 const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
@@ -7,6 +8,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [createdInvite, setCreatedInvite] = useState(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const qrRef = useRef(null)
 
   const expirationOptions = [
     { value: '60s', label: '60 seconds', icon: '⚡' },
@@ -92,30 +94,67 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
             </p>
           </div>
 
+          {/* QR Code and Link Section */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '8px',
-            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
             marginBottom: '1.5rem',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            alignItems: 'center'
           }}>
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.5rem' }}>
-              Invite URL:
-            </div>
+            {/* QR Code */}
             <div style={{
-              background: 'rgba(0, 0, 0, 0.3)',
-              padding: '0.8rem',
-              borderRadius: '4px',
-              fontSize: window.innerWidth < 480 ? '0.7rem' : '0.8rem',
-              fontFamily: 'monospace',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
+              background: 'white',
+              padding: window.innerWidth < 400 ? '0.75rem' : '1rem',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
             }}>
-              {window.innerWidth < 480 && createdInvite.inviteUrl.length > 40 
-                ? createdInvite.inviteUrl.substring(0, 20) + '...' + createdInvite.inviteUrl.substring(createdInvite.inviteUrl.length - 15)
-                : createdInvite.inviteUrl}
+              <div ref={qrRef}>
+                <QRCodeSVG 
+                  value={createdInvite.inviteUrl} 
+                  size={window.innerWidth < 400 ? 120 : 150}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+              <p style={{ 
+                margin: '0.3rem 0 0 0', 
+                fontSize: '0.7rem', 
+                color: '#333',
+                fontWeight: '500'
+              }}>
+                Scan to Join
+              </p>
+            </div>
+
+            {/* Link Display */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '8px',
+              padding: '0.8rem',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              width: '100%'
+            }}>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.3rem' }}>
+                Secure Invite URL:
+              </div>
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                padding: '0.5rem',
+                borderRadius: '4px',
+                fontSize: '0.65rem',
+                fontFamily: 'monospace',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {createdInvite.inviteUrl.length > 50 
+                  ? '...' + createdInvite.inviteUrl.substring(createdInvite.inviteUrl.length - 45)
+                  : createdInvite.inviteUrl}
+              </div>
             </div>
           </div>
 
