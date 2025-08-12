@@ -15,6 +15,9 @@ import {
 } from './utils/secureAuth'
 import logger from './utils/logger'
 
+// Check if we're in development mode
+const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
+
 // Error Boundary Component
 class ErrorBoundary extends Component {
   constructor(props) {
