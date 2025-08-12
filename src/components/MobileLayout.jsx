@@ -23,6 +23,15 @@ export default function MobileLayout({
 }) {
   const [mobileView, setMobileView] = useState('chat')
   const [touchStart, setTouchStart] = useState(null)
+  
+  // Debug logging
+  console.log('🔍 MobileLayout Debug:', {
+    friendsCount: friends?.length || 0,
+    friends: friends,
+    pendingInvitesCount: pendingInvites?.length || 0,
+    pendingInvites: pendingInvites,
+    onlineUsersCount: onlineUsers?.size || 0
+  })
   const [touchEnd, setTouchEnd] = useState(null)
 
   const minSwipeDistance = 50

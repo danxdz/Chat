@@ -288,8 +288,15 @@ function App() {
       setContacts(savedContacts)
       
       // Load friends
-      const friendsList = getFriendsList(user.id)
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      const friendsList = getFriendsList(user, existingUsers)
       setFriends(friendsList)
+      console.log('👥 Friends loaded:', friendsList)
+      
+      // Load pending invites
+      const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+      setPendingInvites(savedInvites)
+      console.log('📋 Pending invites loaded:', savedInvites)
       
       // Load messages from Gun.js (they will be loaded via listeners)
       setMessages([])
@@ -1689,14 +1696,21 @@ function App() {
             onInviteCreated={(invite) => {
               console.log('🎫 Secure invite created:', invite)
               // Add to pending invites
-              setPendingInvites(prev => [...prev, {
+              const newInvite = {
                 id: invite.inviteId,
                 inviteUrl: invite.inviteUrl,
                 expiresAt: invite.expiresAt,
                 createdAt: Date.now(),
                 fromNick: user.nickname,
                 status: 'pending'
-              }])
+              }
+              setPendingInvites(prev => {
+                const updated = [...prev, newInvite]
+                // Save to localStorage
+                localStorage.setItem('pendingInvites', JSON.stringify(updated))
+                return updated
+              })
+              console.log('📋 Pending invites updated')
               // Don't close modal - let user see QR code and copy link
             }}
           />
