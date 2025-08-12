@@ -28,20 +28,9 @@ export default function Header({
 
   return (
     <div className="header" style={{ 
-      padding: '0.8rem 1rem', 
-      background: 'rgba(0, 0, 0, 0.9)', 
-      backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center',
-      gap: '1rem',
-      minHeight: '60px',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000
+      gap: '1rem'
     }}>
       {/* Left side - Simplified user info */}
       <div style={{ 
