@@ -119,7 +119,6 @@ export default function MobileLayout({
               onContactSelect(contact)
               setMobileView('chat')
             }}
-            onAddContact={onShowInvite}
           />
         </div>
         
@@ -132,7 +131,7 @@ export default function MobileLayout({
               onContactSelect(friendName)
               setMobileView('chat')
             }}
-            onAddFriend={onShowInvite}
+            onSendInvite={onShowInvite}
           />
         </div>
       </div>

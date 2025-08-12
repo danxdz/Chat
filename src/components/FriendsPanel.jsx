@@ -3,7 +3,7 @@ export default function FriendsPanel({
   pendingInvites, 
   onlineUsers,
   onSelectFriend,
-  onAddFriend 
+  onSendInvite 
 }) {
   return (
     <div className="friends-panel">
@@ -35,7 +35,7 @@ export default function FriendsPanel({
             <p>No friends added yet</p>
             <button 
               className="btn"
-              onClick={onAddFriend}
+              onClick={onSendInvite}
             >
               Send Invite
             </button>
@@ -59,9 +59,9 @@ export default function FriendsPanel({
       
       <button 
         className="btn add-friend-btn"
-        onClick={onAddFriend}
+        onClick={onSendInvite}
       >
-        ➕ Add New Friend
+        📨 Send Invite
       </button>
     </div>
   )

@@ -118,7 +118,6 @@ function App() {
   const [friends, setFriends] = useState([])
   const [debugNotifications, setDebugNotifications] = useState([])
   const [showTests, setShowTests] = useState(false)
-  const [simpleInviteLink, setSimpleInviteLink] = useState('')
   const [chatError, setChatError] = useState(null)
   const [connectedPeers, setConnectedPeers] = useState(0)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
@@ -849,22 +848,6 @@ function App() {
 
 
 
-  // Generate simple sharing link
-  const generateSimpleInvite = () => {
-    const inviteData = {
-      from: user.nickname,
-      fromId: user.id,
-      timestamp: Date.now()
-    }
-    
-    const encodedInvite = btoa(JSON.stringify(inviteData))
-    const inviteUrl = `${window.location.origin}#invite=${encodedInvite}`
-    
-    setSimpleInviteLink(inviteUrl)
-    logger.log('✅ Simple invite generated:', inviteUrl)
-    
-    return inviteUrl
-  }
 
   const switchToUser = (targetUser) => {
     setUser(targetUser)
@@ -1570,14 +1553,6 @@ function App() {
               onlineUsers={onlineUsers}
               pendingInvites={pendingInvites}
               onContactSelect={setActiveContact}
-              onAddContact={() => {
-                const nickname = prompt('Enter friend nickname:')
-                if (nickname) {
-                  // In the new system, friends are added via invites
-                  alert('Friends are added by sending them a secure invite!')
-                  setShowSecureInviteModal(true)
-                }
-              }}
             />
 
             <ChatArea
@@ -1610,8 +1585,6 @@ function App() {
           <SecureInviteModal
             user={user}
             gun={gun}
-            simpleInviteLink={simpleInviteLink}
-            onGenerateSimpleInvite={generateSimpleInvite}
             onClose={() => setShowSecureInviteModal(false)}
             onInviteCreated={(invite) => {
               console.log('🎫 Secure invite created:', invite)

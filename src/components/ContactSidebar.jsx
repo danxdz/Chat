@@ -5,8 +5,7 @@ export default function ContactSidebar({
   lastSeen,
   onlineUsers,
   pendingInvites = [],
-  onContactSelect, 
-  onAddContact 
+  onContactSelect
 }) {
   const formatLastSeen = (timestamp) => {
     if (!timestamp) return ''

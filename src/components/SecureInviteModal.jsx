@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { createSecureInvite } from '../utils/secureAuth'
 
-const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite, onClose, onInviteCreated }) => {
-  const [inviteType, setInviteType] = useState('simple') // 'simple' or 'secure'
+const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [expirationChoice, setExpirationChoice] = useState('1h')
   const [isCreating, setIsCreating] = useState(false)
   const [createdInvite, setCreatedInvite] = useState(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
-  const [displayLink, setDisplayLink] = useState(simpleInviteLink || '')
 
   const expirationOptions = [
     { value: '60s', label: '60 seconds', icon: '⚡' },
@@ -18,31 +16,22 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
   ]
 
   const handleCreateInvite = async () => {
-    if (inviteType === 'simple') {
-      // Generate simple invite
-      const link = onGenerateSimpleInvite()
-      setDisplayLink(link)
-      setCopied(false)
-    } else {
-      // Generate secure invite
-      setIsCreating(true)
-      setError('')
+    setIsCreating(true)
+    setError('')
+    
+    try {
+      const invite = await createSecureInvite(user, expirationChoice)
+      setCreatedInvite(invite)
       
-      try {
-        const invite = await createSecureInvite(user, expirationChoice)
-        setCreatedInvite(invite)
-        setDisplayLink(invite.inviteUrl)
-        
-        if (onInviteCreated) {
-          onInviteCreated(invite)
-        }
-        
-      } catch (err) {
-        setError(err.message)
-        console.error('Failed to create secure invite:', err)
-      } finally {
-        setIsCreating(false)
+      if (onInviteCreated) {
+        onInviteCreated(invite)
       }
+      
+    } catch (err) {
+      setError(err.message)
+      console.error('Failed to create secure invite:', err)
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -56,8 +45,7 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
     }
   }
 
-  // Show the invite link if we have one (either simple or secure)
-  if (displayLink) {
+  if (createdInvite) {
     return (
       <div style={{
         position: 'fixed',
@@ -93,16 +81,14 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
               margin: '0 0 0.5rem 0', 
               color: '#4CAF50',
               fontSize: window.innerWidth < 400 ? '1.2rem' : '1.5rem'
-            }}>{inviteType === 'simple' ? 'Share Link Ready!' : 'Secure Invite Created!'}</h2>
+            }}>Secure Invite Created!</h2>
             <p style={{ 
               margin: 0, 
               color: 'rgba(255, 255, 255, 0.7)', 
               fontSize: window.innerWidth < 400 ? '0.8rem' : '0.9rem',
               lineHeight: '1.3'
             }}>
-              {inviteType === 'simple' 
-                ? 'Share this link with your friends to connect'
-                : `Cryptographically signed • Expires in ${expirationChoice} • One-time use`}
+              Cryptographically signed • Expires in {expirationChoice} • One-time use
             </p>
           </div>
 
@@ -127,9 +113,9 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
             }}>
-              {window.innerWidth < 480 && displayLink.length > 40 
-                ? displayLink.substring(0, 20) + '...' + displayLink.substring(displayLink.length - 15)
-                : displayLink}
+              {window.innerWidth < 480 && createdInvite.inviteUrl.length > 40 
+                ? createdInvite.inviteUrl.substring(0, 20) + '...' + createdInvite.inviteUrl.substring(createdInvite.inviteUrl.length - 15)
+                : createdInvite.inviteUrl}
             </div>
           </div>
 
@@ -169,7 +155,7 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
 
           <div style={{ display: 'flex', gap: '0.8rem' }}>
             <button
-              onClick={() => copyToClipboard(displayLink)}
+              onClick={() => copyToClipboard(createdInvite.inviteUrl)}
               style={{
                 flex: 1,
                 padding: '0.8rem 1.5rem',
@@ -245,72 +231,17 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
           <h2 style={{ 
             margin: '0 0 0.5rem 0',
             fontSize: window.innerWidth < 400 ? '1.2rem' : '1.5rem'
-          }}>Share Invite Link</h2>
+          }}>Create Secure Invite</h2>
           <p style={{ 
             margin: 0, 
             color: 'rgba(255, 255, 255, 0.7)', 
             fontSize: window.innerWidth < 400 ? '0.8rem' : '0.9rem',
             lineHeight: '1.3'
           }}>
-            Create a link to share with friends
+            Cryptographically signed • One-time use • Choose expiration
           </p>
         </div>
 
-        {/* Invite Type Selection */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{ 
-            display: 'flex', 
-            gap: '0.5rem',
-            marginBottom: '1rem'
-          }}>
-            <button
-              onClick={() => { setInviteType('simple'); setDisplayLink(''); }}
-              style={{
-                flex: 1,
-                padding: '0.8rem',
-                background: inviteType === 'simple' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
-                color: '#fff',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: inviteType === 'simple' ? '600' : '400',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              📋 Simple Link
-            </button>
-            <button
-              onClick={() => { setInviteType('secure'); setDisplayLink(''); setCreatedInvite(null); }}
-              style={{
-                flex: 1,
-                padding: '0.8rem',
-                background: inviteType === 'secure' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
-                color: '#fff',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: inviteType === 'secure' ? '600' : '400',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              🔐 Secure Invite
-            </button>
-          </div>
-          <p style={{
-            fontSize: '0.75rem',
-            color: 'rgba(255, 255, 255, 0.5)',
-            textAlign: 'center',
-            margin: 0
-          }}>
-            {inviteType === 'simple' 
-              ? 'Quick sharing link that never expires'
-              : 'Time-limited secure invite with auto-friend'}
-          </p>
-        </div>
-
-        {inviteType === 'secure' && (
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ 
             fontSize: '0.9rem', 
@@ -365,7 +296,6 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
             ))}
           </div>
         </div>
-        )}
 
         {error && (
           <div style={{
@@ -429,7 +359,7 @@ const SecureInviteModal = ({ user, gun, simpleInviteLink, onGenerateSimpleInvite
               }
             }}
           >
-            {isCreating ? '⏳ Creating...' : inviteType === 'simple' ? '📋 Generate Link' : '🎫 Create Secure Invite'}
+            {isCreating ? '⏳ Creating...' : '🎫 Create Invite'}
           </button>
         </div>
       </div>
