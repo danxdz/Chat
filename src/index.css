@@ -799,6 +799,11 @@ body {
   .header {
     min-height: 44px !important;
     padding: 0.3rem !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
   }
   
   .header h1 {
@@ -816,13 +821,21 @@ body {
   
   /* Mobile layout adjustments */
   .mobile-layout {
+    position: fixed;
+    top: 44px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     height: calc(100vh - 44px);
-    margin-top: 44px;
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
   }
   
   .mobile-view-indicator {
     padding: 0.3rem;
     font-size: 0.75rem;
+    flex-shrink: 0;
   }
   
   /* Compact chat area */
@@ -844,12 +857,30 @@ body {
   .message-input-container {
     padding: 0.4rem !important;
     gap: 0.3rem !important;
+    position: sticky;
+    bottom: 0;
+    background: #2d2d2d;
+    border-top: 1px solid #555;
+    z-index: 50;
   }
   
   .message-input-container textarea {
     padding: 0.5rem !important;
     font-size: 14px !important;
     min-height: 36px !important;
+  }
+  
+  /* Fix chat area to not overlap with input */
+  .chat-area {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 60px !important; /* Space for input */
   }
   
   .send-button {

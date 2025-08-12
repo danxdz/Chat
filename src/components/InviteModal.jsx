@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 
 export default function InviteModal({ 
@@ -10,6 +10,13 @@ export default function InviteModal({
 }) {
   const [copied, setCopied] = useState(false)
   const qrRef = useRef(null)
+  
+  // Auto-generate invite link when modal opens
+  useEffect(() => {
+    if (isVisible && !inviteLink) {
+      onGenerateInvite()
+    }
+  }, [isVisible])
   
   if (!isVisible) return null
 
@@ -56,51 +63,60 @@ export default function InviteModal({
     }}>
       <div style={{
         background: '#2d2d2d',
-        padding: '2rem',
+        padding: window.innerWidth < 400 ? '1rem' : '2rem',
         borderRadius: '8px',
         width: '95%',
-        maxWidth: '500px',
+        maxWidth: window.innerWidth < 400 ? '320px' : '500px',
+        maxHeight: window.innerWidth < 400 ? '80vh' : 'auto',
+        overflowY: 'auto',
         margin: '1rem'
       }}>
-        <h2 style={{ margin: '0 0 1rem 0' }}>🔗 Share Invite Link</h2>
+        <h2 style={{ 
+          margin: '0 0 1rem 0',
+          fontSize: window.innerWidth < 400 ? '1.2rem' : '1.5rem'
+        }}>🔗 Share Invite</h2>
         
         {!inviteLink ? (
-          <button onClick={onGenerateInvite} className="btn" style={{ width: '100%' }}>
-            Generate Magic Link
-          </button>
+          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
+            <p>Generating invite link...</p>
+          </div>
         ) : (
           <div>
-            <p style={{ marginBottom: '1rem' }}>Share this link with friends to invite them to chat:</p>
+            <p style={{ 
+              marginBottom: '1rem',
+              fontSize: window.innerWidth < 400 ? '0.85rem' : '1rem'
+            }}>Share with friends:</p>
             
             {/* QR Code Section */}
             <div style={{
               display: 'flex',
-              flexDirection: window.innerWidth < 600 ? 'column' : 'row',
-              gap: '1.5rem',
+              flexDirection: 'column',
+              gap: window.innerWidth < 400 ? '0.75rem' : '1.5rem',
               alignItems: 'center',
               marginBottom: '1rem'
             }}>
               {/* QR Code */}
               <div style={{
                 background: 'white',
-                padding: '1rem',
+                padding: window.innerWidth < 400 ? '0.75rem' : '1rem',
                 borderRadius: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                flex: window.innerWidth < 600 ? '1' : '0 0 auto'
+                width: 'fit-content'
               }}>
                 <div ref={qrRef}>
                   <QRCodeSVG 
                     value={inviteLink} 
-                    size={window.innerWidth < 400 ? 150 : 200}
+                    size={window.innerWidth < 400 ? 120 : 200}
                     level="M"
                     includeMargin={false}
                   />
                 </div>
                 <p style={{ 
-                  margin: '0.5rem 0 0 0', 
-                  fontSize: '0.85rem', 
+                  margin: '0.3rem 0 0 0', 
+                  fontSize: window.innerWidth < 400 ? '0.7rem' : '0.85rem', 
                   color: '#333',
                   fontWeight: '500'
                 }}>
@@ -109,9 +125,9 @@ export default function InviteModal({
                 <button
                   onClick={downloadQR}
                   style={{
-                    marginTop: '0.5rem',
-                    padding: '0.3rem 0.8rem',
-                    fontSize: '0.75rem',
+                    marginTop: '0.3rem',
+                    padding: window.innerWidth < 400 ? '0.2rem 0.6rem' : '0.3rem 0.8rem',
+                    fontSize: window.innerWidth < 400 ? '0.7rem' : '0.75rem',
                     background: '#666',
                     color: 'white',
                     border: 'none',
@@ -119,7 +135,7 @@ export default function InviteModal({
                     cursor: 'pointer'
                   }}
                 >
-                  💾 Save QR
+                  💾 Save
                 </button>
               </div>
 
