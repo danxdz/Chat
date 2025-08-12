@@ -1606,7 +1606,7 @@ function App() {
                 fromNick: user.nickname,
                 status: 'pending'
               }])
-              setShowSecureInviteModal(false)
+              // Don't close modal - let user see QR code and copy link
             }}
           />
         )}

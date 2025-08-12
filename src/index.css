@@ -725,12 +725,15 @@ body {
 
 /* Mobile swipe navigation for 4-inch screens */
 .mobile-layout {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: calc(100vh - 52px);
-  margin-top: 52px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative;
 }
 
 .mobile-view-indicator {
@@ -970,6 +973,9 @@ body {
   background: rgba(0, 0, 0, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .tab-button {
