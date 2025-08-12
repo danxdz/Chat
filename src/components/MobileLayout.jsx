@@ -221,6 +221,32 @@ export default function MobileLayout({
               overflow: 'auto',
               padding: '20px'
             }}>
+              {/* Admin Panel - Show all users and connections */}
+              {user?.nickname === 'Admin' && (
+                <div style={{
+                  marginBottom: '30px',
+                  padding: '15px',
+                  background: 'linear-gradient(135deg, #9C27B0, #673AB7)',
+                  borderRadius: '10px',
+                  border: '2px solid #9C27B0'
+                }}>
+                  <h3 style={{ color: 'white', marginBottom: '15px' }}>
+                    👑 Admin Overview
+                  </h3>
+                  <div style={{ color: 'white', fontSize: '14px' }}>
+                    <div>Total Users: {JSON.parse(localStorage.getItem('users') || '[]').length}</div>
+                    <div>Total Invites: {pendingInvites?.length || 0}</div>
+                    <div style={{ marginTop: '10px' }}>
+                      <strong>All Users:</strong>
+                      {JSON.parse(localStorage.getItem('users') || '[]').map((u, i) => (
+                        <div key={i} style={{ marginLeft: '10px', marginTop: '5px' }}>
+                          • {u.nickname} {u.friends?.length > 0 && `(${u.friends.length} friends)`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Pending Invites */}
               {pendingInvites && pendingInvites.length > 0 && (
                 <div style={{ marginBottom: '30px' }}>

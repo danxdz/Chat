@@ -101,12 +101,21 @@ export default function TestingPanel({
           {/* Clear Messages Only */}
           <button 
             onClick={() => {
+              // Clear messages from state
+              if (onClearCurrentClient) {
+                onClearCurrentClient()
+              }
+              // Also clear from Gun.js
               if (gun) {
-                gun.get('general_chat').put(null)
-                gun.get('chat_messages').put(null)
+                gun.get('general_chat').map().once((data, key) => {
+                  gun.get('general_chat').get(key).put(null)
+                })
+                gun.get('chat_messages').map().once((data, key) => {
+                  gun.get('chat_messages').get(key).put(null)
+                })
               }
               alert('Messages cleared!')
-              onClose()
+              window.location.reload()
             }}
             style={{
               padding: '15px',
@@ -123,6 +132,55 @@ export default function TestingPanel({
             💬 Clear Messages Only
           </button>
           
+          {/* Admin Panel - Only for Admin user */}
+          {user?.nickname === 'Admin' && (
+            <button 
+              onClick={() => {
+                // Get all users and show connections
+                const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+                const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+                
+                console.log('=== ADMIN PANEL ===')
+                console.log('📊 Total Users:', allUsers.length)
+                console.log('👥 All Users:', allUsers)
+                
+                // Show user tree
+                console.log('\n🌳 FRIENDSHIP TREE:')
+                allUsers.forEach(user => {
+                  console.log(`\n👤 ${user.nickname} (${user.id.slice(0, 8)}...)`)
+                  if (user.friends && user.friends.length > 0) {
+                    user.friends.forEach(friendId => {
+                      const friend = allUsers.find(u => u.id === friendId)
+                      console.log(`  └─ 🤝 ${friend ? friend.nickname : 'Unknown'} (${friendId.slice(0, 8)}...)`)
+                    })
+                  } else {
+                    console.log('  └─ No friends')
+                  }
+                })
+                
+                console.log('\n📨 Pending Invites:', pendingInvites.length)
+                pendingInvites.forEach(invite => {
+                  console.log(`  - Invite ${invite.id?.slice(-6)} from ${invite.fromNick}`)
+                })
+                
+                alert('Admin data logged to console! Press F12 to view.')
+              }}
+              style={{
+                padding: '15px',
+                background: '#9C27B0',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                width: '100%'
+              }}
+            >
+              👑 Admin Panel (Console)
+            </button>
+          )}
+          
           {/* Status Info */}
           <div style={{
             padding: '10px',
@@ -133,6 +191,9 @@ export default function TestingPanel({
           }}>
             <div>👤 User: {user?.nickname || 'Not logged in'}</div>
             <div>🔗 Gun.js: {gun ? 'Connected' : 'Disconnected'}</div>
+            {user?.nickname === 'Admin' && (
+              <div style={{ color: '#9C27B0', marginTop: '5px' }}>👑 Admin Mode</div>
+            )}
           </div>
         </div>
       </div>
