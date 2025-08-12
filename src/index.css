@@ -4,7 +4,47 @@
   box-sizing: border-box;
 }
 
+/* Animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(76, 175, 80, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+  }
+}
+
 /* Enhanced mobile responsiveness for 4-inch screens */
+
+/* Sidebar styles */
+.sidebar {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.sidebar-user-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-user-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateX(4px);
+}
+
+.online-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4CAF50;
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
 
 /* Minimalist base styles */
 body {

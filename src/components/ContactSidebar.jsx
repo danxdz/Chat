@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import logger from '../utils/logger'
 
 export default function ContactSidebar({ 
@@ -9,6 +10,18 @@ export default function ContactSidebar({
   onContactSelect, 
   onAddContact 
 }) {
+  // Responsive design hook
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const formatLastSeen = (timestamp) => {
     if (!timestamp) return ''
     const now = Date.now()
@@ -41,12 +54,10 @@ export default function ContactSidebar({
 
   return (
     <div className="sidebar" style={{ 
-      width: window.innerWidth < 768 ? '100%' : '280px',
-      height: window.innerWidth < 768 ? '120px' : 'auto',
-      background: 'rgba(0, 0, 0, 0.8)', 
-      backdropFilter: 'blur(10px)',
-      borderRight: window.innerWidth < 768 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-      borderBottom: window.innerWidth < 768 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+      width: isMobile ? '100%' : '280px',
+      height: isMobile ? '120px' : 'auto',
+      borderRight: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+      borderBottom: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
       padding: '1rem',
       overflowY: 'auto'
     }}>
@@ -92,13 +103,19 @@ export default function ContactSidebar({
           transition: 'all 0.2s ease',
           backdropFilter: 'blur(5px)'
         }}
-        onMouseOver={(e) => {
-          if (!activeContact) return
-          e.target.style.background = 'rgba(255, 255, 255, 0.1)'
+        onMouseEnter={(e) => {
+          if (!activeContact) {
+            e.currentTarget.style.background = 'rgba(0, 102, 204, 0.9)'
+          } else {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+          }
         }}
-        onMouseOut={(e) => {
-          if (!activeContact) return
-          e.target.style.background = 'rgba(255, 255, 255, 0.05)'
+        onMouseLeave={(e) => {
+          if (!activeContact) {
+            e.currentTarget.style.background = 'rgba(0, 102, 204, 0.8)'
+          } else {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+          }
         }}
       >
         <span style={{ fontSize: '1.2rem' }}>🌐</span>
