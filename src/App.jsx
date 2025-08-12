@@ -717,6 +717,21 @@ function App() {
           localStorage.setItem('users', JSON.stringify(allUsers))
         }
         
+        // Update pending invites where this user accepted
+        const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+        let invitesUpdated = false
+        pendingInvites.forEach(invite => {
+          if (invite.acceptedBy === user.id) {
+            invite.acceptedNickname = newNickname.trim()
+            invitesUpdated = true
+          }
+        })
+        if (invitesUpdated) {
+          localStorage.setItem('pendingInvites', JSON.stringify(pendingInvites))
+          setPendingInvites(pendingInvites)
+          console.log('✅ Updated invites with new nickname')
+        }
+        
         alert(`✅ Nickname changed to "${newNickname.trim()}"`)
       } catch (error) {
         alert(`❌ Failed to change nickname: ${error.message}`)
@@ -1267,10 +1282,17 @@ function App() {
                 // Mark invite as used and remove from pending
                 await markInviteUsed(inviteData.id)
                 
-                // Remove from pending invites
+                // Update pending invite to show who accepted
                 const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
-                const updatedInvites = pendingInvites.filter(inv => inv.id !== inviteData.id)
-                localStorage.setItem('pendingInvites', JSON.stringify(updatedInvites))
+                const inviteIndex = pendingInvites.findIndex(inv => inv.id === inviteData.id)
+                if (inviteIndex !== -1) {
+                  pendingInvites[inviteIndex].status = 'accepted'
+                  pendingInvites[inviteIndex].acceptedBy = newUser.id
+                  pendingInvites[inviteIndex].acceptedNickname = nickname
+                  pendingInvites[inviteIndex].acceptedAt = Date.now()
+                  localStorage.setItem('pendingInvites', JSON.stringify(pendingInvites))
+                  console.log('✅ Invite updated with accepter info:', nickname)
+                }
                 
                 // Auto-login
                 setUser(newUser)

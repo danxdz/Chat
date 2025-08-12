@@ -323,30 +323,42 @@ export default function MobileLayout({
                       padding: '12px',
                       marginBottom: '8px',
                       borderRadius: '8px',
-                      border: '1px solid #333',
+                      border: invite.status === 'accepted' ? '1px solid #4CAF50' : '1px solid #333',
                       color: '#ccc'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>
-                            From: {invite.fromNick || 'Unknown'}
+                            From: {invite.fromNick || 'You'}
                           </div>
                           <div style={{ fontSize: '12px', marginTop: '4px' }}>
                             ID: #{invite.id?.slice(-6) || i}
                           </div>
+                          {invite.acceptedNickname && (
+                            <div style={{ fontSize: '12px', marginTop: '4px', color: '#4CAF50' }}>
+                              ✅ Accepted by: {invite.acceptedNickname}
+                            </div>
+                          )}
                         </div>
                         <div style={{ 
                           padding: '4px 8px',
-                          background: invite.status === 'used' ? '#666' : '#4CAF50',
+                          background: invite.status === 'accepted' ? '#4CAF50' : 
+                                     invite.status === 'expired' ? '#ff4444' : '#ffa500',
                           borderRadius: '4px',
                           fontSize: '12px',
                           color: 'white'
                         }}>
-                          {invite.status === 'used' ? 'Used' : 'Waiting'}
+                          {invite.status === 'accepted' ? 'Accepted' : 
+                           invite.status === 'expired' ? 'Expired' : 'Pending'}
                         </div>
                       </div>
                       <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                        {invite.expiresAt ? `Expires: ${new Date(invite.expiresAt).toLocaleString()}` : 'No expiration'}
+                        {invite.acceptedAt ? 
+                          `Accepted: ${new Date(invite.acceptedAt).toLocaleString()}` :
+                          invite.expiresAt ? 
+                            `Expires: ${new Date(invite.expiresAt).toLocaleString()}` : 
+                            'No expiration'
+                        }
                       </div>
                     </div>
                   ))}
