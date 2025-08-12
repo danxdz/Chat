@@ -30,7 +30,10 @@ export default function MobileLayout({
     friends: friends,
     pendingInvitesCount: pendingInvites?.length || 0,
     pendingInvites: pendingInvites,
-    onlineUsersCount: onlineUsers?.size || 0
+    onlineUsersCount: onlineUsers?.size || 0,
+    messagesCount: messages?.length || 0,
+    displayMessagesCount: displayMessages?.length || 0,
+    activeContact: activeContact
   })
   const [touchEnd, setTouchEnd] = useState(null)
 
@@ -191,19 +194,17 @@ export default function MobileLayout({
                 </div>
               )}
               
-              {/* Filter messages based on active chat */}
-              {displayMessages
-                .filter(msg => {
-                  if (activeContact) {
-                    // Show only private messages between user and active contact
-                    return (msg.from === activeContact.nickname || msg.to === activeContact.nickname) ||
-                           (msg.fromId === activeContact.id || msg.toId === activeContact.id)
-                  } else {
-                    // Show only general messages
-                    return !msg.to && !msg.toId
-                  }
-                })
-                .map((msg, i) => (
+              {/* Debug: Check if messages exist */}
+              {(!displayMessages || displayMessages.length === 0) && (
+                <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
+                  No messages yet. Start chatting!
+                </div>
+              )}
+              
+              {/* Show all messages */}
+              {displayMessages && displayMessages.length > 0 && displayMessages.map((msg, i) => {
+                console.log('Displaying message:', msg)
+                return (
                 <div key={i} style={{
                   background: '#222',
                   padding: '8px',
@@ -213,7 +214,8 @@ export default function MobileLayout({
                 }}>
                   <strong>{msg.from}:</strong> {msg.text}
                 </div>
-              ))}
+                )
+              })}
             </div>
             
             {/* BIG VISIBLE MESSAGE INPUT */}
@@ -244,7 +246,13 @@ export default function MobileLayout({
                 }}
               />
               <button
-                onClick={onSendMessage}
+                onClick={(e) => {
+                  e.preventDefault()
+                  console.log('Send button clicked, message:', newMessage)
+                  if (newMessage && newMessage.trim()) {
+                    onSendMessage(e)
+                  }
+                }}
                 style={{
                   padding: '15px 30px',
                   fontSize: '18px',
