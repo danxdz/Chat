@@ -726,11 +726,11 @@ body {
 /* Mobile swipe navigation for 4-inch screens */
 .mobile-layout {
   position: fixed;
-  top: 52px;
+  top: 60px; /* Match header minHeight */
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(100vh - 52px);
+  height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
