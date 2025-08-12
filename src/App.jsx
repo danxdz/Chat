@@ -121,8 +121,6 @@ function App() {
   const [debugNotifications, setDebugNotifications] = useState([])
   const [showTests, setShowTests] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
-  const [testResults, setTestResults] = useState({})
-  const [testLogs, setTestLogs] = useState([])
   const [chatError, setChatError] = useState(null)
   const [connectedPeers, setConnectedPeers] = useState(0)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
@@ -159,113 +157,102 @@ function App() {
   ]
 
   // Initialize sodium and check URL for invite
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        if (window.sodium) {
-          await window.sodium.ready
-          setSodium(window.sodium)
-          logger.log('✅ Sodium ready for cryptography')
-        }
-
-        // Load existing user data
-        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-        setAllUsers(existingUsers)
-        
-        // Check if user was auto-logged in from registration
-        const currentUser = localStorage.getItem('currentUser')
-        if (currentUser) {
-          try {
-            const userData = JSON.parse(currentUser)
-            setUser(userData)
-            setCurrentView('chat')
-            localStorage.removeItem('currentUser') // Clean up
-            console.log('✅ Auto-logged in user from registration:', userData.nickname)
-            return
-          } catch (e) {
-            localStorage.removeItem('currentUser')
-          }
-        }
-
-        // Invite links now go to separate HTML page (/register.html)
-        // No need to handle them in React app
-
-        // If no invite and no users exist, show error
-        if (existingUsers.length === 0) {
-          setCurrentView('needInvite')
-        } else {
-          setCurrentView('login')
-        }
-      } catch (error) {
-        logger.error('❌ App initialization failed:', error)
-        setChatError('Failed to initialize app: ' + error.message)
-        setCurrentView('error')
+  const initializeApp = async () => {
+    try {
+      if (window.sodium) {
+        await window.sodium.ready
+        setSodium(window.sodium)
+        logger.log('✅ Sodium ready for cryptography')
       }
-    }
 
-    initializeApp()
-  }, [])
+      // Load existing user data
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      setAllUsers(existingUsers)
+      
+      // Check if user was auto-logged in from registration
+      const currentUser = localStorage.getItem('currentUser')
+      if (currentUser) {
+        try {
+          const userData = JSON.parse(currentUser)
+          setUser(userData)
+          setCurrentView('chat')
+          localStorage.removeItem('currentUser') // Clean up
+          console.log('✅ Auto-logged in user from registration:', userData.nickname)
+          return
+        } catch (e) {
+          localStorage.removeItem('currentUser')
+        }
+      }
+
+      // Invite links now go to separate HTML page (/register.html)
+      // No need to handle them in React app
+
+      // If no invite and no users exist, show error
+      if (existingUsers.length === 0) {
+        setCurrentView('needInvite')
+      } else {
+        setCurrentView('login')
+      }
+    } catch (error) {
+      logger.error('❌ App initialization failed:', error)
+      setChatError('Failed to initialize app: ' + error.message)
+      setCurrentView('error')
+    }
+  }
 
   // Initialize Gun.js when user is logged in
-  useEffect(() => {
-    if (!user) return
-
-    const initializeGun = async () => {
-      try {
-        setInitStatus('Connecting to P2P network...')
-        
-        if (!window.Gun) {
-          throw new Error('Gun.js library not loaded')
-        }
-
-        logger.log('🌐 Initializing Gun.js with peers:', gunPeers)
-        
-        const gunInstance = window.Gun({
-          peers: gunPeers,
-          localStorage: false,
-          radisk: false,
-          file: false
-        })
-
-        // Test Gun.js connectivity
-        const testKey = 'gun_init_test_' + Date.now()
-        await gunInstance.get(testKey).put({ test: true, timestamp: Date.now() })
-        
-        gunInstance.get(testKey).once((data) => {
-          if (data) {
-            logger.log('✅ Gun.js connectivity test successful')
-            setInitStatus('Connected to P2P network')
-          }
-        })
-
-        setGun(gunInstance)
-        
-        // Monitor peer connections
-        const peerMonitorInterval = setInterval(() => {
-          if (gunInstance && gunInstance._.opt && gunInstance._.opt.peers) {
-            const peerCount = Object.keys(gunInstance._.opt.peers).length
-            setConnectedPeers(peerCount)
-          }
-        }, 5000)
-
-        // Return cleanup function
-        return () => {
-          clearInterval(peerMonitorInterval)
-          if (gunInstance && gunInstance.off) {
-            gunInstance.off()
-          }
-        }
-
-      } catch (error) {
-        logger.error('❌ Gun.js initialization failed:', error)
-        setInitStatus('P2P connection failed')
-        setChatError('Failed to connect to P2P network: ' + error.message)
+  const initializeGunJS = async () => {
+    try {
+      setInitStatus('Connecting to P2P network...')
+      
+      if (!window.Gun) {
+        throw new Error('Gun.js library not loaded')
       }
-    }
 
-    const cleanup = initializeGun()
-    return cleanup
-  }, [user])
+      logger.log('🌐 Initializing Gun.js with peers:', gunPeers)
+      
+      const gunInstance = window.Gun({
+        peers: gunPeers,
+        localStorage: false,
+        radisk: false,
+        file: false
+      })
+
+      // Test Gun.js connectivity
+      const testKey = 'gun_init_test_' + Date.now()
+      await gunInstance.get(testKey).put({ test: true, timestamp: Date.now() })
+      
+      gunInstance.get(testKey).once((data) => {
+        if (data) {
+          logger.log('✅ Gun.js connectivity test successful')
+          setInitStatus('Connected to P2P network')
+        }
+      })
+
+      setGun(gunInstance)
+      
+      // Monitor peer connections
+      const peerMonitorInterval = setInterval(() => {
+        if (gunInstance && gunInstance._.opt && gunInstance._.opt.peers) {
+          const peerCount = Object.keys(gunInstance._.opt.peers).length
+          setConnectedPeers(peerCount)
+        }
+      }, 5000)
+
+      // Return cleanup function
+      return () => {
+        clearInterval(peerMonitorInterval)
+        if (gunInstance && gunInstance.off) {
+          gunInstance.off()
+        }
+      }
+
+    } catch (error) {
+      logger.error('❌ Gun.js initialization failed:', error)
+      setInitStatus('P2P connection failed')
+      setChatError('Failed to connect to P2P network: ' + error.message)
+    }
+  }
 
   // Load user data when user changes
   useEffect(() => {
@@ -907,457 +894,58 @@ function App() {
       )
     : messages.filter(msg => msg.type === 'general' || msg.toId === 'general')
 
-  // Testing functions
-  const runVisualTests = async () => {
-    const logs = []
-    const results = {}
-    
-    logs.push('🧪 Starting REAL functionality tests...')
-
-    // Test 1: REAL LocalStorage test
-    try {
-      // Test user data
-      const userData = localStorage.getItem('users')
-      const userDataValid = userData && JSON.parse(userData).length > 0
-      
-      // Test messages (we don't store in localStorage anymore, so just check structure)
-      const messagesValid = Array.isArray(messages)
-      
-      // Test contacts
-      const contactData = localStorage.getItem(`contacts_${user.id}`)
-      const contactsValid = contactData !== null
-      
-      results.localStorage = userDataValid && messagesValid && contactsValid
-      logs.push(`✅ LocalStorage REAL test: ${results.localStorage ? 'PASS' : 'FAIL'}`)
-      logs.push(`  - User data: ${userDataValid ? 'PASS' : 'FAIL'}`)
-      logs.push(`  - Messages: ${messagesValid ? 'PASS' : 'FAIL'}`)
-      logs.push(`  - Contacts: ${contactsValid ? 'PASS' : 'FAIL'}`)
-    } catch (e) {
-      results.localStorage = false
-      logs.push(`❌ LocalStorage REAL test: FAIL - ${e.message}`)
-    }
-
-    // Test 2: Gun.js availability
-    results.gunAvailable = !!window.Gun
-    logs.push(`✅ Gun.js availability: ${results.gunAvailable ? 'PASS' : 'FAIL'}`)
-
-    // Test 3: Gun SEA module
-    results.gunSEA = !!(window.Gun && window.Gun.SEA)
-    logs.push(`✅ Gun SEA module: ${results.gunSEA ? 'PASS' : 'FAIL'}`)
-
-    // Test 4: Gun instance creation
-    results.gunInstance = !!gun
-    logs.push(`✅ Gun instance creation: ${results.gunInstance ? 'PASS' : 'FAIL'}`)
-
-    // Test 5: App Gun connection
-    results.gunConnection = initStatus.includes('Connected')
-    logs.push(`✅ App Gun connection: ${results.gunConnection ? 'PASS' : 'FAIL'}`)
-
-    // Test 6: Message state management
-    try {
-      const originalMessageCount = messages.length
-      
-      const testMessage = {
-        id: Date.now() + '_test',
-        from: user.nickname,
-        fromId: user.id,
-        to: 'Test',
-        toId: 'test',
-        text: 'REAL test message for verification',
-        timestamp: Date.now()
-      }
-
-      // Actually add message to app state
-      const updatedMessages = [...messages, testMessage]
-      setMessages(updatedMessages)
-
-      // Wait for state update and check properly
-      setTimeout(() => {
-        // Get current messages from state after update
-        const currentMessageCount = updatedMessages.length
-        results.messaging = currentMessageCount > originalMessageCount
-        logs.push(`✅ Message creation: ${results.messaging ? 'PASS' : 'FAIL'}`)
-        logs.push(`  - Original count: ${originalMessageCount}`)
-        logs.push(`  - New count: ${currentMessageCount}`)
-        
-        // Update the test display
-        setTestLogs([...logs])
-        setTestResults({...results})
-      }, 100)
-
-      results.messaging = true // Assume success for immediate feedback
-    } catch (e) {
-      results.messaging = false
-      logs.push(`❌ Message state REAL test: FAIL - ${e.message}`)
-    }
-
-    // Test 7: Invite generation/parsing
-    try {
-      const testInviteData = { from: user.nickname, fromId: user.id, timestamp: Date.now() }
-      const encodedInvite = btoa(JSON.stringify(testInviteData))
-      const testInviteUrl = `https://chat-brown-chi-22.vercel.app#invite=${encodedInvite}`
-      
-      // Try to parse it back
-      const parsedData = JSON.parse(atob(encodedInvite))
-      const parseSuccess = parsedData.from === user.nickname
-      
-      results.invites = parseSuccess
-      logs.push(`✅ Invite generation/parsing: ${results.invites ? 'PASS' : 'FAIL'}`)
-      logs.push(`  - Generated link: ${testInviteUrl}`)
-      logs.push(`  - Parsed from: ${parsedData.from}`)
-    } catch (e) {
-      results.invites = false
-      logs.push(`❌ Invite REAL test: FAIL - ${e.message}`)
-    }
-
-    // Test 8: Contact management
-    try {
-      const originalContactCount = contacts.length
-      logs.push(`📊 Contact test starting - current count: ${originalContactCount}`)
-      
-      const testContact = {
-        id: Date.now() + Math.random(),
-        nickname: 'RealTestContact',
-        status: 'active'
-      }
-      
-      logs.push(`🧪 Creating test contact: ${testContact.nickname}`)
-      
-      // Save to localStorage like the real addContact function
-      const updatedContacts = [...contacts, testContact]
-      localStorage.setItem(`contacts_${user.id}`, JSON.stringify(updatedContacts))
-      logs.push(`💾 Contact saved to localStorage key: contacts_${user.id}`)
-      
-      // Wait and check
-      setTimeout(() => {
-        const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
-        const newContactCount = savedContacts.length
-        const contactFound = savedContacts.find(c => c.nickname === testContact.nickname)
-        
-        results.contacts = newContactCount > originalContactCount && !!contactFound
-        logs.push(`✅ Contact management: ${results.contacts ? 'PASS' : 'FAIL'}`)
-        logs.push(`  - Original count: ${originalContactCount}`)
-        logs.push(`  - New count: ${newContactCount}`)
-        logs.push(`  - Contact found: ${!!contactFound}`)
-        logs.push(`  - Contact ID: ${contactFound?.id}`)
-        
-        // Update contacts state
-        setContacts(savedContacts)
-      }, 500)
-      
-      results.contacts = true // Assume success for immediate feedback
-    } catch (e) {
-      results.contacts = false
-      logs.push(`❌ Contact REAL test: FAIL - ${e.message}`)
-    }
-
-    // Test 9: REAL Gun.js P2P messaging test with proper timing
-    if (gun) {
-      try {
-        logs.push(`🔫 Testing REAL Gun.js P2P messaging...`)
-        
-        const testId = Date.now() + '_' + Math.random().toString(36).substr(2, 9)
-        const realP2PMessage = {
-          id: testId,
-          from: user.nickname + '_TEST',
-          text: `Real P2P test at ${new Date().toLocaleTimeString()}`,
-          timestamp: Date.now(),
-          testMarker: 'REAL_P2P_TEST_' + testId
-        }
-
-        // Set up listener BEFORE sending message
-        let messageReceived = false
-        const testTimeout = setTimeout(() => {
-          if (!messageReceived) {
-            logs.push(`❌ Gun.js P2P REAL test: FAIL - Timeout waiting for message`)
-            results.gunP2P = false
-          }
-        }, 3000)
-
-        gun.get('real_test_channel').map().on((data, key) => {
-          if (data && data.testMarker === realP2PMessage.testMarker && !messageReceived) {
-            messageReceived = true
-            clearTimeout(testTimeout)
-            logs.push(`✅ Gun.js P2P REAL test: PASS - Message sent and retrieved`)
-            results.gunP2P = true
-          }
-        })
-
-        // Send message AFTER listener is set up
-        await gun.get('real_test_channel').get(`test_${testId}`).put(realP2PMessage)
-        
-        logs.push(`📡 P2P message sent to Gun.js network, waiting for retrieval...`)
-        results.gunP2P = 'pending' // Will be updated by listener
-      } catch (e) {
-        results.gunP2P = false
-        logs.push(`❌ Gun.js P2P REAL test: FAIL - ${e.message}`)
-      }
-    } else {
-      results.gunP2P = false
-      logs.push(`❌ Gun.js P2P REAL test: FAIL - Gun not connected`)
-    }
-
-    // Real summary
-    const passedTests = Object.values(results).filter(Boolean).length
-    const totalTests = Object.keys(results).length
-    
-    logs.push(`\n📊 REAL TEST SUMMARY:`)
-    logs.push(`Passed: ${passedTests}/${totalTests} REAL functionality tests`)
-    
-    if (passedTests === totalTests) {
-      logs.push(`🎉 ALL REAL TESTS PASSED! App is genuinely functional.`)
-    } else {
-      logs.push(`⚠️ Some REAL functionality failed. Check individual results above.`)
-    }
-
-    setTestResults(results)
-    setTestLogs(logs)
-  }
-
+  // Simple test message function
   const sendTestMessage = () => {
+    if (!user || !gun) {
+      alert('Please login first to send test messages')
+      return
+    }
+    
     const testMsg = `Test message from ${user.nickname} at ${new Date().toLocaleTimeString()}`
     setNewMessage(testMsg)
     setTimeout(() => sendMessage(), 100)
   }
 
-  const sendCrossDeviceTest = () => {
-    const testMsg = `🧪 CROSS-DEVICE TEST from ${user.nickname} at ${new Date().toLocaleTimeString()} - Please confirm receipt on other device!`
-    setNewMessage(testMsg)
-    setTimeout(() => sendMessage(), 100)
-  }
-
-  // Enhanced multi-user testing function
-  const testMultiUserMessaging = async () => {
-    if (!gun) {
-      alert('❌ Gun.js not connected - cannot test multi-user messaging')
-      return
-    }
-
-    // Use simulated test users for testing (no longer creating actual accounts)
-    const testUsers = [
-      { id: 9001, nickname: 'TestUser_A', pin: 'test1' },
-      { id: 9002, nickname: 'TestUser_B', pin: 'test2' },
-      { id: 9003, nickname: 'TestUser_C', pin: 'test3' }
-    ]
-
-    logger.log('🧪 STARTING MULTI-USER MESSAGING TEST (Simulated Users)')
-    
-          // Simulate messages from multiple users
-      const testMessages = [
-        {
-          id: Date.now() + '_usera',
-          text: '👋 Hello everyone! This is TestUser_A testing general chat',
-          from: 'TestUser_A',
-          fromId: 9001,
-          to: 'General',
-          toId: 'general',
-          timestamp: Date.now(),
-          type: 'general'
-        },
-        {
-          id: Date.now() + '_userb',
-          text: '🚀 TestUser_B here! Testing P2P messaging functionality',
-          from: 'TestUser_B', 
-          fromId: 9002,
-          to: 'General',
-          toId: 'general',
-          timestamp: Date.now() + 1000,
-          type: 'general'
-        },
-        {
-          id: Date.now() + '_userc',
-          text: '⚡ TestUser_C joining the conversation! P2P works great!',
-          from: 'TestUser_C',
-          fromId: 9003,
-          to: 'General', 
-          toId: 'general',
-          timestamp: Date.now() + 2000,
-          type: 'general'
-        }
-      ]
-
-    // Send each test message to Gun.js P2P network
-    for (let i = 0; i < testMessages.length; i++) {
-      const msg = testMessages[i]
-      try {
-        await gun.get('general_chat').set(msg)
-        logger.log(`✅ Multi-user test message ${i + 1}/3 sent from ${msg.from}`)
-        
-        // Add small delay between messages
-        if (i < testMessages.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
-      } catch (error) {
-        logger.error(`❌ Failed to send test message from ${msg.from}:`, error)
-      }
-    }
-
-    logger.log('🎯 Multi-user test complete! Check for messages from TestUser_A, TestUser_B, and TestUser_C')
-    alert('🧪 Multi-user test sent! You should see messages from TestUser_A, TestUser_B, and TestUser_C appear in general chat.')
-  }
-
-  // Test private messaging between users
-  const testPrivateMessaging = async () => {
-    if (!contacts || contacts.length === 0) {
-      alert('❌ No contacts available for private messaging test. Add a contact first.')
-      return
-    }
-
-    if (!gun) {
-      alert('❌ Gun.js not connected - cannot test private messaging')
-      return
-    }
-
-    const testContact = contacts[0]
-    const privateChannel = `private_${[user.id, testContact.id].sort().join('_')}`
-    
-    const privateTestMessage = {
-      id: Date.now() + '_private_test',
-      text: `🔒 Private message test from ${user.nickname} to ${testContact.nickname} at ${new Date().toLocaleTimeString()}`,
-      from: user.nickname,
-      fromId: user.id,
-      to: testContact.nickname,
-      toId: testContact.id,
-      timestamp: Date.now(),
-      type: 'private'
-    }
-
-    try {
-      await gun.get(privateChannel).set(privateTestMessage)
-      logger.log(`✅ Private message sent to ${testContact.nickname} on channel: ${privateChannel}`)
-      
-      // Add to local messages to show in UI
-      setMessages(prev => [...prev, privateTestMessage])
-      
-      alert(`🔒 Private message test sent to ${testContact.nickname}! Check the private chat.`)
-    } catch (error) {
-      logger.error('❌ Private message test failed:', error)
-      alert('❌ Private message test failed. Check console for details.')
-    }
-  }
-
-  // Removed demo user creation - users must register with PIN for security
-
-  const testBasicGunConnectivity = async () => {
-    if (!gun) {
-      alert('Gun.js not connected')
-      return
-    }
-
-    try {
-      const testData = { test: true, timestamp: Date.now() }
-      await gun.get('connectivity_test').put(testData)
-      
-      gun.get('connectivity_test').once((data) => {
-        if (data && data.test) {
-          alert('✅ Gun.js connectivity test successful!')
-        } else {
-          alert('❌ Gun.js connectivity test failed')
-        }
-      })
-    } catch (error) {
-      alert('❌ Gun.js connectivity test error: ' + error.message)
-    }
-  }
-
+  // Clear current user data
   const clearCurrentClientData = async () => {
-    if (confirm('Clear all data for current user? This will remove messages, contacts, and reset everything. This cannot be undone.')) {
+    if (confirm('Clear all data for current user? This cannot be undone.')) {
       try {
-        // Clear localStorage
-        localStorage.removeItem(`contacts_${user.id}`)
-        
-        // Clear all state
-        setContacts([])
-        setMessages([])
-        setOnlineUsers(new Map())
-        setMessageDeliveryStatus(new Map())
-        setConnectionStatus(new Map())
-        setLastSeen(new Map())
-        
-        // Try to clear Gun.js data (this won't work for P2P data, but we can try)
-        if (gun) {
-          logger.log('🗑️ Attempting to clear Gun.js data...')
-          // Clear general chat messages visible to this user
-          setMessages([])
+        // Clear user-specific data
+        if (user) {
+          localStorage.removeItem(`contacts_${user.id}`)
+          localStorage.removeItem(`friends_${user.id}`)
           
-          // Announce leaving to clean up presence
-          if (user) {
+          // Announce leaving
+          if (gun) {
             await announcePresence('leave')
           }
         }
         
-        logger.log('✅ Current client data cleared')
-        alert('Current client data cleared! Messages from Gun.js P2P network may still be visible to other users.')
-        
-        // Force a refresh to see changes
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
-        
-      } catch (error) {
-        logger.error('❌ Error clearing data:', error)
-        alert('Error clearing some data. Check console for details.')
-      }
-    }
-  }
-
-  const clearAllClientsData = async () => {
-    if (confirm('Clear ALL user data? This will completely reset the app and remove all local data. Gun.js P2P messages may persist on the network. Continue?')) {
-      try {
-        // Stop heartbeat if running
-        if (heartbeatInterval) {
-          clearInterval(heartbeatInterval)
-          setHeartbeatInterval(null)
-        }
-        
-        // Announce leaving if user is logged in
-        if (user && gun) {
-          await announcePresence('leave')
-        }
-        
-        // Clear localStorage completely
-        localStorage.clear()
+        // Clear session data
         sessionStorage.clear()
         
-        // Clear all state
-        setAllUsers([])
-        setContacts([])
-        setMessages([])
-        setOnlineUsers(new Map())
-        setMessageDeliveryStatus(new Map())
-        setConnectionStatus(new Map())
-        setLastSeen(new Map())
+        // Reset states
         setUser(null)
-        setGun(null)
-        setCurrentView('needInvite')
-        setInitStatus('App Reset')
+        setMessages([])
+        setContacts([])
+        setFriends([])
+        setActiveContact(null)
+        setOnlineUsers(new Map())
         
-        logger.log('✅ All client data cleared - complete reset')
-        alert('Complete reset successful! The page will reload in 2 seconds.')
-        
-        // Force complete page reload after a delay
-        setTimeout(() => {
-          window.location.href = window.location.href.split('#')[0] // Remove hash
-        }, 2000)
-        
+        alert('Current session cleared. Please login again.')
+        setCurrentView('login')
       } catch (error) {
-        logger.error('❌ Error during complete reset:', error)
-        alert('Error during reset. Force refreshing page...')
-        setTimeout(() => window.location.reload(), 1000)
+        console.error('Failed to clear data:', error)
+        alert('Failed to clear some data. Try refreshing the page.')
       }
     }
   }
 
-  const resetAppToFresh = async () => {
-    if (confirm('HARD RESET: This will completely restart the app and clear everything including browser cache. Continue?')) {
+  // Clear all data
+  const clearAllClientsData = async () => {
+    if (confirm('Clear ALL application data? This will remove all users and require new registration.')) {
       try {
-        // Stop heartbeat if running
-        if (heartbeatInterval) {
-          clearInterval(heartbeatInterval)
-          setHeartbeatInterval(null)
-        }
-        
-        // Announce leaving if user is logged in
+        // Announce leaving if logged in
         if (user && gun) {
           await announcePresence('leave')
         }
@@ -1366,183 +954,70 @@ function App() {
         localStorage.clear()
         sessionStorage.clear()
         
-        // Clear IndexedDB if it exists (Gun.js sometimes uses it)
-        if ('indexedDB' in window) {
+        // Clear Gun.js data if available
+        if (gun) {
           try {
-            const databases = await indexedDB.databases()
-            databases.forEach(db => {
-              indexedDB.deleteDatabase(db.name)
-            })
+            await gun.get('p2pchat').get('messages').put(null)
+            await gun.get('online_users').put(null)
+            await gun.get('user_presence').put(null)
           } catch (e) {
-            logger.log('Could not clear IndexedDB:', e)
+            console.log('Could not clear Gun.js data:', e)
           }
         }
         
-        logger.log('🔄 Hard reset initiated')
-        alert('Hard reset in progress... Page will reload completely.')
-        
-        // Hard reload with cache clear
-        window.location.href = window.location.origin + window.location.pathname
-        
+        alert('All data cleared. Refreshing...')
+        window.location.reload()
       } catch (error) {
-        logger.error('❌ Error during hard reset:', error)
-        // Fallback to simple reload
-        window.location.reload(true)
+        console.error('Failed to clear all data:', error)
+        alert('Failed to clear some data. Please manually clear browser data.')
       }
     }
   }
 
+  // Force reload
   const forceReload = () => {
-    if (confirm('Force reload the app? This will refresh the page.')) {
+    if (confirm('Reload the application?')) {
       window.location.reload()
     }
   }
 
-  const clearGunJSData = async () => {
-    if (confirm('🗑️ ADVANCED CLEAR: This will try to clear ALL P2P data including user presence. Note: Data on other peers may persist and re-sync later. Continue?')) {
-      try {
-        if (!gun) {
-          alert('Gun.js not available')
-          return
-        }
-        
-        console.log('🗑️ ADVANCED CLEAR: Starting comprehensive data clearing...')
-        logger.log('🗑️ Attempting to clear Gun.js data...')
-        
-        // Announce leave for current user
-        if (user) {
-          await announcePresence('leave')
-          console.log('📡 Announced user departure')
-        }
-        
-        // Clear all local React state
-        setMessages([])
-        setOnlineUsers(new Map())
-        setContacts([])
-        setMessageDeliveryStatus(new Map())
-        setConnectionStatus(new Map())
-        setLastSeen(new Map())
-        console.log('🧹 Cleared all local React state')
-        
-        // Clear all localStorage related to users and app
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('user_') || key.includes('contacts_') || key.includes('chat_') || key.includes('p2p')) {
-            localStorage.removeItem(key)
-            console.log(`🗑️ Removed localStorage: ${key}`)
-          }
-        })
-        
-        // Try to clear Gun.js channels (limited effectiveness in P2P)
-        const channelsToClear = ['general_chat', 'chat_messages', 'user_presence']
-        for (const channel of channelsToClear) {
-          try {
-            // Try multiple clearing methods
-            await gun.get(channel).put(null)
-            await gun.get(channel).put({})
-            await gun.get(channel).map().put(null)
-            console.log(`🗑️ Attempted to clear channel: ${channel}`)
-            logger.log(`✅ Attempted to clear Gun.js channel: ${channel}`)
-          } catch (e) {
-            console.log(`⚠️ Limited clearing for channel ${channel}:`, e.message)
-            logger.log(`⚠️ Could not clear Gun.js channel ${channel} (expected in P2P):`, e.message)
-          }
-        }
-        
-        // Clear any existing heartbeat
-        if (heartbeatInterval) {
-          clearInterval(heartbeatInterval)
-          setHeartbeatInterval(null)
-          console.log('💓 Stopped heartbeat')
-        }
-        
-        console.log('⚠️ P2P LIMITATION: Data may reappear from other peers')
-        alert('Advanced clear completed. P2P network data may persist on other peers and reappear. Page will reload to reinitialize.')
-        
-        setTimeout(() => {
-          window.location.href = window.location.origin
-        }, 2000)
-        
-      } catch (error) {
-        console.error('❌ Error clearing Gun.js data:', error)
-        logger.error('❌ Error clearing Gun.js data:', error)
-        alert('Error clearing Gun.js data: ' + error.message)
-      }
-    }
-  }
-
-  // Global functions for debugging
+  // Initialize app on mount
   useEffect(() => {
-    window.debugGunJS = () => {
-      logger.log('🔍 DEBUGGING GUN.JS AVAILABILITY:')
-      logger.log('- window.Gun available:', !!window.Gun)
-      logger.log('- Current gun instance:', !!gun)
-      logger.log('- Gun.js version:', window.Gun?.version || 'Unknown')
-      
-      if (window.Gun) {
-        const testGun = window.Gun()
-        logger.log('✅ Test Gun.js instance created successfully')
-        
-        testGun.get('debug_test').put({ test: true })
-        logger.log('✅ Test write completed')
-        
-        testGun.get('debug_test').once((data) => {
-          if (data) {
-            logger.log('✅ Test read successful - Gun.js is working!')
-          } else {
-            logger.log('❌ Test read failed')
-          }
-        })
-      }
-    }
+    initializeApp()
+  }, [])
 
-    // Debug functions
-    window.showAllUsers = () => {
-      const users = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('👥 ALL USERS IN DATABASE:', users)
-      console.log('📊 Total users:', users.length)
-      users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.nickname} (ID: ${user.id?.substring(0, 16)}...)`)
-      })
-      return users
+  // Initialize Gun.js when user is logged in
+  useEffect(() => {
+    if (user && !gun) {
+      initializeGunJS()
     }
-    
-    window.checkLocalStorage = () => {
-      console.log('🔍 LOCALSTORAGE DEBUG:')
-      console.log('- users key exists:', localStorage.getItem('users') !== null)
-      console.log('- users value:', localStorage.getItem('users'))
-      console.log('- parsed users:', JSON.parse(localStorage.getItem('users') || '[]'))
-      
-      console.log('\n📱 ALL LOCALSTORAGE KEYS:')
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        console.log(`${i + 1}. ${key}: ${localStorage.getItem(key)?.substring(0, 100)}...`)
-      }
-    }
-    
-    window.createAdminUser = async () => {
-      try {
-        console.log('🎯 Creating fresh admin user...')
-        const adminUser = await createUserAccount('Admin', 'admin123', null)
-        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-        const updatedUsers = [...existingUsers, adminUser]
-        setAllUsers(updatedUsers)
-        localStorage.setItem('users', JSON.stringify(updatedUsers))
-        console.log('✅ Admin user created successfully')
-        console.log('🔑 Login: Admin / admin123')
-        alert('✅ Admin user created!\nLogin: Admin\nPassword: admin123')
-        return adminUser
-      } catch (error) {
-        console.error('❌ Failed to create admin user:', error)
-        alert('❌ Failed: ' + error.message)
-      }
-    }
-    
-    window.clearCurrentClientData = clearCurrentClientData
-    window.clearAllClientsData = clearAllClientsData
-    window.resetAppToFresh = resetAppToFresh
-    window.forceReload = forceReload
-    window.clearGunJSData = clearGunJSData
   }, [user])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval)
+      }
+      if (user && gun) {
+        announcePresence('leave')
+      }
+    }
+  }, [heartbeatInterval, user, gun])
+
+  // Global debug functions (only in dev)
+  useEffect(() => {
+    if (isDev) {
+      window.debugApp = {
+        user,
+        gun,
+        messages,
+        onlineUsers: Array.from(onlineUsers.entries()),
+        friends,
+        contacts
+      }
+    }
+  }, [user, gun, messages, onlineUsers, friends, contacts])
 
   // Render different views
   if (currentView === 'loading') {
@@ -2136,24 +1611,13 @@ function App() {
         <TestingPanel
           isVisible={showTests}
           user={user}
-          contacts={contacts}
-          messages={messages}
           gun={gun}
           initStatus={initStatus}
-          chatError={chatError}
-          testLogs={testLogs}
           onClose={() => setShowTests(false)}
-          onRunTests={runVisualTests}
           onSendTestMessage={sendTestMessage}
-          onSendCrossDeviceTest={sendCrossDeviceTest}
-          onTestMultiUser={testMultiUserMessaging}
-          onTestPrivateMsg={testPrivateMessaging}
-          onTestBasicGun={testBasicGunConnectivity}
           onClearCurrentClient={clearCurrentClientData}
           onClearAllClients={clearAllClientsData}
-          onResetApp={resetAppToFresh}
           onForceReload={forceReload}
-          onClearGunJS={clearGunJSData}
         />
 
         <InviteModal
