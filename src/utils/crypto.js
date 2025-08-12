@@ -1,5 +1,6 @@
 // 🔐 Cryptographic utilities for secure P2P chat
 // Provides high-privacy identity management with recovery options
+import logger from './logger'
 
 /**
  * Generate a unique device fingerprint
@@ -125,7 +126,7 @@ export const createSecureIdentity = async (nickname, masterPassword, inviteData 
       identity
     }
     
-    console.log('🔐 SECURE IDENTITY CREATED:', {
+    logger.log('🔐 SECURE IDENTITY CREATED:', {
       publicKey: identity.pub.substring(0, 16) + '...',
       nickname: nickname,
       deviceId: deviceId,
@@ -139,7 +140,7 @@ export const createSecureIdentity = async (nickname, masterPassword, inviteData 
     }
     
   } catch (error) {
-    console.error('❌ Failed to create secure identity:', error)
+    logger.error('❌ Failed to create secure identity:', error)
     throw error
   }
 }
@@ -179,7 +180,7 @@ export const recoverIdentity = async (recoveryPhrase, masterPassword, nickname) 
       identity
     }
     
-    console.log('🔄 IDENTITY RECOVERED:', {
+    logger.log('🔄 IDENTITY RECOVERED:', {
       publicKey: identity.pub.substring(0, 16) + '...',
       nickname: nickname,
       deviceId: deviceId
@@ -188,7 +189,7 @@ export const recoverIdentity = async (recoveryPhrase, masterPassword, nickname) 
     return userAccount
     
   } catch (error) {
-    console.error('❌ Failed to recover identity:', error)
+    logger.error('❌ Failed to recover identity:', error)
     throw error
   }
 }
@@ -227,7 +228,7 @@ export const loginWithMasterPassword = async (masterPassword) => {
       lastLogin: Date.now()
     }
     
-    console.log('🔑 SECURE LOGIN SUCCESS:', {
+    logger.log('🔑 SECURE LOGIN SUCCESS:', {
       publicKey: identity.pub.substring(0, 16) + '...',
       nickname: encryptedData.nickname,
       deviceId: deviceId
@@ -236,7 +237,7 @@ export const loginWithMasterPassword = async (masterPassword) => {
     return userAccount
     
   } catch (error) {
-    console.error('❌ Login failed:', error)
+    logger.error('❌ Login failed:', error)
     throw error
   }
 }
@@ -260,7 +261,7 @@ export const saveSecureIdentity = (userAccount) => {
   }
   
   localStorage.setItem('secureIdentity_' + deviceId, JSON.stringify(dataToStore))
-  console.log('💾 Secure identity saved to device:', deviceId)
+  logger.log('💾 Secure identity saved to device:', deviceId)
 }
 
 /**
@@ -277,5 +278,5 @@ export const hasStoredIdentity = () => {
 export const clearDeviceIdentity = () => {
   const deviceId = generateDeviceFingerprint()
   localStorage.removeItem('secureIdentity_' + deviceId)
-  console.log('🗑️ Device identity cleared:', deviceId)
+  logger.log('🗑️ Device identity cleared:', deviceId)
 }

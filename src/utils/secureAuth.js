@@ -1,26 +1,27 @@
 // 🔐 Secure Authentication System for P2P Chat
+import logger from './logger'
 // IRC-style login + cryptographically signed invites
 
 /**
  * Generate a permanent user ID using Gun.SEA
  */
 export const generatePermanentId = async () => {
-  console.log('🔑 Generating permanent ID...')
+  logger.log('🔑 Generating permanent ID...')
   
   if (!window.Gun || !window.Gun.SEA) {
-    console.error('❌ Gun.SEA not available')
+    logger.error('❌ Gun.SEA not available')
     if (window.debugNotify) window.debugNotify('❌ Gun.SEA not available', 'error')
     throw new Error('Gun.SEA not available')
   }
   
-  console.log('🔧 Gun.SEA available, creating pair...')
+  logger.log('🔧 Gun.SEA available, creating pair...')
   if (window.debugNotify) window.debugNotify('🔑 Starting Gun.SEA.pair()...', 'info')
   
   try {
     // Simple direct call - Gun.SEA.pair() should return a promise in 0.2020.520
     const identity = await window.Gun.SEA.pair()
     
-    console.log('✅ Identity generated:', {
+    logger.log('✅ Identity generated:', {
       pub: identity.pub?.substring(0, 16) + '...',
       priv: identity.priv ? 'present' : 'missing'
     })
@@ -33,7 +34,7 @@ export const generatePermanentId = async () => {
       publicKey: identity.pub // For verification
     }
   } catch (error) {
-    console.error('❌ Failed to generate Gun.SEA pair:', error)
+    logger.error('❌ Failed to generate Gun.SEA pair:', error)
     if (window.debugNotify) window.debugNotify('❌ Gun.SEA.pair() FAILED: ' + error.message, 'error')
     throw error
   }
@@ -44,18 +45,18 @@ export const generatePermanentId = async () => {
  */
 export const createUserAccount = async (nickname, password, inviteData = null) => {
   try {
-    console.log('👤 Creating user account for:', nickname)
+    logger.log('👤 Creating user account for:', nickname)
     if (window.debugNotify) window.debugNotify('👤 Creating account: ' + nickname, 'info')
     
     const identity = await generatePermanentId()
-    console.log('🔑 Identity created successfully')
+    logger.log('🔑 Identity created successfully')
     if (window.debugNotify) window.debugNotify('🔑 Identity created!', 'success')
     
     // Hash password for storage (never store plain text)
-    console.log('🔐 Hashing password...')
+    logger.log('🔐 Hashing password...')
     if (window.debugNotify) window.debugNotify('🔐 Hashing password...', 'info')
     const hashedPassword = await hashPassword(password)
-    console.log('🔐 Password hashed successfully')
+    logger.log('🔐 Password hashed successfully')
     if (window.debugNotify) window.debugNotify('🔐 Password hashed!', 'success')
     
     const userAccount = {
@@ -70,7 +71,7 @@ export const createUserAccount = async (nickname, password, inviteData = null) =
       friends: inviteData ? [inviteData.fromId] : [] // Auto-friend inviter
     }
     
-    console.log('👤 IRC-STYLE USER CREATED:', {
+    logger.log('👤 IRC-STYLE USER CREATED:', {
       id: identity.id.substring(0, 16) + '...',
       nickname: nickname
     })
@@ -79,7 +80,7 @@ export const createUserAccount = async (nickname, password, inviteData = null) =
     return userAccount
     
   } catch (error) {
-    console.error('❌ Failed to create user account:', error)
+    logger.error('❌ Failed to create user account:', error)
     if (window.debugNotify) window.debugNotify('❌ Account creation failed: ' + error.message, 'error')
     throw error
   }
@@ -104,7 +105,7 @@ export const ircLogin = async (nickname, password) => {
       throw new Error('Invalid password')
     }
     
-    console.log('🔑 IRC-STYLE LOGIN SUCCESS:', {
+    logger.log('🔑 IRC-STYLE LOGIN SUCCESS:', {
       id: user.id.substring(0, 16) + '...',
       nickname: user.nickname
     })
@@ -112,7 +113,7 @@ export const ircLogin = async (nickname, password) => {
     return user
     
   } catch (error) {
-    console.error('❌ IRC login failed:', error)
+    logger.error('❌ IRC login failed:', error)
     throw error
   }
 }
@@ -160,7 +161,7 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
       await window.gun.get('secure_invites').get(inviteId).put(signedInvite)
     }
     
-    console.log('🎫 SECURE INVITE CREATED:', {
+    logger.log('🎫 SECURE INVITE CREATED:', {
       id: inviteId,
       fromNick: user.nickname,
       expiresIn: expirationChoice,
@@ -175,7 +176,7 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
     }
     
   } catch (error) {
-    console.error('❌ Failed to create secure invite:', error)
+    logger.error('❌ Failed to create secure invite:', error)
     throw error
   }
 }
@@ -185,7 +186,7 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
  */
 export const verifySecureInvite = async (inviteToken) => {
   try {
-    console.log('🔍 VERIFYING INVITE TOKEN:', {
+    logger.log('🔍 VERIFYING INVITE TOKEN:', {
       tokenLength: inviteToken.length,
       tokenStart: inviteToken.substring(0, 20) + '...',
       tokenEnd: '...' + inviteToken.substring(inviteToken.length - 20)
@@ -193,7 +194,7 @@ export const verifySecureInvite = async (inviteToken) => {
     alert('🔍 DEBUG: Starting invite verification...')
     
     const inviteData = JSON.parse(atob(inviteToken))
-    console.log('✅ Invite token decoded successfully:', {
+    logger.log('✅ Invite token decoded successfully:', {
       id: inviteData.id,
       fromNick: inviteData.fromNick,
       expiresAt: new Date(inviteData.expiresAt).toLocaleString()
@@ -214,7 +215,7 @@ export const verifySecureInvite = async (inviteToken) => {
     const { signature, ...originalData } = inviteData
     const originalMessage = JSON.stringify(originalData)
     
-    console.log('🔐 Verifying signature:', {
+    logger.log('🔐 Verifying signature:', {
       messageLength: originalMessage.length,
       signatureExists: !!signature,
       fromId: inviteData.fromId
@@ -223,14 +224,14 @@ export const verifySecureInvite = async (inviteToken) => {
     // Simple direct call for Gun.SEA.verify
     const signatureValid = await window.Gun.SEA.verify(signature, originalMessage, inviteData.fromId)
     
-    console.log('🔐 Signature verification result:', signatureValid)
+    logger.log('🔐 Signature verification result:', signatureValid)
     
     if (!signatureValid) {
       alert('❌ DEBUG: Signature verification FAILED!')
       throw new Error('Invalid invite signature - possible forgery')
     }
     
-    console.log('✅ SECURE INVITE VERIFIED:', {
+    logger.log('✅ SECURE INVITE VERIFIED:', {
       id: inviteData.id,
       fromNick: inviteData.fromNick,
       validUntil: new Date(inviteData.expiresAt).toLocaleString()
@@ -240,7 +241,7 @@ export const verifySecureInvite = async (inviteToken) => {
     return inviteData
     
   } catch (error) {
-    console.error('❌ Invite verification failed:', error)
+    logger.error('❌ Invite verification failed:', error)
     alert('❌ DEBUG: verifySecureInvite FAILED: ' + error.message)
     throw error
   }
@@ -254,9 +255,9 @@ export const markInviteUsed = async (inviteId) => {
     if (window.gun) {
       await window.gun.get('secure_invites').get(inviteId).get('used').put(true)
     }
-    console.log('🎫 Invite marked as used:', inviteId)
+    logger.log('🎫 Invite marked as used:', inviteId)
   } catch (error) {
-    console.error('❌ Failed to mark invite as used:', error)
+    logger.error('❌ Failed to mark invite as used:', error)
   }
 }
 
@@ -292,12 +293,12 @@ export const changeNickname = async (user, newNickname, gun) => {
         try {
           await gun.get('notifications').get(friendId).set(notification)
         } catch (e) {
-          console.error('Failed to notify friend:', friendId, e)
+          logger.error('Failed to notify friend:', friendId, e)
         }
       })
     }
     
-    console.log('✏️ NICKNAME CHANGED:', {
+    logger.log('✏️ NICKNAME CHANGED:', {
       userId: user.id.substring(0, 16) + '...',
       oldNickname: oldNickname,
       newNickname: newNickname,
@@ -307,7 +308,7 @@ export const changeNickname = async (user, newNickname, gun) => {
     return user
     
   } catch (error) {
-    console.error('❌ Failed to change nickname:', error)
+    logger.error('❌ Failed to change nickname:', error)
     throw error
   }
 }

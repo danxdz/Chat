@@ -1,3 +1,5 @@
+import logger from '../utils/logger'
+
 export default function ChatArea({ 
   chatError, 
   messages, 
@@ -59,8 +61,8 @@ export default function ChatArea({
           <span>📊 Total Messages: {messages.length} | From Gun.js</span>
           <button 
             onClick={() => {
-              console.log('🔍 ALL MESSAGES:', messages)
-              console.log('🔍 DISPLAY MESSAGES:', displayMessages)
+              logger.log('🔍 ALL MESSAGES:', messages)
+              logger.log('🔍 DISPLAY MESSAGES:', displayMessages)
               alert(`Total messages: ${messages.length}\nAll from Gun.js\nCheck console for details`)
             }}
             style={{

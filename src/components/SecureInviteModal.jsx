@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createSecureInvite } from '../utils/secureAuth'
+import logger from '../utils/logger'
 
 const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [expirationChoice, setExpirationChoice] = useState('1h')
@@ -28,7 +29,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
       
     } catch (err) {
       setError(err.message)
-      console.error('Failed to create secure invite:', err)
+      logger.error('Failed to create secure invite:', err)
     } finally {
       setIsCreating(false)
     }
@@ -39,7 +40,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
       await navigator.clipboard.writeText(text)
       // Could add a toast notification here
     } catch (err) {
-      console.error('Failed to copy to clipboard:', err)
+      logger.error('Failed to copy to clipboard:', err)
     }
   }
 
