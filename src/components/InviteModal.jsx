@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function InviteModal({ 
   isVisible, 
@@ -8,6 +9,7 @@ export default function InviteModal({
   onCopyInvite 
 }) {
   const [copied, setCopied] = useState(false)
+  const qrRef = useRef(null)
   
   if (!isVisible) return null
 
@@ -15,6 +17,28 @@ export default function InviteModal({
     onCopyInvite()
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const downloadQR = () => {
+    const svg = qrRef.current.querySelector('svg')
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    
+    img.onload = () => {
+      canvas.width = img.width
+      canvas.height = img.height
+      ctx.drawImage(img, 0, 0)
+      const pngFile = canvas.toDataURL('image/png')
+      
+      const downloadLink = document.createElement('a')
+      downloadLink.download = 'chat-invite-qr.png'
+      downloadLink.href = pngFile
+      downloadLink.click()
+    }
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
   }
 
   return (
@@ -46,19 +70,88 @@ export default function InviteModal({
           </button>
         ) : (
           <div>
-            <p>Share this link with friends to invite them to chat:</p>
+            <p style={{ marginBottom: '1rem' }}>Share this link with friends to invite them to chat:</p>
+            
+            {/* QR Code Section */}
             <div style={{
-              background: '#333',
-              padding: '1rem',
-              borderRadius: '4px',
-              marginTop: '0.5rem',
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
-              wordBreak: 'break-all'
+              display: 'flex',
+              flexDirection: window.innerWidth < 600 ? 'column' : 'row',
+              gap: '1.5rem',
+              alignItems: 'center',
+              marginBottom: '1rem'
             }}>
-              {inviteLink}
+              {/* QR Code */}
+              <div style={{
+                background: 'white',
+                padding: '1rem',
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                flex: window.innerWidth < 600 ? '1' : '0 0 auto'
+              }}>
+                <div ref={qrRef}>
+                  <QRCodeSVG 
+                    value={inviteLink} 
+                    size={window.innerWidth < 400 ? 150 : 200}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+                <p style={{ 
+                  margin: '0.5rem 0 0 0', 
+                  fontSize: '0.85rem', 
+                  color: '#333',
+                  fontWeight: '500'
+                }}>
+                  Scan to Join
+                </p>
+                <button
+                  onClick={downloadQR}
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.3rem 0.8rem',
+                    fontSize: '0.75rem',
+                    background: '#666',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  💾 Save QR
+                </button>
+              </div>
+
+              {/* OR Divider for mobile */}
+              {window.innerWidth < 600 && (
+                <div style={{ 
+                  color: '#999', 
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                }}>
+                  — OR —
+                </div>
+              )}
+
+              {/* Link Section */}
+              <div style={{ flex: '1', width: '100%' }}>
+                <div style={{
+                  background: '#333',
+                  padding: '1rem',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                  wordBreak: 'break-all',
+                  maxHeight: '100px',
+                  overflowY: 'auto'
+                }}>
+                  {inviteLink}
+                </div>
+              </div>
             </div>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button 
                 onClick={handleCopy} 
                 className="btn" 
