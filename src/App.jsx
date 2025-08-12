@@ -166,6 +166,27 @@ function App() {
       const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
       setAllUsers(existingUsers)
       
+      // Check for saved session (Remember Me)
+      const savedSession = localStorage.getItem('savedSession')
+      if (savedSession) {
+        try {
+          const session = JSON.parse(savedSession)
+          // Find the user in existing users
+          const savedUser = existingUsers.find(u => u.id === session.id)
+          if (savedUser) {
+            setUser(savedUser)
+            setCurrentView('chat')
+            console.log('✅ Auto-logged in as:', savedUser.nickname)
+            return
+          } else {
+            // Session invalid, clear it
+            localStorage.removeItem('savedSession')
+          }
+        } catch (e) {
+          localStorage.removeItem('savedSession')
+        }
+      }
+      
       // Check if user was auto-logged in from registration
       const currentUser = localStorage.getItem('currentUser')
       if (currentUser) {
@@ -507,7 +528,7 @@ function App() {
   // Registration now handled by separate HTML page (/register.html)
   // This function is kept for compatibility but not used
 
-  const login = async (nickname, password) => {
+  const login = async (nickname, password, rememberMe = true) => {
     if (!nickname.trim() || !password.trim()) {
       alert('Nickname and password are required')
       return false
@@ -522,6 +543,15 @@ function App() {
 
       const user = await ircLogin(nickname, password)
       setUser(user)
+      
+      // Save session if remember me
+      if (rememberMe) {
+        localStorage.setItem('savedSession', JSON.stringify({
+          nickname: user.nickname,
+          id: user.id,
+          timestamp: Date.now()
+        }))
+      }
       
       // Load user's friends
       const userFriends = getFriendsList(user, allUsers)
@@ -1271,8 +1301,9 @@ function App() {
             e.preventDefault()
             const nickname = e.target.nickname.value.trim()
             const password = e.target.password.value.trim()
+            const rememberMe = e.target.rememberMe.checked
             if (nickname && password) {
-              const success = await login(nickname, password)
+              const success = await login(nickname, password, rememberMe)
               if (success) {
                 // Login successful, will automatically navigate to chat
               }
@@ -1293,8 +1324,26 @@ function App() {
               placeholder="Your password"
               required
               className="input"
-              style={{ marginBottom: '1.5rem' }}
+              style={{ marginBottom: '1rem' }}
             />
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              marginBottom: '1.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '0.9rem',
+              cursor: 'pointer'
+            }}>
+              <input
+                name="rememberMe"
+                type="checkbox"
+                defaultChecked
+                style={{ cursor: 'pointer' }}
+              />
+              Remember me
+            </label>
             <button type="submit" className="btn">
               🔑 Sign In
             </button>
@@ -1546,13 +1595,14 @@ function App() {
     const isMobile = window.innerWidth <= 480
     
     return (
-      <div className="app">
+      <div className="app" style={{ paddingTop: '60px' }}>
         <DebugNotifications />
         <Header
           user={user}
           activeContact={activeContact}
           initStatus={initStatus}
-          connectedPeers={connectedPeers}
+          onlineUsers={onlineUsers.size}
+          totalUsers={allUsers.length}
           connectionStatus={connectionStatus}
           onShowInvite={() => setShowSecureInviteModal(true)}
           onShowTests={() => setShowTests(true)}

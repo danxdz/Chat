@@ -4,7 +4,8 @@ export default function Header({
   user, 
   activeContact, 
   initStatus,
-  connectedPeers,
+  onlineUsers,
+  totalUsers,
   connectionStatus,
   onShowInvite, 
   onShowTests, 
@@ -102,11 +103,9 @@ export default function Header({
             gap: '0.8rem' 
           }}>
             <span>{initStatus}</span>
-            {connectedPeers > 0 && (
-              <span style={{ color: '#4CAF50' }}>
-                🟢 {connectedPeers} peers
-              </span>
-            )}
+            <span style={{ color: '#4CAF50' }}>
+              👥 {onlineUsers}/{totalUsers} online
+            </span>
           </div>
         </div>
       </div>
