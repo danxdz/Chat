@@ -3,6 +3,7 @@ import Header from './components/Header'
 import ContactSidebar from './components/ContactSidebar'
 import ChatArea from './components/ChatArea'
 import TestingPanel from './components/TestingPanel'
+import InviteModal from './components/InviteModal'
 import SecureInviteModal from './components/SecureInviteModal'
 import MobileLayout from './components/MobileLayout'
 import { 
@@ -114,10 +115,12 @@ function App() {
   const [newMessage, setNewMessage] = useState('')
   const [initStatus, setInitStatus] = useState('Initializing...')
   const [gun, setGun] = useState(null)
+  const [showInvite, setShowInvite] = useState(false)
   const [showSecureInviteModal, setShowSecureInviteModal] = useState(false)
   const [friends, setFriends] = useState([])
   const [debugNotifications, setDebugNotifications] = useState([])
   const [showTests, setShowTests] = useState(false)
+  const [inviteLink, setInviteLink] = useState('')
   const [chatError, setChatError] = useState(null)
   const [connectedPeers, setConnectedPeers] = useState(0)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
@@ -849,6 +852,32 @@ function App() {
 
 
 
+  // Generate a simple magic link for inviting users
+  const generateInvite = () => {
+    const inviteData = {
+      from: user.nickname,
+      fromId: user.id,
+      timestamp: Date.now()
+    }
+    
+    const encodedInvite = btoa(JSON.stringify(inviteData))
+    const inviteUrl = `${window.location.origin}#invite=${encodedInvite}`
+    
+    setInviteLink(inviteUrl)
+    logger.log('✅ Invite link generated:', inviteUrl)
+    
+    return inviteUrl
+  }
+
+  const copyInvite = () => {
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      // Don't use alert, just log it
+      logger.log('✅ Invite link copied to clipboard!')
+    }).catch(() => {
+      logger.error('Failed to copy invite link')
+    })
+  }
+
   const switchToUser = (targetUser) => {
     setUser(targetUser)
     logger.log('✅ Switched to user:', targetUser.nickname)
@@ -1517,7 +1546,7 @@ function App() {
           initStatus={initStatus}
           connectedPeers={connectedPeers}
           connectionStatus={connectionStatus}
-          onShowInvite={() => setShowSecureInviteModal(true)}
+          onShowInvite={() => setShowInvite(true)}
           onShowTests={() => setShowTests(true)}
           onChangeNickname={handleNicknameChange}
           onLogout={logout}
@@ -1540,7 +1569,7 @@ function App() {
             onMessageChange={(e) => setNewMessage(e.target.value)}
             onSendMessage={sendMessage}
             onContactSelect={setActiveContact}
-            onShowInvite={() => setShowSecureInviteModal(true)}
+            onShowInvite={() => setShowInvite(true)}
           />
         ) : (
           // Desktop layout
@@ -1579,6 +1608,14 @@ function App() {
           onClearCurrentClient={clearCurrentClientData}
           onClearAllClients={clearAllClientsData}
           onForceReload={forceReload}
+        />
+
+        <InviteModal
+          isVisible={showInvite}
+          inviteLink={inviteLink}
+          onClose={() => setShowInvite(false)}
+          onGenerateInvite={generateInvite}
+          onCopyInvite={copyInvite}
         />
 
         {showSecureInviteModal && (

@@ -134,7 +134,7 @@ export default function Header({
             transition: 'all 0.3s ease',
             backdropFilter: 'blur(10px)'
           }}
-          title="Send secure invite"
+          title="Generate invite link"
           onMouseOver={(e) => {
             e.target.style.background = 'rgba(255, 255, 255, 0.15)'
             e.target.style.transform = 'translateY(-2px)'
