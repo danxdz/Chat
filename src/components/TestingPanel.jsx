@@ -134,51 +134,91 @@ export default function TestingPanel({
           
           {/* Admin Panel - Only for Admin user */}
           {user?.nickname === 'Admin' && (
-            <button 
-              onClick={() => {
-                // Get all users and show connections
-                const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-                const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
-                
-                console.log('=== ADMIN PANEL ===')
-                console.log('📊 Total Users:', allUsers.length)
-                console.log('👥 All Users:', allUsers)
-                
-                // Show user tree
-                console.log('\n🌳 FRIENDSHIP TREE:')
-                allUsers.forEach(user => {
-                  console.log(`\n👤 ${user.nickname} (${user.id.slice(0, 8)}...)`)
-                  if (user.friends && user.friends.length > 0) {
-                    user.friends.forEach(friendId => {
-                      const friend = allUsers.find(u => u.id === friendId)
-                      console.log(`  └─ 🤝 ${friend ? friend.nickname : 'Unknown'} (${friendId.slice(0, 8)}...)`)
-                    })
-                  } else {
-                    console.log('  └─ No friends')
+            <>
+              <button 
+                onClick={() => {
+                  const adminPanel = document.getElementById('admin-data-panel')
+                  if (adminPanel) {
+                    adminPanel.style.display = adminPanel.style.display === 'none' ? 'block' : 'none'
                   }
-                })
-                
-                console.log('\n📨 Pending Invites:', pendingInvites.length)
-                pendingInvites.forEach(invite => {
-                  console.log(`  - Invite ${invite.id?.slice(-6)} from ${invite.fromNick}`)
-                })
-                
-                alert('Admin data logged to console! Press F12 to view.')
-              }}
-              style={{
-                padding: '15px',
-                background: '#9C27B0',
-                color: 'white',
-                border: 'none',
+                }}
+                style={{
+                  padding: '15px',
+                  background: '#9C27B0',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  width: '100%'
+                }}
+              >
+                👑 Show/Hide Admin Data
+              </button>
+              
+              {/* Admin Data Panel */}
+              <div id="admin-data-panel" style={{
+                display: 'none',
+                maxHeight: '300px',
+                overflow: 'auto',
+                background: '#2a2a2a',
                 borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%'
-              }}
-            >
-              👑 Admin Panel (Console)
-            </button>
+                padding: '15px',
+                fontSize: '12px',
+                color: '#ddd'
+              }}>
+                <h4 style={{ color: '#9C27B0', marginBottom: '10px' }}>👑 Admin Panel</h4>
+                
+                {(() => {
+                  const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
+                  const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+                  
+                  return (
+                    <>
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong>📊 Total Users:</strong> {allUsers.length}
+                      </div>
+                      
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong>🌳 User Connections:</strong>
+                        {allUsers.map((user, i) => (
+                          <div key={i} style={{ marginLeft: '10px', marginTop: '5px' }}>
+                            <div style={{ color: '#4CAF50' }}>
+                              👤 {user.nickname}
+                            </div>
+                            {user.friends && user.friends.length > 0 ? (
+                              user.friends.map((friendId, j) => {
+                                const friend = allUsers.find(u => u.id === friendId)
+                                return (
+                                  <div key={j} style={{ marginLeft: '20px', color: '#888' }}>
+                                    └─ 🤝 {friend ? friend.nickname : 'Unknown'}
+                                  </div>
+                                )
+                              })
+                            ) : (
+                              <div style={{ marginLeft: '20px', color: '#666' }}>
+                                └─ No friends
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div style={{ marginTop: '10px' }}>
+                        <strong>📨 Invites ({pendingInvites.length}):</strong>
+                        {pendingInvites.map((invite, i) => (
+                          <div key={i} style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px' }}>
+                            • {invite.fromNick} → {invite.acceptedNickname || 'Pending'}
+                            {invite.status === 'accepted' && ' ✅'}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            </>
           )}
           
           {/* Status Info */}

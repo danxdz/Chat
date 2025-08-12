@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ChatArea from './ChatArea'
 import ContactSidebar from './ContactSidebar'
 import FriendsPanel from './FriendsPanel'
@@ -23,6 +23,14 @@ export default function MobileLayout({
 }) {
   const [mobileView, setMobileView] = useState('chat')
   const [touchStart, setTouchStart] = useState(null)
+  const messagesEndRef = useRef(null)
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [displayMessages])
   
   // Debug logging
   console.log('🔍 MobileLayout Debug:', {
@@ -213,10 +221,12 @@ export default function MobileLayout({
                   color: 'white'
                 }}>
                   <strong>{msg.from}:</strong> {msg.text}
-                </div>
-                )
-              })}
-            </div>
+                                  </div>
+                  )
+                })}
+                {/* Invisible element to scroll to */}
+                <div ref={messagesEndRef} />
+              </div>
             
             {/* BIG VISIBLE MESSAGE INPUT */}
             <div style={{
