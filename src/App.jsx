@@ -5,6 +5,7 @@ import ChatArea from './components/ChatArea'
 import TestingPanel from './components/TestingPanel'
 import InviteModal from './components/InviteModal'
 import SecureInviteModal from './components/SecureInviteModal'
+import MobileLayout from './components/MobileLayout'
 import { 
   ircLogin, 
   createUserAccount, 
@@ -130,36 +131,6 @@ function App() {
   const [onlineUsers, setOnlineUsers] = useState(new Map())
   const [heartbeatInterval, setHeartbeatInterval] = useState(null)
   const [pendingInvites, setPendingInvites] = useState([])
-  const [mobileView, setMobileView] = useState('chat') // 'chat' or 'users'
-  const [touchStart, setTouchStart] = useState(null)
-  const [touchEnd, setTouchEnd] = useState(null)
-
-  // Minimum swipe distance (in px)
-  const minSwipeDistance = 50
-
-  const onTouchStart = (e) => {
-    setTouchEnd(null)
-    setTouchStart(e.targetTouches[0].clientX)
-  }
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX)
-  }
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-    
-    const distance = touchStart - touchEnd
-    const isLeftSwipe = distance > minSwipeDistance
-    const isRightSwipe = distance < -minSwipeDistance
-    
-    if (isLeftSwipe && mobileView === 'chat') {
-      setMobileView('users')
-    }
-    if (isRightSwipe && mobileView === 'users') {
-      setMobileView('chat')
-    }
-  }
 
   // Debug notification system (only in development)
   const showDebugNotification = (message, type = 'info') => {
@@ -359,6 +330,24 @@ function App() {
         handlePresenceUpdate(data)
       } else {
         logger.log('❌ Invalid presence data:', data)
+      }
+    })
+    
+    // Also listen to online_users for better tracking
+    gun.get('online_users').map().on((data, userId) => {
+      if (data && data.nickname) {
+        setOnlineUsers(prev => {
+          const updated = new Map(prev)
+          updated.set(userId, data)
+          return updated
+        })
+      } else {
+        // User went offline
+        setOnlineUsers(prev => {
+          const updated = new Map(prev)
+          updated.delete(userId)
+          return updated
+        })
       }
     })
 
@@ -692,7 +681,20 @@ function App() {
     
     try {
       logger.log(`📡 Announcing presence: ${action} for ${currentUser.nickname}`, presenceData)
-      await gun.get('user_presence').set(presenceData)
+      // Use put instead of set for proper updates
+      await gun.get('user_presence').get(currentUser.id).put(presenceData)
+      
+      // Also update the online_users node for better tracking
+      if (action === 'join' || action === 'heartbeat') {
+        await gun.get('online_users').get(currentUser.id).put({
+          nickname: currentUser.nickname,
+          lastSeen: Date.now(),
+          isOnline: true
+        })
+      } else if (action === 'leave') {
+        await gun.get('online_users').get(currentUser.id).put(null)
+      }
+      
       logger.log(`✅ Presence announced successfully`)
     } catch (error) {
       logger.error('❌ Failed to announce presence:', error)
@@ -2079,56 +2081,24 @@ function App() {
         />
 
         {isMobile ? (
-          // Mobile layout with swipe navigation
-          <div 
-            className="mobile-layout"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            {/* View indicator dots */}
-            <div className="mobile-view-indicator">
-              <span className={mobileView === 'chat' ? 'active' : ''}>Chat</span>
-              <div className="dots">
-                <span className={`dot ${mobileView === 'chat' ? 'active' : ''}`}></span>
-                <span className={`dot ${mobileView === 'users' ? 'active' : ''}`}></span>
-              </div>
-              <span className={mobileView === 'users' ? 'active' : ''}>Users</span>
-            </div>
-            
-            <div className="mobile-views-container">
-              <div className={`mobile-view-panel ${mobileView === 'chat' ? 'active' : ''}`}>
-                <ChatArea
-                  chatError={chatError}
-                  messages={messages}
-                  displayMessages={displayMessages}
-                  user={user}
-                  activeContact={activeContact}
-                  newMessage={newMessage}
-                  messageDeliveryStatus={messageDeliveryStatus}
-                  onMessageChange={(e) => setNewMessage(e.target.value)}
-                  onSendMessage={sendMessage}
-                />
-              </div>
-              
-              <div className={`mobile-view-panel ${mobileView === 'users' ? 'active' : ''}`}>
-                <ContactSidebar
-                  contacts={friends}
-                  activeContact={activeContact}
-                  connectionStatus={connectionStatus}
-                  lastSeen={lastSeen}
-                  onlineUsers={onlineUsers}
-                  onContactSelect={(contact) => {
-                    setActiveContact(contact)
-                    setMobileView('chat') // Switch back to chat when selecting a contact
-                  }}
-                  onAddContact={() => {
-                    setShowSecureInviteModal(true)
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+          <MobileLayout
+            user={user}
+            messages={messages}
+            displayMessages={displayMessages}
+            friends={friends}
+            onlineUsers={onlineUsers}
+            pendingInvites={pendingInvites}
+            activeContact={activeContact}
+            newMessage={newMessage}
+            chatError={chatError}
+            messageDeliveryStatus={messageDeliveryStatus}
+            connectionStatus={connectionStatus}
+            lastSeen={lastSeen}
+            onMessageChange={(e) => setNewMessage(e.target.value)}
+            onSendMessage={sendMessage}
+            onContactSelect={setActiveContact}
+            onShowInvite={() => setShowSecureInviteModal(true)}
+          />
         ) : (
           // Desktop layout
           <div className="main-layout">

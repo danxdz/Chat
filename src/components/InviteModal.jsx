@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 export default function InviteModal({ 
   isVisible, 
   inviteLink, 
@@ -5,6 +7,8 @@ export default function InviteModal({
   onGenerateInvite, 
   onCopyInvite 
 }) {
+  const [copied, setCopied] = useState(false)
+  
   if (!isVisible) return null
 
   // Truncate link for display
@@ -12,6 +16,12 @@ export default function InviteModal({
     if (!link) return ''
     if (link.length <= 40) return link
     return link.substring(0, 20) + '...' + link.substring(link.length - 15)
+  }
+
+  const handleCopy = () => {
+    onCopyInvite()
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -59,15 +69,15 @@ export default function InviteModal({
             </div>
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button 
-                onClick={onCopyInvite} 
+                onClick={handleCopy} 
                 className="btn" 
                 style={{ 
-                  background: '#0066cc',
+                  background: copied ? '#28a745' : '#0066cc',
                   flex: '1',
                   minWidth: '120px'
                 }}
               >
-                📋 Copy Link
+                {copied ? '✓ Copied!' : '📋 Copy Link'}
               </button>
               <button 
                 onClick={onClose} 
