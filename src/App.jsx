@@ -1605,11 +1605,29 @@ function App() {
   }
 
   if (currentView === 'chat') {
-    const isMobile = window.innerWidth <= 768
+    // FORCE MOBILE LAYOUT FOR NOW
+    const isMobile = true // window.innerWidth <= 768
     
     return (
-      <div className="app">
+      <div className="app" style={{ background: '#000' }}>
         <DebugNotifications />
+        
+        {/* DEBUG INFO - VISIBLE CHANGE */}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: '#ff0000',
+          color: 'white',
+          padding: '5px',
+          zIndex: 9999,
+          textAlign: 'center',
+          fontSize: '14px'
+        }}>
+          🚨 LAYOUT UPDATE v2 - MOBILE FORCED - {new Date().toLocaleTimeString()}
+        </div>
+        
         <Header
           user={user}
           activeContact={activeContact}
