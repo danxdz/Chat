@@ -1591,6 +1591,7 @@ function App() {
               connectionStatus={connectionStatus}
               lastSeen={lastSeen}
               onlineUsers={onlineUsers}
+              pendingInvites={pendingInvites}
               onContactSelect={setActiveContact}
               onAddContact={() => {
                 const nickname = prompt('Enter friend nickname:')
