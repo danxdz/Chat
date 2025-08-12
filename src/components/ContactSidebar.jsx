@@ -22,12 +22,14 @@ export default function ContactSidebar({
   }
 
   // Convert online users Map to array for display
+  console.log('ContactSidebar - onlineUsers Map:', onlineUsers)
   const onlineUsersList = Array.from(onlineUsers.entries()).map(([id, userData]) => ({
     id,
     nickname: userData.nickname,
     lastSeen: userData.lastSeen,
     isOnline: true
   }))
+  console.log('ContactSidebar - onlineUsersList:', onlineUsersList)
 
 
 

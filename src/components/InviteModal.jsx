@@ -146,8 +146,18 @@ export default function InviteModal({
                   maxHeight: '100px',
                   overflowY: 'auto'
                 }}>
-                  {inviteLink}
+                  {inviteLink.length > 60 
+                    ? inviteLink.substring(0, 30) + '...' + inviteLink.substring(inviteLink.length - 25)
+                    : inviteLink}
                 </div>
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: '#999',
+                  marginTop: '0.5rem',
+                  textAlign: 'center'
+                }}>
+                  Link will be copied in full
+                </p>
               </div>
             </div>
 

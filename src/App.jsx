@@ -328,15 +328,18 @@ function App() {
     // Also listen to online_users for better tracking
     gun.get('online_users').map().on((data, userId) => {
       console.log('🔵 Online user update:', userId, data)
-      if (data && data.nickname) {
+      if (data && data.nickname && data.isOnline) {
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.set(userId, data)
           console.log('✅ User online:', data.nickname, '- Total:', updated.size)
+          
+          // Debug: log all online users
+          console.log('📋 All online users:', Array.from(updated.entries()).map(([id, u]) => u.nickname))
           return updated
         })
       } else {
-        // User went offline
+        // User went offline or data is null
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.delete(userId)
@@ -532,7 +535,11 @@ function App() {
       // Add current user to online list immediately
       setOnlineUsers(prev => {
         const updated = new Map(prev)
-        updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
+        updated.set(user.id, { 
+          nickname: user.nickname, 
+          lastSeen: Date.now(),
+          isOnline: true 
+        })
         console.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
         return updated
       })
