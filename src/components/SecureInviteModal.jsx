@@ -157,7 +157,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
               style={{
                 flex: 1,
                 padding: '0.8rem 1.5rem',
-                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                background: copied ? 'linear-gradient(135deg, #28a745, #218838)' : 'linear-gradient(135deg, #4CAF50, #45a049)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -169,7 +169,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
               onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
               onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
             >
-              📋 Copy Link
+              {copied ? '✓ Copied!' : '📋 Copy Link'}
             </button>
             <button
               onClick={onClose}

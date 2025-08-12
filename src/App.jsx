@@ -3,7 +3,6 @@ import Header from './components/Header'
 import ContactSidebar from './components/ContactSidebar'
 import ChatArea from './components/ChatArea'
 import TestingPanel from './components/TestingPanel'
-import InviteModal from './components/InviteModal'
 import SecureInviteModal from './components/SecureInviteModal'
 import MobileLayout from './components/MobileLayout'
 import { 
@@ -115,12 +114,10 @@ function App() {
   const [newMessage, setNewMessage] = useState('')
   const [initStatus, setInitStatus] = useState('Initializing...')
   const [gun, setGun] = useState(null)
-  const [showInvite, setShowInvite] = useState(false)
   const [showSecureInviteModal, setShowSecureInviteModal] = useState(false)
   const [friends, setFriends] = useState([])
   const [debugNotifications, setDebugNotifications] = useState([])
   const [showTests, setShowTests] = useState(false)
-  const [inviteLink, setInviteLink] = useState('')
   const [chatError, setChatError] = useState(null)
   const [connectedPeers, setConnectedPeers] = useState(0)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
@@ -849,45 +846,7 @@ function App() {
     logger.log('✅ Contact added:', newContact)
   }
 
-  const generateInvite = () => {
-    const inviteData = {
-      from: user.nickname,
-      fromId: user.id,
-      timestamp: Date.now()
-    }
-    
-    const encodedInvite = btoa(JSON.stringify(inviteData))
-    const inviteUrl = `https://chat-brown-chi-22.vercel.app#invite=${encodedInvite}`
-    
-    setInviteLink(inviteUrl)
-    
-    // Add pending contact for the inviter
-    addPendingContact(user.nickname, user.id)
-    
-    logger.log('✅ Invite generated:', inviteUrl)
-  }
 
-  const addPendingContact = (nickname, id) => {
-    const pendingContact = {
-      id: id,
-      nickname: nickname,
-      status: 'pending',
-      addedAt: Date.now()
-    }
-    
-    // Don't add if already exists
-    if (!contacts.find(c => c.id === id)) {
-      addContact(pendingContact)
-    }
-  }
-
-  const copyInvite = () => {
-    navigator.clipboard.writeText(inviteLink).then(() => {
-      alert('Invite link copied to clipboard!')
-    }).catch(() => {
-      alert('Failed to copy invite link')
-    })
-  }
 
   const switchToUser = (targetUser) => {
     setUser(targetUser)
@@ -1627,14 +1586,6 @@ function App() {
           onClearCurrentClient={clearCurrentClientData}
           onClearAllClients={clearAllClientsData}
           onForceReload={forceReload}
-        />
-
-        <InviteModal
-          isVisible={showInvite}
-          inviteLink={inviteLink}
-          onClose={() => setShowInvite(false)}
-          onGenerateInvite={generateInvite}
-          onCopyInvite={copyInvite}
         />
 
         {showSecureInviteModal && (
