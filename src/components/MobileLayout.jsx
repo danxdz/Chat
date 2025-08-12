@@ -60,36 +60,56 @@ export default function MobileLayout({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Tab navigation for both mobile and PC */}
-      <div className="mobile-view-tabs">
+      {/* Tab navigation - Simplified to Chat and Friends only */}
+      <div className="mobile-view-tabs" style={{
+        display: 'flex',
+        height: '50px',
+        background: 'rgba(0, 0, 0, 0.95)',
+        borderBottom: '2px solid #333'
+      }}>
         <button 
           className={`tab-button ${mobileView === 'chat' ? 'active' : ''}`}
           onClick={() => setMobileView('chat')}
+          style={{
+            flex: 1,
+            background: mobileView === 'chat' ? '#1a1a1a' : 'transparent',
+            border: 'none',
+            color: mobileView === 'chat' ? '#4CAF50' : '#888',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            padding: '10px'
+          }}
         >
           💬 Chat
         </button>
         <button 
-          className={`tab-button ${mobileView === 'users' ? 'active' : ''}`}
-          onClick={() => setMobileView('users')}
-        >
-          🟢 Online ({onlineUsers.size})
-        </button>
-        <button 
           className={`tab-button ${mobileView === 'friends' ? 'active' : ''}`}
           onClick={() => setMobileView('friends')}
+          style={{
+            flex: 1,
+            background: mobileView === 'friends' ? '#1a1a1a' : 'transparent',
+            border: 'none',
+            color: mobileView === 'friends' ? '#4CAF50' : '#888',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            padding: '10px',
+            position: 'relative'
+          }}
         >
-          👥 Friends ({friends.length})
+          👥 Friends 
+          {pendingInvites && pendingInvites.length > 0 && (
+            <span style={{
+              background: '#ff4444',
+              color: 'white',
+              borderRadius: '10px',
+              padding: '2px 6px',
+              fontSize: '12px',
+              marginLeft: '5px'
+            }}>
+              {pendingInvites.length}
+            </span>
+          )}
         </button>
-      </div>
-      
-      {/* Swipe indicator dots */}
-      <div className="mobile-view-indicator">
-        <div className="dots">
-          <span className={`dot ${mobileView === 'chat' ? 'active' : ''}`}></span>
-          <span className={`dot ${mobileView === 'users' ? 'active' : ''}`}></span>
-          <span className={`dot ${mobileView === 'friends' ? 'active' : ''}`}></span>
-        </div>
-        <div className="swipe-hint">Swipe or tap tabs to navigate</div>
       </div>
       
       <div className="mobile-views-container">
@@ -107,21 +127,7 @@ export default function MobileLayout({
           />
         </div>
         
-        <div className={`mobile-view-panel ${mobileView === 'users' ? 'active' : ''}`}>
-          <ContactSidebar
-            contacts={friends}
-            activeContact={activeContact}
-            connectionStatus={connectionStatus}
-            lastSeen={lastSeen}
-            onlineUsers={onlineUsers}
-            pendingInvites={pendingInvites}
-            onContactSelect={(contact) => {
-              onContactSelect(contact)
-              setMobileView('chat')
-            }}
-          />
-        </div>
-        
+
         <div className={`mobile-view-panel ${mobileView === 'friends' ? 'active' : ''}`}>
           <FriendsPanel
             friends={friends}

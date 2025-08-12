@@ -6,8 +6,15 @@ export default function FriendsPanel({
   onSendInvite 
 }) {
   return (
-    <div className="friends-panel">
-      <h3>👥 Friends & Contacts</h3>
+    <div className="friends-panel" style={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '1rem',
+      background: '#1a1a1a',
+      overflow: 'auto'
+    }}>
+      <h2 style={{ color: '#4CAF50', marginBottom: '1rem' }}>👥 Friends & Invites</h2>
       
       {/* Pending Invites Section */}
       {pendingInvites.length > 0 && (
