@@ -1,3 +1,5 @@
+import logger from '../utils/logger'
+
 export default function ContactSidebar({ 
   contacts, 
   activeContact, 
@@ -30,7 +32,7 @@ export default function ContactSidebar({
   }))
 
   // Debug logging
-  console.log('👥 ContactSidebar Debug:', {
+  logger.log('👥 ContactSidebar Debug:', {
     onlineUsersMapSize: onlineUsers.size,
     onlineUsersEntries: Array.from(onlineUsers.entries()),
     onlineUsersList: onlineUsersList,

@@ -13,17 +13,7 @@ import {
   changeNickname, 
   getFriendsList 
 } from './utils/secureAuth'
-
-// Smart logging system - only logs in development
-const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
-
-const logger = {
-  log: (...args) => isDev && console.log(...args),
-  error: (...args) => console.error(...args), // Always show errors
-  warn: (...args) => isDev && console.warn(...args),
-  info: (...args) => isDev && console.info(...args),
-  debug: (...args) => isDev && console.debug(...args)
-}
+import logger from './utils/logger'
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -42,7 +32,7 @@ class ErrorBoundary extends Component {
     
     // Clear sessionStorage if there's an initialization error  
     if (error.message && error.message.includes('before initialization')) {
-      console.log('🔧 Clearing sessionStorage due to initialization error')
+      logger.log('🔧 Clearing sessionStorage due to initialization error')
       sessionStorage.clear()
       // Don't clear localStorage to keep admin user
     }
@@ -178,7 +168,7 @@ function App() {
             setUser(userData)
             setCurrentView('chat')
             localStorage.removeItem('currentUser') // Clean up
-            console.log('✅ Auto-logged in user from registration:', userData.nickname)
+            logger.log('✅ Auto-logged in user from registration:', userData.nickname)
             return
           } catch (e) {
             localStorage.removeItem('currentUser')
@@ -387,7 +377,7 @@ function App() {
       
       // Decrypt message if it's encrypted
       let messageData = { ...data }
-      console.log('🔓 DECRYPTION DEBUG:', {
+      logger.log('🔓 DECRYPTION DEBUG:', {
         messageEncrypted: data.encrypted,
         seaAvailable: !!(window.Gun && window.Gun.SEA),
         encryptedText: data.encrypted ? data.text : 'not encrypted'
@@ -399,10 +389,10 @@ function App() {
           const sharedKey = 'p2p-chat-key-' + channelName
           const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
           messageData.text = decryptedText
-          console.log('🔓 Message decrypted successfully!')
+          logger.log('🔓 Message decrypted successfully!')
           logger.log('🔓 Message decrypted')
         } catch (e) {
-          console.log('⚠️ Decryption failed:', e.message)
+          logger.log('⚠️ Decryption failed:', e.message)
           logger.log('⚠️ Decryption failed:', e.message)
           messageData.text = '[Encrypted message - cannot decrypt]'
         }
@@ -480,9 +470,9 @@ function App() {
     try {
       // Debug: Show what users exist
       const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('🔍 LOGIN DEBUG - Available users:', allUsers.length)
-      console.log('👥 User nicknames:', allUsers.map(u => u.nickname))
-      console.log('🎯 Trying to login as:', nickname)
+      logger.log('🔍 LOGIN DEBUG - Available users:', allUsers.length)
+      logger.log('👥 User nicknames:', allUsers.map(u => u.nickname))
+      logger.log('🎯 Trying to login as:', nickname)
 
       const user = await ircLogin(nickname, password)
       setUser(user)
@@ -494,7 +484,7 @@ function App() {
       logger.log('✅ IRC-style login successful:', user.nickname)
     
       // Test encryption availability immediately after login
-      console.log('🔐 ENCRYPTION TEST AT LOGIN:', {
+      logger.log('🔐 ENCRYPTION TEST AT LOGIN:', {
         gunAvailable: !!window.Gun,
         seaAvailable: !!(window.Gun && window.Gun.SEA),
         seaObject: window.Gun ? window.Gun.SEA : 'Gun not available'
@@ -503,22 +493,22 @@ function App() {
       // Quick encryption test
       if (window.Gun && window.Gun.SEA) {
         window.Gun.SEA.encrypt('test message', 'test key').then(encrypted => {
-          console.log('🔐 ENCRYPTION TEST SUCCESS:', encrypted)
+          logger.log('🔐 ENCRYPTION TEST SUCCESS:', encrypted)
           return window.Gun.SEA.decrypt(encrypted, 'test key')
         }).then(decrypted => {
-          console.log('🔓 DECRYPTION TEST SUCCESS:', decrypted)
+          logger.log('🔓 DECRYPTION TEST SUCCESS:', decrypted)
         }).catch(err => {
-          console.error('❌ ENCRYPTION TEST FAILED:', err)
+          logger.error('❌ ENCRYPTION TEST FAILED:', err)
         })
       } else {
-        console.error('❌ Gun SEA not available for testing')
+        logger.error('❌ Gun SEA not available for testing')
       }
       
       // Add current user to online list immediately
       setOnlineUsers(prev => {
         const updated = new Map(prev)
         updated.set(user.id, { nickname: user.nickname, lastSeen: Date.now() })
-        console.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
+        logger.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
         return updated
       })
       
@@ -553,16 +543,16 @@ function App() {
   // Bootstrap function to create first admin user for demo
   const createBootstrapUser = async () => {
     try {
-      console.log('🎯 Creating bootstrap admin user...')
+      logger.log('🎯 Creating bootstrap admin user...')
       
       // First, check what users currently exist
       const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('📊 Current users before creation:', existingUsers.length)
+      logger.log('📊 Current users before creation:', existingUsers.length)
       
       // Check if Admin already exists
       const existingAdmin = existingUsers.find(u => u.nickname.toLowerCase() === 'admin')
       if (existingAdmin) {
-        console.log('👤 Admin user already exists, logging in...')
+        logger.log('👤 Admin user already exists, logging in...')
         setUser(existingAdmin)
         setCurrentView('chat')
         alert('✅ Admin user already exists! Logged in successfully.')
@@ -570,7 +560,7 @@ function App() {
       }
       
       const bootstrapUser = await createUserAccount('Admin', 'admin123', null)
-      console.log('👤 Bootstrap user created:', bootstrapUser)
+      logger.log('👤 Bootstrap user created:', bootstrapUser)
       
       const updatedUsers = [...existingUsers, bootstrapUser]
       setAllUsers(updatedUsers)
@@ -578,20 +568,20 @@ function App() {
       
       // Verify it was saved
       const savedUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('💾 Users after save:', savedUsers.length)
-      console.log('🔍 Saved users:', savedUsers.map(u => u.nickname))
+      logger.log('💾 Users after save:', savedUsers.length)
+      logger.log('🔍 Saved users:', savedUsers.map(u => u.nickname))
       
       // Auto-login the bootstrap user
       setUser(bootstrapUser)
       setCurrentView('chat')
       
-      console.log('🎯 Bootstrap admin user created successfully')
-      console.log('📋 Login credentials: Admin / admin123')
+      logger.log('🎯 Bootstrap admin user created successfully')
+      logger.log('📋 Login credentials: Admin / admin123')
       alert('✅ Admin user created!\nLogin: Admin\nPassword: admin123\n\nYou are now logged in!')
       
     } catch (error) {
-      console.error('❌ Failed to create bootstrap user:', error)
-      console.error('❌ Error details:', error)
+      logger.error('❌ Failed to create bootstrap user:', error)
+      logger.error('❌ Error details:', error)
       alert('❌ Failed to create bootstrap user: ' + error.message)
     }
   }
@@ -693,7 +683,7 @@ function App() {
       
       // Encrypt message text if SEA is available
       let messageToSend = { ...message }
-      console.log('🔐 ENCRYPTION DEBUG:', {
+      logger.log('🔐 ENCRYPTION DEBUG:', {
         gunAvailable: !!window.Gun,
         seaAvailable: !!(window.Gun && window.Gun.SEA),
         messageText: message.text
@@ -706,16 +696,16 @@ function App() {
           const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
           messageToSend.text = encryptedText
           messageToSend.encrypted = true
-          console.log('🔐 Message encrypted successfully!')
+          logger.log('🔐 Message encrypted successfully!')
           logger.log('🔐 Message encrypted')
         } catch (e) {
-          console.log('⚠️ Encryption failed:', e.message)
+          logger.log('⚠️ Encryption failed:', e.message)
           logger.log('⚠️ Encryption failed, sending plain text:', e.message)
           messageToSend.encrypted = false
         }
       } else {
         messageToSend.encrypted = false
-        console.log('⚠️ SEA not available, sending plain text')
+        logger.log('⚠️ SEA not available, sending plain text')
         logger.log('⚠️ SEA not available, sending plain text')
       }
 
@@ -758,7 +748,7 @@ function App() {
     if (e) e.preventDefault() // Handle form submission
     if (!newMessage.trim()) return
 
-    console.log('📤 SEND MESSAGE CALLED:', {
+    logger.log('📤 SEND MESSAGE CALLED:', {
       messageText: newMessage.trim(),
       activeContact: activeContact?.nickname || 'General',
       userNickname: user.nickname
@@ -1373,13 +1363,13 @@ function App() {
           return
         }
         
-        console.log('🗑️ ADVANCED CLEAR: Starting comprehensive data clearing...')
+        logger.log('🗑️ ADVANCED CLEAR: Starting comprehensive data clearing...')
         logger.log('🗑️ Attempting to clear Gun.js data...')
         
         // Announce leave for current user
         if (user) {
           await announcePresence('leave')
-          console.log('📡 Announced user departure')
+          logger.log('📡 Announced user departure')
         }
         
         // Clear all local React state
@@ -1389,13 +1379,13 @@ function App() {
         setMessageDeliveryStatus(new Map())
         setConnectionStatus(new Map())
         setLastSeen(new Map())
-        console.log('🧹 Cleared all local React state')
+        logger.log('🧹 Cleared all local React state')
         
         // Clear all localStorage related to users and app
         Object.keys(localStorage).forEach(key => {
           if (key.includes('user_') || key.includes('contacts_') || key.includes('chat_') || key.includes('p2p')) {
             localStorage.removeItem(key)
-            console.log(`🗑️ Removed localStorage: ${key}`)
+            logger.log(`🗑️ Removed localStorage: ${key}`)
           }
         })
         
@@ -1407,10 +1397,10 @@ function App() {
             await gun.get(channel).put(null)
             await gun.get(channel).put({})
             await gun.get(channel).map().put(null)
-            console.log(`🗑️ Attempted to clear channel: ${channel}`)
+            logger.log(`🗑️ Attempted to clear channel: ${channel}`)
             logger.log(`✅ Attempted to clear Gun.js channel: ${channel}`)
           } catch (e) {
-            console.log(`⚠️ Limited clearing for channel ${channel}:`, e.message)
+            logger.log(`⚠️ Limited clearing for channel ${channel}:`, e.message)
             logger.log(`⚠️ Could not clear Gun.js channel ${channel} (expected in P2P):`, e.message)
           }
         }
@@ -1419,10 +1409,10 @@ function App() {
         if (heartbeatInterval) {
           clearInterval(heartbeatInterval)
           setHeartbeatInterval(null)
-          console.log('💓 Stopped heartbeat')
+          logger.log('💓 Stopped heartbeat')
         }
         
-        console.log('⚠️ P2P LIMITATION: Data may reappear from other peers')
+        logger.log('⚠️ P2P LIMITATION: Data may reappear from other peers')
         alert('Advanced clear completed. P2P network data may persist on other peers and reappear. Page will reload to reinitialize.')
         
         setTimeout(() => {
@@ -1430,7 +1420,7 @@ function App() {
         }, 2000)
         
       } catch (error) {
-        console.error('❌ Error clearing Gun.js data:', error)
+        logger.error('❌ Error clearing Gun.js data:', error)
         logger.error('❌ Error clearing Gun.js data:', error)
         alert('Error clearing Gun.js data: ' + error.message)
       }
@@ -1465,41 +1455,41 @@ function App() {
     // Debug functions
     window.showAllUsers = () => {
       const users = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('👥 ALL USERS IN DATABASE:', users)
-      console.log('📊 Total users:', users.length)
+      logger.log('👥 ALL USERS IN DATABASE:', users)
+      logger.log('📊 Total users:', users.length)
       users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.nickname} (ID: ${user.id?.substring(0, 16)}...)`)
+        logger.log(`${index + 1}. ${user.nickname} (ID: ${user.id?.substring(0, 16)}...)`)
       })
       return users
     }
     
     window.checkLocalStorage = () => {
-      console.log('🔍 LOCALSTORAGE DEBUG:')
-      console.log('- users key exists:', localStorage.getItem('users') !== null)
-      console.log('- users value:', localStorage.getItem('users'))
-      console.log('- parsed users:', JSON.parse(localStorage.getItem('users') || '[]'))
+      logger.log('🔍 LOCALSTORAGE DEBUG:')
+      logger.log('- users key exists:', localStorage.getItem('users') !== null)
+      logger.log('- users value:', localStorage.getItem('users'))
+      logger.log('- parsed users:', JSON.parse(localStorage.getItem('users') || '[]'))
       
-      console.log('\n📱 ALL LOCALSTORAGE KEYS:')
+      logger.log('\n📱 ALL LOCALSTORAGE KEYS:')
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        console.log(`${i + 1}. ${key}: ${localStorage.getItem(key)?.substring(0, 100)}...`)
+        logger.log(`${i + 1}. ${key}: ${localStorage.getItem(key)?.substring(0, 100)}...`)
       }
     }
     
     window.createAdminUser = async () => {
       try {
-        console.log('🎯 Creating fresh admin user...')
+        logger.log('🎯 Creating fresh admin user...')
         const adminUser = await createUserAccount('Admin', 'admin123', null)
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
         const updatedUsers = [...existingUsers, adminUser]
         setAllUsers(updatedUsers)
         localStorage.setItem('users', JSON.stringify(updatedUsers))
-        console.log('✅ Admin user created successfully')
-        console.log('🔑 Login: Admin / admin123')
+        logger.log('✅ Admin user created successfully')
+        logger.log('🔑 Login: Admin / admin123')
         alert('✅ Admin user created!\nLogin: Admin\nPassword: admin123')
         return adminUser
       } catch (error) {
-        console.error('❌ Failed to create admin user:', error)
+        logger.error('❌ Failed to create admin user:', error)
         alert('❌ Failed: ' + error.message)
       }
     }
@@ -1535,13 +1525,13 @@ function App() {
       
       if (hash.startsWith('#invite=')) {
         token = hash.replace('#invite=', '')
-        console.log('📨 Got invite from URL')
+        logger.log('📨 Got invite from URL')
       } else {
         try {
           token = sessionStorage.getItem('pendingInvite')
-          console.log('📨 Got invite from session')
+          logger.log('📨 Got invite from session')
         } catch (e) {
-          console.log('❌ SessionStorage error:', e)
+          logger.log('❌ SessionStorage error:', e)
         }
       }
       
@@ -1551,11 +1541,11 @@ function App() {
           setInviterName(data.fromNick || data.from || 'someone')
           setInviteToken(token)
         } catch (e) {
-          console.error('❌ Invalid invite token:', e)
+          logger.error('❌ Invalid invite token:', e)
           setCurrentView('needInvite')
         }
       } else {
-        console.log('❌ No invite found')
+        logger.log('❌ No invite found')
         setCurrentView('needInvite')
       }
     }, [])
@@ -1572,30 +1562,30 @@ function App() {
           <p>Complete your registration to join {inviterName}'s chat</p>
           <form onSubmit={async (e) => {
             e.preventDefault()
-            console.log('📝 FORM: Registration form submitted')
+            logger.log('📝 FORM: Registration form submitted')
             
             const nickname = e.target.nickname.value.trim()
             const password = e.target.password.value.trim()
-            console.log('📝 FORM: Form data:', { nickname, passwordLength: password.length })
+            logger.log('📝 FORM: Form data:', { nickname, passwordLength: password.length })
             
             if (nickname && password) {
-              console.log('📝 FORM: Calling register function...')
+              logger.log('📝 FORM: Calling register function...')
               try {
                 // Store invite token in sessionStorage for register function
                 if (inviteToken) {
                   sessionStorage.setItem('pendingInvite', inviteToken)
                 }
                 const success = await register(nickname, password)
-                console.log('📝 FORM: Register result:', success)
+                logger.log('📝 FORM: Register result:', success)
                 if (success) {
-                  console.log('📝 FORM: Registration successful, will automatically login')
+                  logger.log('📝 FORM: Registration successful, will automatically login')
                 }
               } catch (error) {
-                console.error('📝 FORM: Registration form error:', error)
+                logger.error('📝 FORM: Registration form error:', error)
                 alert('Form submission error: ' + error.message)
               }
             } else {
-              console.log('📝 FORM: Missing nickname or password')
+              logger.log('📝 FORM: Missing nickname or password')
               alert('Please fill in both nickname and password')
             }
           }}>
@@ -1638,7 +1628,7 @@ function App() {
         const inviteData = JSON.parse(atob(inviteToken))
         inviterName = inviteData.fromNick || inviteData.from || 'someone'
       } catch (e) {
-        console.log('Could not parse invite name')
+        logger.log('Could not parse invite name')
       }
     }
     
@@ -1673,7 +1663,7 @@ function App() {
                 setCurrentView('chat')
                 alert('✅ Account created successfully!')
               } catch (error) {
-                console.error('Registration failed:', error)
+                logger.error('Registration failed:', error)
                 alert('❌ Registration failed: ' + error.message)
               }
             }
@@ -2113,7 +2103,7 @@ function App() {
             gun={gun}
             onClose={() => setShowSecureInviteModal(false)}
             onInviteCreated={(invite) => {
-              console.log('🎫 Secure invite created:', invite)
+              logger.log('🎫 Secure invite created:', invite)
               // Could add more logic here if needed
             }}
           />
