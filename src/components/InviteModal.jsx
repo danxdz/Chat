@@ -7,6 +7,13 @@ export default function InviteModal({
 }) {
   if (!isVisible) return null
 
+  // Truncate link for display
+  const truncateLink = (link) => {
+    if (!link) return ''
+    if (link.length <= 40) return link
+    return link.substring(0, 20) + '...' + link.substring(link.length - 15)
+  }
+
   return (
     <div style={{
       position: 'fixed',
@@ -42,19 +49,34 @@ export default function InviteModal({
               padding: '1rem',
               borderRadius: '4px',
               marginTop: '0.5rem',
-              wordBreak: 'break-all',
-              fontFamily: 'monospace'
+              fontFamily: 'monospace',
+              fontSize: window.innerWidth < 480 ? '0.8rem' : '1rem',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
-              {inviteLink}
+              {truncateLink(inviteLink)}
             </div>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <button onClick={onCopyInvite} className="btn" style={{ background: '#0066cc' }}>
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={onCopyInvite} 
+                className="btn" 
+                style={{ 
+                  background: '#0066cc',
+                  flex: '1',
+                  minWidth: '120px'
+                }}
+              >
                 📋 Copy Link
               </button>
               <button 
                 onClick={onClose} 
                 className="btn" 
-                style={{ background: '#666' }}
+                style={{ 
+                  background: '#666',
+                  flex: '1',
+                  minWidth: '120px'
+                }}
               >
                 Close
               </button>

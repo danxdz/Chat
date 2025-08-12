@@ -129,6 +129,37 @@ function App() {
   const [lastSeen, setLastSeen] = useState(new Map())
   const [onlineUsers, setOnlineUsers] = useState(new Map())
   const [heartbeatInterval, setHeartbeatInterval] = useState(null)
+  const [pendingInvites, setPendingInvites] = useState([])
+  const [mobileView, setMobileView] = useState('chat') // 'chat' or 'users'
+  const [touchStart, setTouchStart] = useState(null)
+  const [touchEnd, setTouchEnd] = useState(null)
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+    
+    if (isLeftSwipe && mobileView === 'chat') {
+      setMobileView('users')
+    }
+    if (isRightSwipe && mobileView === 'users') {
+      setMobileView('chat')
+    }
+  }
 
   // Debug notification system (only in development)
   const showDebugNotification = (message, type = 'info') => {
@@ -2030,6 +2061,8 @@ function App() {
   }
 
   if (currentView === 'chat') {
+    const isMobile = window.innerWidth <= 480
+    
     return (
       <div className="app">
         <DebugNotifications />
@@ -2045,36 +2078,90 @@ function App() {
           onLogout={logout}
         />
 
-        <div className="main-layout">
-                  <ContactSidebar
-          contacts={friends}
-          activeContact={activeContact}
-          connectionStatus={connectionStatus}
-          lastSeen={lastSeen}
-          onlineUsers={onlineUsers}
-          onContactSelect={setActiveContact}
-          onAddContact={() => {
-            const nickname = prompt('Enter friend nickname:')
-            if (nickname) {
-              // In the new system, friends are added via invites
-              alert('Friends are added by sending them a secure invite!')
-              setShowSecureInviteModal(true)
-            }
-          }}
-        />
+        {isMobile ? (
+          // Mobile layout with swipe navigation
+          <div 
+            className="mobile-layout"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {/* View indicator dots */}
+            <div className="mobile-view-indicator">
+              <span className={mobileView === 'chat' ? 'active' : ''}>Chat</span>
+              <div className="dots">
+                <span className={`dot ${mobileView === 'chat' ? 'active' : ''}`}></span>
+                <span className={`dot ${mobileView === 'users' ? 'active' : ''}`}></span>
+              </div>
+              <span className={mobileView === 'users' ? 'active' : ''}>Users</span>
+            </div>
+            
+            <div className="mobile-views-container">
+              <div className={`mobile-view-panel ${mobileView === 'chat' ? 'active' : ''}`}>
+                <ChatArea
+                  chatError={chatError}
+                  messages={messages}
+                  displayMessages={displayMessages}
+                  user={user}
+                  activeContact={activeContact}
+                  newMessage={newMessage}
+                  messageDeliveryStatus={messageDeliveryStatus}
+                  onMessageChange={(e) => setNewMessage(e.target.value)}
+                  onSendMessage={sendMessage}
+                />
+              </div>
+              
+              <div className={`mobile-view-panel ${mobileView === 'users' ? 'active' : ''}`}>
+                <ContactSidebar
+                  contacts={friends}
+                  activeContact={activeContact}
+                  connectionStatus={connectionStatus}
+                  lastSeen={lastSeen}
+                  onlineUsers={onlineUsers}
+                  onContactSelect={(contact) => {
+                    setActiveContact(contact)
+                    setMobileView('chat') // Switch back to chat when selecting a contact
+                  }}
+                  onAddContact={() => {
+                    setShowSecureInviteModal(true)
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Desktop layout
+          <div className="main-layout">
+            <ContactSidebar
+              contacts={friends}
+              activeContact={activeContact}
+              connectionStatus={connectionStatus}
+              lastSeen={lastSeen}
+              onlineUsers={onlineUsers}
+              onContactSelect={setActiveContact}
+              onAddContact={() => {
+                const nickname = prompt('Enter friend nickname:')
+                if (nickname) {
+                  // In the new system, friends are added via invites
+                  alert('Friends are added by sending them a secure invite!')
+                  setShowSecureInviteModal(true)
+                }
+              }}
+            />
 
-          <ChatArea
-            chatError={chatError}
-            messages={messages}
-            displayMessages={displayMessages}
-            user={user}
-            activeContact={activeContact}
-            newMessage={newMessage}
-            messageDeliveryStatus={messageDeliveryStatus}
-            onMessageChange={(e) => setNewMessage(e.target.value)}
-            onSendMessage={sendMessage}
-          />
-        </div>
+            <ChatArea
+              chatError={chatError}
+              messages={messages}
+              displayMessages={displayMessages}
+              user={user}
+              activeContact={activeContact}
+              newMessage={newMessage}
+              messageDeliveryStatus={messageDeliveryStatus}
+              onMessageChange={(e) => setNewMessage(e.target.value)}
+              onSendMessage={sendMessage}
+            />
+          </div>
+        )}
 
         <TestingPanel
           isVisible={showTests}

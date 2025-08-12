@@ -104,12 +104,16 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
               background: 'rgba(0, 0, 0, 0.3)',
               padding: '0.8rem',
               borderRadius: '4px',
-              fontSize: '0.8rem',
-              wordBreak: 'break-all',
+              fontSize: window.innerWidth < 480 ? '0.7rem' : '0.8rem',
               fontFamily: 'monospace',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
-              {createdInvite.inviteUrl}
+              {window.innerWidth < 480 && createdInvite.inviteUrl.length > 40 
+                ? createdInvite.inviteUrl.substring(0, 20) + '...' + createdInvite.inviteUrl.substring(createdInvite.inviteUrl.length - 15)
+                : createdInvite.inviteUrl}
             </div>
           </div>
 
