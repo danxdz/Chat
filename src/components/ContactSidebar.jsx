@@ -4,6 +4,7 @@ export default function ContactSidebar({
   connectionStatus, 
   lastSeen,
   onlineUsers,
+  pendingInvites = [],
   onContactSelect, 
   onAddContact 
 }) {

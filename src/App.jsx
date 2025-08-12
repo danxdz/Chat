@@ -262,12 +262,17 @@ function App() {
       // Load contacts
       const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
       setContacts(savedContacts)
-
+      
+      // Load friends
+      const friendsList = getFriendsList(user.id)
+      setFriends(friendsList)
+      
       // Load messages from Gun.js (they will be loaded via listeners)
       setMessages([])
       
       logger.log('📋 User data loaded successfully')
       logger.log('- Contacts:', savedContacts.length)
+      logger.log('- Friends:', friendsList.length)
       logger.log('- Messages: Starting fresh, will load from Gun.js')
       
       setCurrentView('chat')
@@ -322,10 +327,12 @@ function App() {
     
     // Also listen to online_users for better tracking
     gun.get('online_users').map().on((data, userId) => {
+      console.log('🔵 Online user update:', userId, data)
       if (data && data.nickname) {
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.set(userId, data)
+          console.log('✅ User online:', data.nickname, '- Total:', updated.size)
           return updated
         })
       } else {
@@ -333,6 +340,7 @@ function App() {
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.delete(userId)
+          console.log('❌ User offline:', userId, '- Total:', updated.size)
           return updated
         })
       }
@@ -1635,7 +1643,16 @@ function App() {
             onClose={() => setShowSecureInviteModal(false)}
             onInviteCreated={(invite) => {
               console.log('🎫 Secure invite created:', invite)
-              // Could add more logic here if needed
+              // Add to pending invites
+              setPendingInvites(prev => [...prev, {
+                id: invite.inviteId,
+                inviteUrl: invite.inviteUrl,
+                expiresAt: invite.expiresAt,
+                createdAt: Date.now(),
+                fromNick: user.nickname,
+                status: 'pending'
+              }])
+              setShowSecureInviteModal(false)
             }}
           />
         )}
