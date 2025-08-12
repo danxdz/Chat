@@ -1605,7 +1605,7 @@ function App() {
   }
 
   if (currentView === 'chat') {
-    const isMobile = window.innerWidth <= 480
+    const isMobile = window.innerWidth <= 768
     
     return (
       <div className="app">
