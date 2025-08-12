@@ -144,10 +144,66 @@ export default function MobileLayout({
               flex: 1,
               overflow: 'auto',
               padding: '10px',
+              paddingBottom: '80px', // Space for input
               background: '#0a0a0a'
             }}>
-
-              {displayMessages.map((msg, i) => (
+              {/* Active Chat Indicator */}
+              {activeContact && (
+                <div style={{
+                  background: '#1a1a1a',
+                  padding: '10px',
+                  marginBottom: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid #4CAF50',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ color: '#4CAF50' }}>
+                    💬 Private chat with {activeContact.nickname}
+                  </span>
+                  <button
+                    onClick={() => onContactSelect(null)}
+                    style={{
+                      padding: '4px 12px',
+                      background: '#333',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Back to General
+                  </button>
+                </div>
+              )}
+              {!activeContact && (
+                <div style={{
+                  background: '#1a1a1a',
+                  padding: '10px',
+                  marginBottom: '10px',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  color: '#888'
+                }}>
+                  📢 General Chat
+                </div>
+              )}
+              
+              {/* Filter messages based on active chat */}
+              {displayMessages
+                .filter(msg => {
+                  if (activeContact) {
+                    // Show only private messages between user and active contact
+                    return (msg.from === activeContact.nickname || msg.to === activeContact.nickname) ||
+                           (msg.fromId === activeContact.id || msg.toId === activeContact.id)
+                  } else {
+                    // Show only general messages
+                    return !msg.to && !msg.toId
+                  }
+                })
+                .map((msg, i) => (
                 <div key={i} style={{
                   background: '#222',
                   padding: '8px',
