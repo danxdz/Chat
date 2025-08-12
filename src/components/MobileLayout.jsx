@@ -137,9 +137,7 @@ export default function MobileLayout({
               padding: '10px',
               background: '#0a0a0a'
             }}>
-              <div style={{ color: '#4CAF50', fontSize: '18px', marginBottom: '10px' }}>
-                💬 CHAT MESSAGES
-              </div>
+
               {displayMessages.map((msg, i) => (
                 <div key={i} style={{
                   background: '#222',
@@ -199,19 +197,116 @@ export default function MobileLayout({
           </div>
         )}
         
-
-        <div className={`mobile-view-panel ${mobileView === 'friends' ? 'active' : ''}`}>
-          <FriendsPanel
-            friends={friends}
-            pendingInvites={pendingInvites}
-            onlineUsers={onlineUsers}
-            onSelectFriend={(friendName) => {
-              onContactSelect(friendName)
-              setMobileView('chat')
-            }}
-            onSendInvite={onShowInvite}
-          />
-        </div>
+        
+        {/* FRIENDS VIEW - CLEAN & PROFESSIONAL */}
+        {mobileView === 'friends' && (
+          <div style={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#0a0a0a',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '20px'
+            }}>
+              {/* Pending Invites */}
+              {pendingInvites && pendingInvites.length > 0 && (
+                <div style={{ marginBottom: '30px' }}>
+                  <h3 style={{ color: '#4CAF50', marginBottom: '15px' }}>
+                    Pending Invites ({pendingInvites.length})
+                  </h3>
+                  {pendingInvites.map((invite, i) => (
+                    <div key={i} style={{
+                      background: '#1a1a1a',
+                      padding: '12px',
+                      marginBottom: '8px',
+                      borderRadius: '8px',
+                      border: '1px solid #333',
+                      color: '#ccc'
+                    }}>
+                      <div>Invite #{invite.id?.slice(-6) || i}</div>
+                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                        {invite.expiresAt ? `Expires: ${new Date(invite.expiresAt).toLocaleString()}` : 'Pending'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Friends List */}
+              <div style={{ marginBottom: '30px' }}>
+                <h3 style={{ color: '#4CAF50', marginBottom: '15px' }}>
+                  Friends ({friends.length})
+                </h3>
+                {friends.length === 0 ? (
+                  <div style={{
+                    color: '#888',
+                    padding: '30px',
+                    textAlign: 'center',
+                    background: '#1a1a1a',
+                    borderRadius: '8px'
+                  }}>
+                    No friends yet. Send an invite to connect!
+                  </div>
+                ) : (
+                  friends.map((friend, i) => (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        onContactSelect({ nickname: friend.nickname })
+                        setMobileView('chat')
+                      }}
+                      style={{
+                        background: '#1a1a1a',
+                        padding: '12px',
+                        marginBottom: '8px',
+                        borderRadius: '8px',
+                        border: '1px solid #333',
+                        color: 'white',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span>{friend.nickname}</span>
+                      {onlineUsers.has(friend.id) && (
+                        <span style={{ color: '#4CAF50' }}>● Online</span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            
+            {/* Send Invite Button - Fixed at bottom */}
+            <div style={{
+              padding: '15px',
+              background: '#1a1a1a',
+              borderTop: '1px solid #333'
+            }}>
+              <button
+                onClick={onShowInvite}
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Send New Invite
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
