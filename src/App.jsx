@@ -189,8 +189,9 @@ function App() {
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession)
-          // Find the user in existing users
-          const savedUser = existingUsers.find(u => u.id === session.id)
+          // Find the user in all loaded users
+          const loadedUsers = allUsers || []
+          const savedUser = loadedUsers.find(u => u.id === session.id)
           if (savedUser) {
             setUser(savedUser)
             setCurrentView('chat')
