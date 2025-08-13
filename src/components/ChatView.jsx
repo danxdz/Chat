@@ -90,6 +90,7 @@ function ChatView({
         onShowTests={() => setShowTests(true)}
         onChangeNickname={onNicknameChange}
         onLogout={onLogout}
+        gun={gun}
       />
 
       {isMobile ? (

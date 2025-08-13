@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ChangePasswordModal from './ChangePasswordModal'
 
 export default function Header({ 
   user, 
@@ -8,11 +9,13 @@ export default function Header({
   totalUsers,
   connectionStatus,
   onShowInvite, 
-  onShowTests, 
+  onShowTests,
   onChangeNickname,
-  onLogout
+  onLogout,
+  gun 
 }) {
   const [showDevMenu, setShowDevMenu] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   // Close dev menu when clicking outside
   useEffect(() => {
@@ -234,6 +237,31 @@ export default function Header({
               ✏️ Change Nickname
             </button>
             
+            <button
+              onClick={() => {
+                setShowPasswordModal(true)
+                setShowDevMenu(false)
+              }}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                padding: '1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              🔐 Change Password
+            </button>
+            
             <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.1)', margin: '0 1rem' }}></div>
             
             <button
@@ -263,6 +291,14 @@ export default function Header({
           </div>
         )}
       </div>
+      
+      {showPasswordModal && (
+        <ChangePasswordModal
+          user={user}
+          gun={gun}
+          onClose={() => setShowPasswordModal(false)}
+        />
+      )}
     </div>
   )
 }
