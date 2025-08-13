@@ -66,11 +66,13 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
       friends: inviteData?.fromId ? [inviteData.fromId] : []
     }
     
-    // Store user in Gun.js
+    // Store user in Gun.js (with encrypted private key)
     await gun.get('chat_users').get(identity.pub).put({
       nickname: nickname,
       passwordHash: hashedPassword,
+      passwordSalt: salt,
       publicKey: identity.pub,
+      encryptedPrivateKey: await window.Gun.SEA.encrypt(identity.priv, password),
       createdAt: Date.now(),
       invitedBy: inviteData?.fromId || null,
       friends: inviteData?.fromId ? [inviteData.fromId] : []
@@ -222,19 +224,32 @@ export const loginGunUser = async (gun, nickname, password) => {
       friends: userData.friends || []
     }
     
-    // For existing users, we need to generate a new key pair for this session
-    // since we don't store private keys for security
-    // This means invites will have different signatures each session
+    // Decrypt the private key using the password
     try {
-      const pair = await window.Gun.SEA.pair()
-      user.privateKey = pair.priv
-      // Keep the original public key from registration for identity
-      // But use new private key for this session's operations
-      logger.log('✅ Generated session private key for invites')
+      if (userData.encryptedPrivateKey) {
+        // Decrypt the stored private key
+        const decryptedKey = await window.Gun.SEA.decrypt(userData.encryptedPrivateKey, password)
+        if (decryptedKey) {
+          user.privateKey = decryptedKey
+          logger.log('✅ Decrypted original private key for invites')
+        }
+      } else {
+        // Fallback: generate new key for old users
+        const pair = await window.Gun.SEA.pair()
+        user.privateKey = pair.priv
+        logger.log('✅ Generated new private key for old user')
+      }
       logger.log('🔑 User object now has privateKey:', !!user.privateKey)
     } catch (e) {
-      logger.error('❌ Could not generate session keys:', e)
-      // User can still login but won't be able to create invites
+      logger.error('❌ Could not decrypt/generate private key:', e)
+      // Try to generate a new one as last resort
+      try {
+        const pair = await window.Gun.SEA.pair()
+        user.privateKey = pair.priv
+        logger.log('✅ Generated fallback private key')
+      } catch (e2) {
+        logger.error('❌ Failed to generate fallback key:', e2)
+      }
     }
     
     logger.log('✅ User logged in from Gun.js:', nickname)
