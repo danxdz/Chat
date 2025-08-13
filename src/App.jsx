@@ -792,7 +792,8 @@ function App() {
             id: user.id, 
             nickname: user.nickname, 
             friends: user.friends,
-            friendsCount: user.friends ? user.friends.length : 0
+            friendsCount: user.friends ? user.friends.length : 0,
+            hasPrivateKey: !!user.privateKey
           })
         } catch (gunError) {
           console.log('⚠️ Gun.js login failed:', gunError.message)
@@ -826,6 +827,20 @@ function App() {
       
       if (!user) {
         return { success: false, error: 'Invalid nickname or password' }
+      }
+      
+      // ALWAYS ensure user has a private key for invites
+      if (!user.privateKey) {
+        console.log('⚠️ User missing private key, generating one...')
+        if (window.Gun && window.Gun.SEA) {
+          try {
+            const pair = await window.Gun.SEA.pair()
+            user.privateKey = pair.priv
+            console.log('✅ Generated private key for user')
+          } catch (e) {
+            console.error('❌ Failed to generate private key:', e)
+          }
+        }
       }
       
       setUser(user)
@@ -926,6 +941,14 @@ function App() {
       const existingAdmin = existingUsers.find(u => u.nickname.toLowerCase() === 'admin')
       if (existingAdmin) {
         console.log('👤 Admin user already exists, logging in...')
+        
+        // Ensure admin has private key
+        if (!existingAdmin.privateKey && window.Gun && window.Gun.SEA) {
+          const pair = await window.Gun.SEA.pair()
+          existingAdmin.privateKey = pair.priv
+          console.log('✅ Generated private key for existing admin')
+        }
+        
         setUser(existingAdmin)
         setCurrentView('chat')
         alert('✅ Admin user already exists! Logged in successfully.')
