@@ -133,8 +133,16 @@ export const ircLogin = async (nickname, password) => {
  * Create a cryptographically signed invite with expiration
  */
 export const createSecureInvite = async (user, expirationChoice = '1h') => {
+  console.log('🔑 Creating invite with user:', {
+    hasUser: !!user,
+    hasPrivateKey: !!user?.privateKey,
+    userId: user?.id?.substring(0, 8),
+    nickname: user?.nickname
+  })
+  
   if (!user.privateKey) {
-    throw new Error('User private key not available')
+    console.error('❌ No private key in user object:', user)
+    throw new Error('User private key not available. Please logout and login again.')
   }
   
   const expirationTimes = {

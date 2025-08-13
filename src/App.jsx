@@ -829,6 +829,7 @@ function App() {
       }
       
       setUser(user)
+      console.log('📱 User state updated with privateKey:', !!user.privateKey)
       
       // Save session data
       const sessionData = JSON.stringify({

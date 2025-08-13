@@ -230,9 +230,10 @@ export const loginGunUser = async (gun, nickname, password) => {
       user.privateKey = pair.priv
       // Keep the original public key from registration for identity
       // But use new private key for this session's operations
-      logger.log('Generated session private key for invites')
+      logger.log('✅ Generated session private key for invites')
+      logger.log('🔑 User object now has privateKey:', !!user.privateKey)
     } catch (e) {
-      logger.warn('Could not generate session keys:', e)
+      logger.error('❌ Could not generate session keys:', e)
       // User can still login but won't be able to create invites
     }
     
