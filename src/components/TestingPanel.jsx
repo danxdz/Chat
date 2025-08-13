@@ -98,6 +98,35 @@ export default function TestingPanel({
             🔄 Restart App
           </button>
           
+          {/* Migrate to Gun.js Button */}
+          <button 
+            onClick={async () => {
+              if (confirm('Migrate all users from localStorage to Gun.js for cross-platform access?')) {
+                try {
+                  const { migrateUsersToGun } = await import('../services/gunAuthService.js')
+                  const count = await migrateUsersToGun(gun)
+                  alert(`✅ Migrated ${count} users to Gun.js! Users can now login from any device.`)
+                } catch (error) {
+                  alert(`❌ Migration failed: ${error.message}`)
+                }
+              }
+            }}
+            style={{ 
+              background: 'linear-gradient(135deg, #9C27B0, #673AB7)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 20px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '10px'
+            }}
+          >
+            🚀 Migrate Users to Gun.js (Cross-Platform)
+          </button>
+          
           {/* Clear Messages Only */}
           <button 
             onClick={() => {
