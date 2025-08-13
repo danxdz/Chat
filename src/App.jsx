@@ -289,6 +289,12 @@ function App() {
       const friendsList = getFriendsList(user, existingUsers)
       setFriends(friendsList)
       console.log('👥 Friends loaded:', friendsList)
+      console.log('📊 User data:', { 
+        userId: user.id, 
+        userFriends: user.friends,
+        existingUsersCount: existingUsers.length,
+        friendsListCount: friendsList.length 
+      })
       
       // Load pending invites
       const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
@@ -615,6 +621,12 @@ function App() {
       console.log('🎯 Trying to login as:', nickname)
 
       const user = await ircLogin(nickname, password)
+      console.log('🔐 Logged in user:', { 
+        id: user.id, 
+        nickname: user.nickname, 
+        friends: user.friends,
+        friendsCount: user.friends ? user.friends.length : 0
+      })
       setUser(user)
       
       // Save session if remember me
