@@ -167,13 +167,16 @@ function App() {
       }
 
       // Initialize Gun.js FIRST (needed for user auth)
+      console.log('🔧 Starting Gun.js initialization...')
       const gunInstance = await initializeGunJS()
+      console.log('🔧 Gun instance returned:', gunInstance ? 'Valid' : 'Null')
       
       // Wait a moment for Gun.js to fully initialize
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Load users from Gun.js instead of localStorage
       if (gunInstance) {
+        console.log('🔧 Attempting to load users from Gun.js...')
         const gunUsers = await getAllGunUsers(gunInstance)
         setAllUsers(gunUsers)
         console.log('📊 Loaded users from Gun.js:', gunUsers.length)
@@ -291,14 +294,22 @@ function App() {
       setGun(gunInstance)
       
       // Initialize Gun.js user system
-      initGunUsers(gunInstance)
+      try {
+        initGunUsers(gunInstance)
+      } catch (error) {
+        console.error('Error initializing Gun users:', error)
+      }
       
       // Auto-migrate localStorage users to Gun.js if any exist
-      const localUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      if (localUsers.length > 0) {
-        console.log('🔄 Auto-migrating localStorage users to Gun.js...')
-        await migrateUsersToGun(gunInstance)
-        console.log('✅ Migration complete!')
+      try {
+        const localUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        if (localUsers.length > 0 && gunInstance) {
+          console.log('🔄 Auto-migrating localStorage users to Gun.js...')
+          await migrateUsersToGun(gunInstance)
+          console.log('✅ Migration complete!')
+        }
+      } catch (error) {
+        console.error('Error migrating users:', error)
       }
       
       // Store gun instance globally for register.html

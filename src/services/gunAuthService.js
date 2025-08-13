@@ -98,13 +98,23 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
  * Check if user exists in Gun.js
  */
 export const checkUserExists = async (gun, nickname) => {
+  if (!gun) {
+    logger.warn('Gun instance not provided to checkUserExists')
+    return null
+  }
+  
   return new Promise((resolve) => {
-    gun.get('chat_users_by_nick').get(nickname.toLowerCase()).once((data) => {
-      resolve(data && data.userId ? data : null)
-    })
-    
-    // Timeout after 2 seconds
-    setTimeout(() => resolve(null), 2000)
+    try {
+      gun.get('chat_users_by_nick').get(nickname.toLowerCase()).once((data) => {
+        resolve(data && data.userId ? data : null)
+      })
+      
+      // Timeout after 2 seconds
+      setTimeout(() => resolve(null), 2000)
+    } catch (error) {
+      logger.error('Error in checkUserExists:', error)
+      resolve(null)
+    }
   })
 }
 
@@ -286,6 +296,11 @@ export const addMutualFriendsGun = async (gun, userId1, userId2) => {
  * Migrate existing localStorage users to Gun.js
  */
 export const migrateUsersToGun = async (gun) => {
+  if (!gun) {
+    logger.warn('Gun instance not provided to migrateUsersToGun')
+    return 0
+  }
+  
   try {
     const localUsers = JSON.parse(localStorage.getItem('users') || '[]')
     
