@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 export default function ChatArea({ 
   chatError, 
   messages, 
@@ -9,6 +11,23 @@ export default function ChatArea({
   onMessageChange, 
   onSendMessage 
 }) {
+  const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
+  
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+    
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(scrollToBottom, 100)
+    
+    return () => clearTimeout(timeoutId)
+  }, [displayMessages, messages])
+  
   return (
     <div className="chat-area" style={{ 
       flex: 1, 
@@ -17,6 +36,7 @@ export default function ChatArea({
     }}>
       {/* Messages Container */}
       <div 
+        ref={messagesContainerRef}
         id="messages-container"
         className="messages-container"
         style={{ 
@@ -150,6 +170,9 @@ export default function ChatArea({
             )
           })
         )}
+        
+        {/* Scroll anchor - always scroll to this element */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}

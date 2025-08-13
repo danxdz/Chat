@@ -213,20 +213,21 @@ export default function MobileLayout({
               {displayMessages && displayMessages.length > 0 && displayMessages.map((msg, i) => {
                 console.log('Displaying message:', msg)
                 return (
-                <div key={i} style={{
-                  background: '#222',
-                  padding: '8px',
-                  marginBottom: '5px',
-                  borderRadius: '5px',
-                  color: 'white'
-                }}>
-                  <strong>{msg.from}:</strong> {msg.text}
-                                  </div>
-                  )
-                })}
-                {/* Invisible element to scroll to */}
-                <div ref={messagesEndRef} />
-              </div>
+                  <div key={i} style={{
+                    background: '#222',
+                    padding: '8px',
+                    marginBottom: '5px',
+                    borderRadius: '5px',
+                    color: 'white'
+                  }}>
+                    <strong>{msg.from}:</strong> {msg.text}
+                  </div>
+                )
+              })}
+              
+              {/* Invisible element to scroll to */}
+              <div ref={messagesEndRef} />
+            </div>
             
             {/* BIG VISIBLE MESSAGE INPUT */}
             <div style={{
