@@ -397,11 +397,51 @@ export const migrateUsersToGun = async (gun) => {
 }
 
 /**
+ * Clear only messages from Gun.js
+ */
+export const clearMessagesOnly = async (gun) => {
+  try {
+    logger.log('🗑️ Clearing all messages...')
+    
+    // Get all messages and delete them one by one
+    let count = 0
+    
+    // Clear general chat
+    await new Promise((resolve) => {
+      let timeout = setTimeout(resolve, 2000)
+      
+      gun.get('general_chat').map().on(function(msg, key) {
+        if (msg && key && typeof msg === 'object' && msg.text) {
+          // Use 'this' context to unset the message
+          this.put(null)
+          count++
+          clearTimeout(timeout)
+          timeout = setTimeout(resolve, 500)
+        }
+      })
+    })
+    
+    logger.log(`✅ Cleared ${count} messages`)
+    
+    // Overwrite nodes with empty data
+    await gun.get('general_chat').put({ cleared: true, timestamp: Date.now() })
+    
+    // Clear localStorage messages
+    localStorage.removeItem('messages')
+    
+    return true
+  } catch (error) {
+    logger.error('Failed to clear messages:', error)
+    throw error
+  }
+}
+
+/**
  * Clear all Gun.js data (reset database)
  */
 export const clearGunDatabase = async (gun) => {
   try {
-    logger.log('🗑️ Starting complete Gun.js database cleanup...')
+    logger.log('🗑️ Starting AGGRESSIVE Gun.js database cleanup...')
     
     // First get all users to clear them individually
     const users = await getAllGunUsers(gun)
@@ -415,35 +455,58 @@ export const clearGunDatabase = async (gun) => {
       }
     }
     
-    // Clear all message channels
-    logger.log('🗑️ Clearing message channels...')
+    // AGGRESSIVE MESSAGE CLEARING
+    logger.log('💥 AGGRESSIVE message clearing started...')
     
-    // Clear general chat messages by iterating through them
+    // Method 1: Clear general chat by mapping and nulling each message
+    const clearedMessages = new Set()
     await new Promise((resolve) => {
-      let count = 0
       let timeout = setTimeout(() => {
-        logger.log(`Cleared ${count} general chat messages`)
+        logger.log(`Method 1: Cleared ${clearedMessages.size} messages`)
         resolve()
-      }, 2000)
+      }, 3000)
       
-      gun.get('general_chat').map().once((msg, key) => {
-        if (msg && key) {
+      gun.get('general_chat').map().on((msg, key) => {
+        if (msg && key && !clearedMessages.has(key)) {
+          clearedMessages.add(key)
+          // Multiple attempts to ensure deletion
           gun.get('general_chat').get(key).put(null)
-          count++
-          clearTimeout(timeout)
-          timeout = setTimeout(() => {
-            logger.log(`Cleared ${count} general chat messages`)
-            resolve()
-          }, 500)
+          gun.get('general_chat').get(key).put(undefined)
+          gun.get('general_chat').unset(key)
         }
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+          logger.log(`Method 1: Cleared ${clearedMessages.size} messages`)
+          resolve()
+        }, 1000)
       })
     })
+    
+    // Method 2: Overwrite the entire general_chat node
+    await gun.get('general_chat').put(null)
+    await gun.get('general_chat').put({})
+    await gun.get('general_chat').put({ cleared: true, at: Date.now() })
+    
+    // Method 3: Clear all possible message nodes
+    const messageNodes = [
+      'general_chat',
+      'messages', 
+      'chat_messages',
+      'chat',
+      'msgs'
+    ]
+    
+    for (const node of messageNodes) {
+      await gun.get(node).put(null)
+      await gun.get(node).put({})
+    }
     
     // Clear private message channels
     for (let i = 0; i < users.length; i++) {
       for (let j = i + 1; j < users.length; j++) {
         const channelName = `private_${[users[i].id, users[j].id].sort().join('_')}`
         await gun.get(channelName).put(null)
+        await gun.get(channelName).put({})
       }
     }
     

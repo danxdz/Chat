@@ -80,6 +80,36 @@ export default function TestingPanel({
             🗑️ Clear LocalStorage & Restart
           </button>
           
+          {/* Clear Messages Only */}
+          <button 
+            onClick={async () => {
+              if (confirm('⚠️ Clear all messages?\n\nThis will delete all chat messages but keep users and friendships.')) {
+                try {
+                  const { clearMessagesOnly } = await import('../services/gunAuthService.js')
+                  await clearMessagesOnly(gun)
+                  alert('✅ Messages cleared! Reloading...')
+                  setTimeout(() => window.location.reload(), 500)
+                } catch (error) {
+                  alert(`❌ Failed to clear messages: ${error.message}`)
+                }
+              }
+            }}
+            style={{
+              padding: '15px',
+              background: '#ff9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '10px'
+            }}
+          >
+            🗑️ Clear Messages Only
+          </button>
+          
           {/* Clear Gun.js Database */}
           <button 
             onClick={async () => {
