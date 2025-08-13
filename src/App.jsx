@@ -387,11 +387,19 @@ function App() {
       const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
       setContacts(savedContacts)
       
-      // Load friends
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      const friendsList = getFriendsList(user, existingUsers)
+      // Load friends from Gun.js
+      let friendsList = []
+      if (gun && user.friends && user.friends.length > 0) {
+        // Get all users from Gun.js to find friends
+        try {
+          const gunUsers = await getAllGunUsers(gun)
+          friendsList = getFriendsList(user, gunUsers)
+          console.log('👥 Friends loaded from Gun.js:', friendsList)
+        } catch (e) {
+          console.error('Failed to load friends from Gun.js:', e)
+        }
+      }
       setFriends(friendsList)
-      console.log('👥 Friends loaded:', friendsList)
       console.log('📊 User data:', { 
         userId: user.id, 
         userFriends: user.friends,
@@ -468,18 +476,24 @@ function App() {
     logger.log('🔧 Setting up Gun.js listeners for general and private chats...')
     
     // Listen for friend updates
-    gun.get('friendships').get(user.id).map().on((data, key) => {
-      if (data && data.status === 'friends') {
-        console.log('🤝 New friend detected:', key)
-        // Reload friends list
-        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-        const currentUser = existingUsers.find(u => u.id === user.id)
-        if (currentUser) {
-          const friendsList = getFriendsList(currentUser, existingUsers)
-          setFriends(friendsList)
+          gun.get('friendships').get(user.id).map().on(async (data, key) => {
+        if (data && data.status === 'friends') {
+          console.log('🤝 New friend detected:', key)
+          // Reload friends list from Gun.js
+          if (gun) {
+            try {
+              const gunUsers = await getAllGunUsers(gun)
+              const currentUser = gunUsers.find(u => u.id === user.id)
+              if (currentUser) {
+                const friendsList = getFriendsList(currentUser, gunUsers)
+                setFriends(friendsList)
+              }
+            } catch (e) {
+              console.error('Failed to reload friends from Gun.js:', e)
+            }
+          }
         }
-      }
-    })
+      })
 
     // Listen to general chat
     gun.get('general_chat').map().on((data, key) => {
@@ -874,9 +888,17 @@ function App() {
         localStorage.setItem('savedSession', sessionData)
       }
       
-      // Load user's friends
-      const userFriends = getFriendsList(user, allUsers)
-      setFriends(userFriends)
+      // Load user's friends from Gun.js
+      if (gun) {
+        try {
+          const gunUsers = await getAllGunUsers(gun)
+          setAllUsers(gunUsers) // Update allUsers state
+          const userFriends = getFriendsList(user, gunUsers)
+          setFriends(userFriends)
+        } catch (e) {
+          console.error('Failed to load users/friends from Gun.js:', e)
+        }
+      }
       
       // Announce presence after successful login
       setTimeout(() => {
