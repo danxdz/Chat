@@ -3,13 +3,20 @@ import LoginView from './components/LoginView'
 import NeedInviteView from './components/NeedInviteView'
 import ChatView from './components/ChatView'
 import { 
-  ircLogin, 
-  createUserAccount, 
   verifySecureInvite, 
   markInviteUsed, 
   changeNickname, 
   getFriendsList 
 } from './utils/secureAuth'
+
+import {
+  initGunUsers,
+  createGunUser,
+  loginGunUser,
+  getAllGunUsers,
+  updateGunUser,
+  migrateUsersToGun
+} from './services/gunAuthService'
 
 // Smart logging system - only logs in development
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
@@ -159,9 +166,16 @@ function App() {
         logger.log('✅ Sodium ready for cryptography')
       }
 
-      // Load existing user data
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      setAllUsers(existingUsers)
+      // Initialize Gun.js FIRST (needed for user auth)
+      const gunInstance = await initializeGunJS()
+      
+      // Wait a moment for Gun.js to fully initialize
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Load users from Gun.js instead of localStorage
+      const gunUsers = await getAllGunUsers(gunInstance || gun || window.gun)
+      setAllUsers(gunUsers)
+      console.log('📊 Loaded users from Gun.js:', gunUsers.length)
       
       // Check for saved session (Remember Me)
       const savedSession = localStorage.getItem('savedSession')
@@ -228,7 +242,7 @@ function App() {
     }
   }
 
-  // Initialize Gun.js when user is logged in
+  // Initialize Gun.js (always, not just when user is logged in)
   const initializeGunJS = async () => {
     try {
       setInitStatus('Connecting to P2P network...')
@@ -258,6 +272,17 @@ function App() {
       })
 
       setGun(gunInstance)
+      
+      // Initialize Gun.js user system
+      initGunUsers(gunInstance)
+      
+      // Auto-migrate localStorage users to Gun.js if any exist
+      const localUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      if (localUsers.length > 0) {
+        console.log('🔄 Auto-migrating localStorage users to Gun.js...')
+        await migrateUsersToGun(gunInstance)
+        console.log('✅ Migration complete!')
+      }
       
       // Monitor peer connections
       const peerMonitorInterval = setInterval(() => {
@@ -594,14 +619,13 @@ function App() {
         return
       }
       
-      // Create admin account
-      const adminUser = await createUserAccount('Admin', 'admin123', null)
-      console.log('👤 Admin user created:', adminUser)
+      // Create admin account in Gun.js
+      const adminUser = await createGunUser(gun, 'Admin', 'admin123', null)
+      console.log('👤 Admin user created in Gun.js:', adminUser)
       
-      // Save to localStorage
+      // Update allUsers state
       const updatedUsers = [...existingUsers, adminUser]
-      localStorage.setItem('users', JSON.stringify(updatedUsers))
-      localStorage.setItem('adminUser', JSON.stringify(adminUser))
+      setAllUsers(updatedUsers)
       
       // Auto-login as admin
       setUser(adminUser)
@@ -627,8 +651,8 @@ function App() {
       console.log('👥 User nicknames:', allUsers.map(u => u.nickname))
       console.log('🎯 Trying to login as:', nickname)
 
-      const user = await ircLogin(nickname, password)
-      console.log('🔐 Logged in user:', { 
+      const user = await loginGunUser(gun, nickname, password)
+      console.log('🔐 Logged in user from Gun.js:', { 
         id: user.id, 
         nickname: user.nickname, 
         friends: user.friends,
@@ -1135,12 +1159,8 @@ function App() {
     initializeApp()
   }, [])
 
-  // Initialize Gun.js when user is logged in
-  useEffect(() => {
-    if (user && !gun) {
-      initializeGunJS()
-    }
-  }, [user])
+  // Gun.js is now initialized in initializeApp, not here
+  // This effect is no longer needed since Gun.js starts immediately
 
   // Cleanup on unmount
   useEffect(() => {
