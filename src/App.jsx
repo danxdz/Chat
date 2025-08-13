@@ -404,10 +404,52 @@ function App() {
         friendsListCount: friendsList.length 
       })
       
-      // Load pending invites
+      // Load and monitor pending invites
       const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
       setPendingInvites(savedInvites)
       console.log('📋 Pending invites loaded:', savedInvites)
+      
+      // Monitor invites in Gun.js for real-time updates
+      if (gun && user) {
+        gun.get('secure_invites').map().on((invite, key) => {
+          if (invite && invite.fromId === user.id && invite.status === 'pending') {
+            setPendingInvites(prev => {
+              const exists = prev.some(inv => inv.id === invite.id)
+              if (!exists) {
+                const updated = [...prev, invite]
+                localStorage.setItem('pendingInvites', JSON.stringify(updated))
+                return updated
+              }
+              return prev
+            })
+          }
+        })
+        
+        // Also monitor for accepted invites to update status
+        gun.get('secure_invites').map().on((invite, key) => {
+          if (invite && invite.fromId === user.id && invite.status === 'accepted') {
+            setPendingInvites(prev => {
+              const updated = prev.map(inv => 
+                inv.id === invite.id 
+                  ? { ...inv, status: 'accepted', acceptedBy: invite.acceptedBy, acceptedAt: invite.acceptedAt }
+                  : inv
+              )
+              localStorage.setItem('pendingInvites', JSON.stringify(updated))
+              return updated
+            })
+            
+            // Add friend if accepted - reload friends list
+            if (invite.acceptedBy) {
+              // Reload friends from Gun.js
+              const existingUsers = await getAllGunUsers(gun)
+              setAllUsers(existingUsers)
+              const userFriends = getFriendsList(user, existingUsers)
+              setFriends(userFriends)
+              console.log('🔄 Friends reloaded after invite accepted')
+            }
+          }
+        })
+      }
       
       // Load messages from Gun.js (they will be loaded via listeners)
       setMessages([])

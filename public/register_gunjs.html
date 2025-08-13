@@ -324,9 +324,14 @@
                     });
                 }
                 
-                // Mark invite as used
+                // Mark invite as accepted with user info
                 if (inviteData.id) {
-                    gun.get('secure_invites').get(inviteData.id).get('used').put(true);
+                    gun.get('secure_invites').get(inviteData.id).put({
+                        status: 'accepted',
+                        acceptedBy: identity.pub,
+                        acceptedAt: Date.now(),
+                        acceptedNickname: nickname
+                    });
                 }
                 
                 // Create user object for auto-login

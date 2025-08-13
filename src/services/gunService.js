@@ -118,12 +118,16 @@ export const createSecureInvite = async (gun, fromUser, expiresInHours = 24) => 
   const expiresAt = Date.now() + (expiresInHours * 60 * 60 * 1000)
   
   const inviteData = {
+    id: inviteId,
     inviteId,
+    fromId: fromUser.id,
     fromUserId: fromUser.id,
     fromNick: fromUser.nickname,
     createdAt: Date.now(),
     expiresAt,
-    status: 'pending'
+    status: 'pending',
+    acceptedBy: null,
+    acceptedAt: null
   }
   
   // Store invite in Gun.js
