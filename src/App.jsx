@@ -5,6 +5,8 @@ import ChatArea from './components/ChatArea'
 import TestingPanel from './components/TestingPanel'
 import SecureInviteModal from './components/SecureInviteModal'
 import MobileLayout from './components/MobileLayout'
+import LoginView from './components/LoginView'
+import NeedInviteView from './components/NeedInviteView'
 import { 
   ircLogin, 
   createUserAccount, 
@@ -1346,6 +1348,18 @@ function App() {
 
   if (currentView === 'login') {
     return (
+      <div className="app">
+        <LoginView 
+          onLogin={handleLogin}
+          onCreateAdmin={handleCreateAdmin}
+          allUsers={allUsers}
+        />
+      </div>
+    )
+  }
+
+  if (currentView === 'login-old') {
+    return (
       <div style={{ 
         minHeight: '100vh', 
         display: 'flex', 
@@ -1574,6 +1588,14 @@ function App() {
   }
 
   if (currentView === 'needInvite') {
+    return (
+      <div className="app">
+        <NeedInviteView onCreateAdmin={handleCreateAdmin} />
+      </div>
+    )
+  }
+
+  if (currentView === 'needInvite-old') {
     return (
       <div className="screen">
         <div className="form">
