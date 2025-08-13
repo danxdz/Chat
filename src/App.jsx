@@ -284,6 +284,9 @@ function App() {
         console.log('✅ Migration complete!')
       }
       
+      // Store gun instance globally for register.html
+      window.gun = gunInstance
+      
       // Monitor peer connections
       const peerMonitorInterval = setInterval(() => {
         if (gunInstance && gunInstance._.opt && gunInstance._.opt.peers) {
@@ -292,13 +295,8 @@ function App() {
         }
       }, 5000)
 
-      // Return cleanup function
-      return () => {
-        clearInterval(peerMonitorInterval)
-        if (gunInstance && gunInstance.off) {
-          gunInstance.off()
-        }
-      }
+      // Return the gun instance for use in initialization
+      return gunInstance
 
     } catch (error) {
       logger.error('❌ Gun.js initialization failed:', error)
