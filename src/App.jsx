@@ -1249,13 +1249,13 @@ function App() {
     : messages.filter(msg => msg.type === 'general' || msg.toId === 'general')
 
   // Simple test message function
-  const sendTestMessage = () => {
+  const sendTestMessage = (customMessage) => {
     if (!user || !gun) {
       alert('Please login first to send test messages')
       return
     }
     
-    const testMsg = `Test message from ${user.nickname} at ${new Date().toLocaleTimeString()}`
+    const testMsg = customMessage || `Test message from ${user.nickname} at ${new Date().toLocaleTimeString()}`
     setNewMessage(testMsg)
     setTimeout(() => sendMessage(), 100)
   }

@@ -187,24 +187,22 @@ export default function TestingPanel({
             🚀 Migrate Users to Gun.js (Cross-Platform)
           </button>
           
-          {/* Clear Messages Only */}
+          {/* Test Message Sending */}
           <button 
-            onClick={() => {
-              // Clear messages from state
-              if (onClearCurrentClient) {
-                onClearCurrentClient()
+            onClick={async () => {
+              if (!onSendTestMessage) {
+                alert('Test message function not available')
+                return
               }
-              // Also clear from Gun.js
-              if (gun) {
-                gun.get('general_chat').map().once((data, key) => {
-                  gun.get('general_chat').get(key).put(null)
-                })
-                gun.get('chat_messages').map().once((data, key) => {
-                  gun.get('chat_messages').get(key).put(null)
-                })
-              }
-              alert('Messages cleared!')
-              window.location.reload()
+              const testMessages = [
+                'Test message ' + Date.now(),
+                '🚀 Testing Gun.js P2P messaging',
+                'Hello from ' + user.nickname,
+                '✅ Message test successful!'
+              ]
+              const randomMsg = testMessages[Math.floor(Math.random() * testMessages.length)]
+              await onSendTestMessage(randomMsg)
+              alert('Test message sent: ' + randomMsg)
             }}
             style={{
               padding: '15px',
@@ -215,10 +213,164 @@ export default function TestingPanel({
               fontSize: '16px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              width: '100%'
+              width: '100%',
+              marginTop: '10px'
             }}
           >
-            💬 Clear Messages Only
+            📤 Send Test Message
+          </button>
+          
+          {/* Force Sync Gun.js */}
+          <button 
+            onClick={async () => {
+              if (!gun) {
+                alert('Gun.js not connected')
+                return
+              }
+              try {
+                // Force sync by reading all data
+                const syncPromises = []
+                
+                // Sync users
+                syncPromises.push(new Promise((resolve) => {
+                  let timeout = setTimeout(resolve, 2000)
+                  gun.get('chat_users').map().on((data) => {
+                    clearTimeout(timeout)
+                    timeout = setTimeout(resolve, 500)
+                  })
+                }))
+                
+                // Sync messages
+                syncPromises.push(new Promise((resolve) => {
+                  let timeout = setTimeout(resolve, 2000)
+                  gun.get('general_chat').map().on((data) => {
+                    clearTimeout(timeout)
+                    timeout = setTimeout(resolve, 500)
+                  })
+                }))
+                
+                await Promise.all(syncPromises)
+                alert('✅ Gun.js sync forced! Reloading...')
+                window.location.reload()
+              } catch (error) {
+                alert('❌ Sync failed: ' + error.message)
+              }
+            }}
+            style={{
+              padding: '15px',
+              background: '#FF9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '10px'
+            }}
+          >
+            🔄 Force Gun.js Sync
+          </button>
+          
+          {/* Test Connection */}
+          <button 
+            onClick={async () => {
+              if (!gun) {
+                alert('❌ Gun.js NOT connected!')
+                return
+              }
+              
+              const testKey = 'test_' + Date.now()
+              const testData = { test: true, timestamp: Date.now(), user: user.nickname }
+              
+              try {
+                // Write test data
+                await gun.get('connection_test').get(testKey).put(testData)
+                
+                // Read it back
+                const result = await new Promise((resolve) => {
+                  let timeout = setTimeout(() => resolve(null), 3000)
+                  gun.get('connection_test').get(testKey).once((data) => {
+                    clearTimeout(timeout)
+                    resolve(data)
+                  })
+                })
+                
+                if (result) {
+                  alert('✅ Gun.js connection WORKING!\n\nTest data written and read successfully.')
+                } else {
+                  alert('⚠️ Gun.js connection SLOW\n\nData write succeeded but read timed out.')
+                }
+                
+                // Clean up test data
+                gun.get('connection_test').get(testKey).put(null)
+              } catch (error) {
+                alert('❌ Connection test FAILED: ' + error.message)
+              }
+            }}
+            style={{
+              padding: '15px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '10px'
+            }}
+          >
+            🔌 Test Gun.js Connection
+          </button>
+          
+          {/* Show Online Users */}
+          <button 
+            onClick={async () => {
+              if (!gun) {
+                alert('Gun.js not connected')
+                return
+              }
+              
+              const onlineUsers = []
+              await new Promise((resolve) => {
+                let timeout = setTimeout(resolve, 2000)
+                gun.get('presence').map().once((data, key) => {
+                  if (data && data.nickname && data.timestamp) {
+                    const isOnline = Date.now() - data.timestamp < 30000 // 30 seconds
+                    onlineUsers.push({
+                      nickname: data.nickname,
+                      status: isOnline ? '🟢 Online' : '🔴 Offline',
+                      lastSeen: new Date(data.timestamp).toLocaleTimeString()
+                    })
+                  }
+                  clearTimeout(timeout)
+                  timeout = setTimeout(resolve, 500)
+                })
+              })
+              
+              if (onlineUsers.length > 0) {
+                alert('Online Users:\n\n' + onlineUsers.map(u => 
+                  `${u.status} ${u.nickname} (last: ${u.lastSeen})`
+                ).join('\n'))
+              } else {
+                alert('No users online data found')
+              }
+            }}
+            style={{
+              padding: '15px',
+              background: '#00BCD4',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '10px'
+            }}
+          >
+            👥 Show Online Users
           </button>
           
           {/* Admin Panel - Only for Admin user */}
@@ -240,7 +392,8 @@ export default function TestingPanel({
                   fontSize: '16px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
-                  width: '100%'
+                  width: '100%',
+                  marginTop: '10px'
                 }}
               >
                 👑 Show/Hide Admin Data
