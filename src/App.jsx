@@ -223,6 +223,15 @@ function App() {
           }
           
           if (savedUser) {
+            // Restore private key from session if available
+            if (session.privateKey) {
+              savedUser.privateKey = session.privateKey
+              console.log('🔑 Restored private key from session')
+            } else {
+              // Generate a new key for this session if missing
+              console.log('⚠️ No private key in session, will generate on demand')
+            }
+            
             setUser(savedUser)
             setCurrentView('chat')
             console.log('✅ Auto-logged in as:', savedUser.nickname)
@@ -877,15 +886,22 @@ function App() {
       const sessionData = JSON.stringify({
         nickname: user.nickname,
         id: user.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        // Store private key temporarily in session (will be lost on browser close)
+        privateKey: user.privateKey
       })
       
       // Always save to sessionStorage for current session (works in private mode)
       sessionStorage.setItem('savedSession', sessionData)
       
-      // Save to localStorage if remember me is checked
+      // Save to localStorage if remember me is checked (without private key for security)
       if (rememberMe) {
-        localStorage.setItem('savedSession', sessionData)
+        const persistData = JSON.stringify({
+          nickname: user.nickname,
+          id: user.id,
+          timestamp: Date.now()
+        })
+        localStorage.setItem('savedSession', persistData)
       }
       
       // Load user's friends from Gun.js

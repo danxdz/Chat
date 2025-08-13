@@ -53,30 +53,33 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     // Use PBKDF2 with salt for better security (Gun.SEA.work uses PBKDF2 internally)
     const hashedPassword = await window.Gun.SEA.work(password, salt)
     
-    const newUser = {
-      id: identity.pub,
-      nickname: nickname,
-      passwordHash: hashedPassword,
-      passwordSalt: salt,  // Store salt for login verification
-      privateKey: identity.priv,
-      publicKey: identity.pub,
-      createdAt: Date.now(),
-      invitedBy: inviteData?.fromId || null,
-      inviterNickname: inviteData?.fromNick || null,
-      friends: inviteData?.fromId ? [inviteData.fromId] : []
-    }
-    
-    // Store user in Gun.js (with encrypted private key)
-    await gun.get('chat_users').get(identity.pub).put({
-      nickname: nickname,
-      passwordHash: hashedPassword,
-      passwordSalt: salt,
-      publicKey: identity.pub,
-      encryptedPrivateKey: await window.Gun.SEA.encrypt(identity.priv, password),
-      createdAt: Date.now(),
-      invitedBy: inviteData?.fromId || null,
-      friends: inviteData?.fromId ? [inviteData.fromId] : []
-    })
+      // Encrypt the private key for storage
+  const encryptedPrivateKey = await window.Gun.SEA.encrypt(identity.priv, password)
+  
+  const newUser = {
+    id: identity.pub,
+    nickname: nickname,
+    passwordHash: hashedPassword,
+    passwordSalt: salt,  // Store salt for login verification
+    privateKey: identity.priv,  // Include plain private key in returned object for session
+    publicKey: identity.pub,
+    createdAt: Date.now(),
+    invitedBy: inviteData?.fromId || null,
+    inviterNickname: inviteData?.fromNick || null,
+    friends: inviteData?.fromId ? [inviteData.fromId] : []
+  }
+  
+  // Store user in Gun.js (with encrypted private key)
+  await gun.get('chat_users').get(identity.pub).put({
+    nickname: nickname,
+    passwordHash: hashedPassword,
+    passwordSalt: salt,
+    publicKey: identity.pub,
+    encryptedPrivateKey: encryptedPrivateKey,
+    createdAt: Date.now(),
+    invitedBy: inviteData?.fromId || null,
+    friends: inviteData?.fromId ? [inviteData.fromId] : []
+  })
     
     // Also store by nickname for easy lookup
     await gun.get('chat_users_by_nick').get(nickname.toLowerCase()).put({
