@@ -256,8 +256,16 @@ function App() {
     try {
       setInitStatus('Connecting to P2P network...')
       
+      // Wait for Gun.js to be available
+      let attempts = 0
+      while (!window.Gun && attempts < 10) {
+        console.log('Waiting for Gun.js to load...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+        attempts++
+      }
+      
       if (!window.Gun) {
-        throw new Error('Gun.js library not loaded')
+        throw new Error('Gun.js library not loaded after 5 seconds')
       }
 
       logger.log('🌐 Initializing Gun.js with peers:', gunPeers)

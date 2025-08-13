@@ -14,12 +14,19 @@ const logger = {
  */
 export const initGunUsers = (gun) => {
   if (!gun) {
-    throw new Error('Gun.js instance required')
+    logger.error('Gun.js instance required for initGunUsers')
+    return false
   }
   
-  // Create users node if it doesn't exist
-  gun.get('chat_users').put({ initialized: true })
-  logger.log('🔫 Gun.js users system initialized')
+  try {
+    // Create users node if it doesn't exist
+    gun.get('chat_users').put({ initialized: true })
+    logger.log('🔫 Gun.js users system initialized')
+    return true
+  } catch (error) {
+    logger.error('Failed to initialize Gun.js users:', error)
+    return false
+  }
 }
 
 /**
@@ -164,6 +171,11 @@ export const loginGunUser = async (gun, nickname, password) => {
  * Get all users from Gun.js
  */
 export const getAllGunUsers = async (gun) => {
+  if (!gun) {
+    logger.warn('Gun.js instance not provided to getAllGunUsers')
+    return []
+  }
+  
   return new Promise((resolve) => {
     const users = []
     let timeout
