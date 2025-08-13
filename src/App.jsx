@@ -153,8 +153,11 @@ function App() {
   // Gun.js peers for P2P networking - Updated working peers
   const gunPeers = [
     'https://relay.peer.ooo/gun',
+    'https://gun-manhattan.herokuapp.com/gun',
+    'https://gun-us.herokuapp.com/gun',
     'https://gun-eu.herokuapp.com/gun',
-    'https://peer.wallie.io/gun'
+    'https://peer.wallie.io/gun',
+    'https://gunjs.herokuapp.com/gun'
   ]
 
   // Initialize sodium and check URL for invite
@@ -326,9 +329,12 @@ function App() {
       
       const gunInstance = window.Gun({
         peers: gunPeers,
-        localStorage: false,
-        radisk: false,
-        file: false
+        localStorage: true,  // Enable local caching
+        radisk: true,       // Enable radix storage
+        file: false,
+        uuid: () => {       // Custom UUID to ensure consistency
+          return 'chat_' + Math.random().toString(36).substring(2, 15)
+        }
       })
 
       // Test Gun.js connectivity
