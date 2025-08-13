@@ -337,15 +337,31 @@ function App() {
         }
       })
 
-      // Test Gun.js connectivity
+      // Test Gun.js connectivity and wait for sync
       const testKey = 'gun_init_test_' + Date.now()
       await gunInstance.get(testKey).put({ test: true, timestamp: Date.now() })
       
-      gunInstance.get(testKey).once((data) => {
-        if (data) {
-          logger.log('✅ Gun.js connectivity test successful')
-          setInitStatus('Connected to P2P network')
-        }
+      // Wait for Gun.js to sync with peers
+      await new Promise((resolve) => {
+        let subscription = gunInstance.get(testKey).on((data) => {
+          if (data) {
+            logger.log('✅ Gun.js connectivity test successful')
+            setInitStatus('Connected to P2P network')
+            if (subscription && subscription.off) {
+              subscription.off()
+            }
+            resolve()
+          }
+        })
+        
+        // Timeout after 3 seconds
+        setTimeout(() => {
+          logger.log('⚠️ Gun.js connectivity test timed out')
+          if (subscription && subscription.off) {
+            subscription.off()
+          }
+          resolve()
+        }, 3000)
       })
 
       setGun(gunInstance)
