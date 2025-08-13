@@ -77,7 +77,37 @@ export default function TestingPanel({
               width: '100%'
             }}
           >
-            🗑️ Clear All Data & Restart
+            🗑️ Clear LocalStorage & Restart
+          </button>
+          
+          {/* Clear Gun.js Database */}
+          <button 
+            onClick={async () => {
+              if (confirm('⚠️ CLEAR GUN.JS P2P DATABASE?\n\nThis will delete:\n• All users from P2P network\n• All messages\n• All friendships\n\nThis affects ALL connected peers!')) {
+                try {
+                  const { clearGunDatabase } = await import('../services/gunAuthService.js')
+                  await clearGunDatabase(gun)
+                  alert('✅ Gun.js database cleared!')
+                  window.location.reload()
+                } catch (error) {
+                  alert(`❌ Failed to clear Gun.js: ${error.message}`)
+                }
+              }
+            }}
+            style={{
+              padding: '15px',
+              background: '#9c27b0',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '10px'
+            }}
+          >
+            💥 Clear Gun.js P2P Database
           </button>
           
           {/* Restart App Button */}

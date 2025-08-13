@@ -653,19 +653,37 @@ function App() {
     }
 
     try {
-      // Debug: Show what users exist
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('🔍 LOGIN DEBUG - Available users:', allUsers.length)
-      console.log('👥 User nicknames:', allUsers.map(u => u.nickname))
       console.log('🎯 Trying to login as:', nickname)
 
-      const user = await loginGunUser(gun, nickname, password)
-      console.log('🔐 Logged in user from Gun.js:', { 
-        id: user.id, 
-        nickname: user.nickname, 
-        friends: user.friends,
-        friendsCount: user.friends ? user.friends.length : 0
-      })
+      // Try Gun.js first
+      let user = null;
+      try {
+        user = await loginGunUser(gun, nickname, password)
+        console.log('🔐 Logged in user from Gun.js:', { 
+          id: user.id, 
+          nickname: user.nickname, 
+          friends: user.friends,
+          friendsCount: user.friends ? user.friends.length : 0
+        })
+      } catch (gunError) {
+        console.log('⚠️ Gun.js login failed, trying localStorage:', gunError.message)
+        
+        // Fallback to localStorage
+        const { ircLogin } = await import('./utils/secureAuth')
+        user = await ircLogin(nickname, password)
+        console.log('🔐 Logged in user from localStorage')
+        
+        // Migrate this user to Gun.js for next time
+        if (gun && user) {
+          try {
+            await createGunUser(gun, user.nickname, password, null)
+            console.log('✅ User migrated to Gun.js')
+          } catch (e) {
+            console.log('Could not migrate user to Gun.js:', e.message)
+          }
+        }
+      }
+      
       setUser(user)
       
       // Save session if remember me
@@ -770,12 +788,13 @@ function App() {
         return
       }
       
-      const bootstrapUser = await createUserAccount('Admin', 'admin123', null)
-      console.log('👤 Bootstrap user created:', bootstrapUser)
+      // Create admin in Gun.js
+      const bootstrapUser = await createGunUser(gun, 'Admin', 'admin123', null)
+      console.log('👤 Bootstrap admin created in Gun.js:', bootstrapUser)
       
-      const updatedUsers = [...existingUsers, bootstrapUser]
-      setAllUsers(updatedUsers)
-      localStorage.setItem('users', JSON.stringify(updatedUsers))
+      // Update allUsers state
+      const gunUsers = await getAllGunUsers(gun)
+      setAllUsers(gunUsers)
       
       // Verify it was saved
       const savedUsers = JSON.parse(localStorage.getItem('users') || '[]')
