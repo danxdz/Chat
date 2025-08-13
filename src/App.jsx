@@ -391,91 +391,94 @@ function App() {
   useEffect(() => {
     if (!user) return
 
-    try {
-      // Load contacts
-      const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
-      setContacts(savedContacts)
-      
-      // Load friends from Gun.js
-      let friendsList = []
-      if (gun && user.friends && user.friends.length > 0) {
-        // Get all users from Gun.js to find friends
-        try {
-          const gunUsers = await getAllGunUsers(gun)
-          friendsList = getFriendsList(user, gunUsers)
-          console.log('👥 Friends loaded from Gun.js:', friendsList)
-        } catch (e) {
-          console.error('Failed to load friends from Gun.js:', e)
-        }
-      }
-      setFriends(friendsList)
-      console.log('📊 User data:', { 
-        userId: user.id, 
-        userFriends: user.friends,
-        existingUsersCount: existingUsers.length,
-        friendsListCount: friendsList.length 
-      })
-      
-      // Load and monitor pending invites
-      const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
-      setPendingInvites(savedInvites)
-      console.log('📋 Pending invites loaded:', savedInvites)
-      
-      // Monitor invites in Gun.js for real-time updates
-      if (gun && user) {
-        gun.get('secure_invites').map().on((invite, key) => {
-          if (invite && invite.fromId === user.id && invite.status === 'pending') {
-            setPendingInvites(prev => {
-              const exists = prev.some(inv => inv.id === invite.id)
-              if (!exists) {
-                const updated = [...prev, invite]
-                localStorage.setItem('pendingInvites', JSON.stringify(updated))
-                return updated
-              }
-              return prev
-            })
+    const loadUserData = async () => {
+      try {
+        // Load contacts
+        const savedContacts = JSON.parse(localStorage.getItem(`contacts_${user.id}`) || '[]')
+        setContacts(savedContacts)
+        
+        // Load friends from Gun.js
+        let friendsList = []
+        if (gun && user.friends && user.friends.length > 0) {
+          // Get all users from Gun.js to find friends
+          try {
+            const gunUsers = await getAllGunUsers(gun)
+            friendsList = getFriendsList(user, gunUsers)
+            console.log('👥 Friends loaded from Gun.js:', friendsList)
+          } catch (e) {
+            console.error('Failed to load friends from Gun.js:', e)
           }
+        }
+        setFriends(friendsList)
+        console.log('📊 User data:', { 
+          userId: user.id, 
+          userFriends: user.friends,
+          friendsListCount: friendsList.length 
         })
         
-        // Also monitor for accepted invites to update status
-        gun.get('secure_invites').map().on((invite, key) => {
-          if (invite && invite.fromId === user.id && invite.status === 'accepted') {
-            setPendingInvites(prev => {
-              const updated = prev.map(inv => 
-                inv.id === invite.id 
-                  ? { ...inv, status: 'accepted', acceptedBy: invite.acceptedBy, acceptedAt: invite.acceptedAt }
-                  : inv
-              )
-              localStorage.setItem('pendingInvites', JSON.stringify(updated))
-              return updated
-            })
-            
-            // Add friend if accepted - reload friends list
-            if (invite.acceptedBy) {
-              // Reload friends from Gun.js
-              const existingUsers = await getAllGunUsers(gun)
-              setAllUsers(existingUsers)
-              const userFriends = getFriendsList(user, existingUsers)
-              setFriends(userFriends)
-              console.log('🔄 Friends reloaded after invite accepted')
+        // Load and monitor pending invites
+        const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+        setPendingInvites(savedInvites)
+        console.log('📋 Pending invites loaded:', savedInvites)
+        
+        // Monitor invites in Gun.js for real-time updates
+        if (gun && user) {
+          gun.get('secure_invites').map().on((invite, key) => {
+            if (invite && invite.fromId === user.id && invite.status === 'pending') {
+              setPendingInvites(prev => {
+                const exists = prev.some(inv => inv.id === invite.id)
+                if (!exists) {
+                  const updated = [...prev, invite]
+                  localStorage.setItem('pendingInvites', JSON.stringify(updated))
+                  return updated
+                }
+                return prev
+              })
             }
-          }
-        })
-      }
+          })
+          
+          // Also monitor for accepted invites to update status
+          gun.get('secure_invites').map().on(async (invite, key) => {
+            if (invite && invite.fromId === user.id && invite.status === 'accepted') {
+              setPendingInvites(prev => {
+                const updated = prev.map(inv => 
+                  inv.id === invite.id 
+                    ? { ...inv, status: 'accepted', acceptedBy: invite.acceptedBy, acceptedAt: invite.acceptedAt }
+                    : inv
+                )
+                localStorage.setItem('pendingInvites', JSON.stringify(updated))
+                return updated
+              })
+              
+              // Add friend if accepted - reload friends list
+              if (invite.acceptedBy) {
+                // Reload friends from Gun.js
+                const existingUsers = await getAllGunUsers(gun)
+                setAllUsers(existingUsers)
+                const userFriends = getFriendsList(user, existingUsers)
+                setFriends(userFriends)
+                console.log('🔄 Friends reloaded after invite accepted')
+              }
+            }
+          })
+        }
       
       // Load messages from Gun.js (they will be loaded via listeners)
       setMessages([])
       
-      logger.log('📋 User data loaded successfully')
-      logger.log('- Contacts:', savedContacts.length)
-      logger.log('- Friends:', friendsList.length)
-      logger.log('- Messages: Starting fresh, will load from Gun.js')
-      
-      setCurrentView('chat')
-    } catch (error) {
-      logger.error('❌ Failed to load user data:', error)
-      setChatError('Failed to load user data: ' + error.message)
+        logger.log('📋 User data loaded successfully')
+        logger.log('- Contacts:', savedContacts.length)
+        logger.log('- Friends:', friendsList.length)
+        logger.log('- Messages: Starting fresh, will load from Gun.js')
+        
+        setCurrentView('chat')
+      } catch (error) {
+        logger.error('❌ Failed to load user data:', error)
+        setChatError('Failed to load user data: ' + error.message)
+      }
     }
+    
+    loadUserData()
   }, [user])
 
   // Gun.js message listeners
