@@ -19,6 +19,7 @@ import {
 } from './services/gunAuthService'
 
 import gunPeers from './config/gunPeers'
+import { initWebRTC, sendWebRTCMessage, connectToPeer } from './services/webrtcService'
 
 // Smart logging system - only logs in development
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
@@ -846,6 +847,18 @@ function App() {
       setUser(user)
       console.log('📱 User state updated with privateKey:', !!user.privateKey)
       
+      // Initialize WebRTC for P2P messaging
+      if (gun && user.id && user.nickname) {
+        const webrtc = initWebRTC(gun, user.id, user.nickname)
+        console.log('🎥 WebRTC initialized for P2P messaging')
+        
+        // Listen for WebRTC messages
+        webrtc.onMessage((message, fromUserId) => {
+          console.log('📨 Received WebRTC message from:', fromUserId.substring(0, 8))
+          setMessages(prev => [...prev, message])
+        })
+      }
+      
       // Save session data
       const sessionData = JSON.stringify({
         nickname: user.nickname,
@@ -1209,16 +1222,39 @@ function App() {
       setMessages(prevMessages => [...prevMessages, messageToSend])
       logger.log('✅ Message added to local state')
 
-      // Send to appropriate channel based on contact
-      const channelName = activeContact ? `private_${[user.id, activeContact.id].sort().join('_')}` : 'general_chat'
-      logger.log('📡 Using channel:', channelName)
-
-      const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
-      
-      if (p2pSuccess) {
-        logger.log('✅ Message sent via Gun.js successfully')
+      // For private messages, try WebRTC first, then fallback to Gun.js
+      if (activeContact) {
+        logger.log('🎥 Attempting WebRTC P2P message to:', activeContact.nickname)
+        
+        // Try WebRTC first for true P2P
+        const webrtcSuccess = await sendWebRTCMessage(activeContact.id, messageToSend)
+        
+        if (webrtcSuccess) {
+          logger.log('✅ Message sent via WebRTC P2P!')
+        } else {
+          logger.log('⚠️ WebRTC failed, falling back to Gun.js...')
+          // Fallback to Gun.js channel
+          const channelName = `private_${[user.id, activeContact.id].sort().join('_')}`
+          const gunSuccess = await sendP2PMessage(messageToSend, channelName)
+          
+          if (gunSuccess) {
+            logger.log('✅ Message sent via Gun.js fallback')
+          } else {
+            logger.log('❌ Both WebRTC and Gun.js failed')
+          }
+        }
       } else {
-        logger.log('❌ Failed to send message via Gun.js, but showing in local UI')
+        // General chat always uses Gun.js
+        const channelName = 'general_chat'
+        logger.log('📡 Using Gun.js for general chat')
+        
+        const p2pSuccess = await sendP2PMessage(messageToSend, channelName)
+        
+        if (p2pSuccess) {
+          logger.log('✅ General message sent via Gun.js')
+        } else {
+          logger.log('❌ Failed to send general message')
+        }
       }
 
       setNewMessage('')
