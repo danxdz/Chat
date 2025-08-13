@@ -228,19 +228,21 @@ export default function ChatArea({
           disabled={!newMessage.trim()}
           style={{ 
             background: newMessage.trim() ? '#0066cc' : '#555', 
-            padding: '0.6rem 0.8rem',
+            padding: '0.5rem 0.7rem',
             width: 'auto',
-            minWidth: '60px',
-            margin: 0,
+            minWidth: '55px',
+            maxWidth: '80px',
+            marginRight: '0.2rem',
             fontSize: '0.85rem',
-            minHeight: '44px',
+            minHeight: '42px',
             borderRadius: '8px',
             cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
             opacity: newMessage.trim() ? 1 : 0.5,
             border: 'none',
             color: 'white',
             transition: 'background 0.2s',
-            flexShrink: 0
+            flexShrink: 0,
+            whiteSpace: 'nowrap'
           }}
         >
           Send

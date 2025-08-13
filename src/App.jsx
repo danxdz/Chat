@@ -18,6 +18,8 @@ import {
   migrateUsersToGun
 } from './services/gunAuthService'
 
+import gunPeers from './config/gunPeers'
+
 // Smart logging system - only logs in development
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
 
@@ -150,15 +152,7 @@ function App() {
     window.debugNotify = showDebugNotification
   }
 
-  // Gun.js peers for P2P networking - Updated working peers
-  const gunPeers = [
-    'https://relay.peer.ooo/gun',
-    'https://gun-manhattan.herokuapp.com/gun',
-    'https://gun-us.herokuapp.com/gun',
-    'https://gun-eu.herokuapp.com/gun',
-    'https://peer.wallie.io/gun',
-    'https://gunjs.herokuapp.com/gun'
-  ]
+
 
   // Initialize sodium and check URL for invite
   const initializeApp = async () => {

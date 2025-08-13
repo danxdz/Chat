@@ -1,7 +1,16 @@
+# Vendor/third-party libraries
+public/gun.js
+public/sea.js
+public/sodium.js
+public/*.min.js
+
+# Build output
 dist/
-node_modules/
 build/
-coverage/
-.git/
-*.min.js
-verify-all.js
+
+# Dependencies
+node_modules/
+
+# Test files
+*.test.js
+*.spec.js

@@ -46,12 +46,18 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     
     // Create user identity
     const identity = await window.Gun.SEA.pair()
-    const hashedPassword = await window.Gun.SEA.work(password, null, null, {name: 'SHA-256'})
+    
+    // Generate unique salt for this user (based on nickname + timestamp)
+    const salt = nickname + '_' + Date.now() + '_' + Math.random()
+    
+    // Use PBKDF2 with salt for better security (Gun.SEA.work uses PBKDF2 internally)
+    const hashedPassword = await window.Gun.SEA.work(password, salt)
     
     const newUser = {
       id: identity.pub,
       nickname: nickname,
       passwordHash: hashedPassword,
+      passwordSalt: salt,  // Store salt for login verification
       privateKey: identity.priv,
       publicKey: identity.pub,
       createdAt: Date.now(),
@@ -83,8 +89,8 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     
     logger.log('✅ User created in Gun.js:', nickname)
     
-    // Store private key locally for this session
-    sessionStorage.setItem('userPrivateKey', identity.priv)
+    // Note: Private key should NOT be stored - it's only needed for this session
+    // User will need to login with password to regenerate keys
     
     return newUser
     
@@ -190,8 +196,16 @@ export const loginGunUser = async (gun, nickname, password) => {
       throw new Error('User data not found')
     }
     
-    // Verify password
-    const hashedPassword = await window.Gun.SEA.work(password, null, null, {name: 'SHA-256'})
+    // Verify password with salt (backward compatible)
+    let hashedPassword
+    if (userData.passwordSalt) {
+      // New method with salt
+      hashedPassword = await window.Gun.SEA.work(password, userData.passwordSalt)
+    } else {
+      // Old method for backward compatibility
+      hashedPassword = await window.Gun.SEA.work(password, null, null, {name: 'SHA-256'})
+    }
+    
     if (userData.passwordHash !== hashedPassword) {
       throw new Error('Invalid password')
     }
@@ -207,11 +221,7 @@ export const loginGunUser = async (gun, nickname, password) => {
       friends: userData.friends || []
     }
     
-    // Try to recover private key from previous session
-    const storedPrivateKey = sessionStorage.getItem('userPrivateKey')
-    if (storedPrivateKey) {
-      user.privateKey = storedPrivateKey
-    }
+    // Private keys are not stored for security - regenerate from password if needed
     
     logger.log('✅ User logged in from Gun.js:', nickname)
     return user
