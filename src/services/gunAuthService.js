@@ -320,6 +320,42 @@ export const migrateUsersToGun = async (gun) => {
   }
 }
 
+/**
+ * Clear all Gun.js data (reset database)
+ */
+export const clearGunDatabase = async (gun) => {
+  try {
+    logger.log('🗑️ Clearing Gun.js database...')
+    
+    // Clear users
+    await gun.get('chat_users').put(null)
+    await gun.get('chat_users_by_nick').put(null)
+    
+    // Clear messages
+    await gun.get('general_chat').put(null)
+    await gun.get('chat_messages').put(null)
+    
+    // Clear invites
+    await gun.get('secure_invites').put(null)
+    
+    // Clear presence/online data
+    await gun.get('user_presence').put(null)
+    await gun.get('online_users').put(null)
+    
+    // Clear friendships
+    await gun.get('friendships').put(null)
+    
+    // Re-initialize the users system
+    gun.get('chat_users').put({ initialized: true })
+    
+    logger.log('✅ Gun.js database cleared!')
+    return true
+  } catch (error) {
+    logger.error('Failed to clear Gun.js database:', error)
+    throw error
+  }
+}
+
 export default {
   initGunUsers,
   createGunUser,
@@ -328,5 +364,6 @@ export default {
   getAllGunUsers,
   updateGunUser,
   addMutualFriendsGun,
-  migrateUsersToGun
+  migrateUsersToGun,
+  clearGunDatabase
 }
