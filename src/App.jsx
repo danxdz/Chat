@@ -167,19 +167,33 @@ function App() {
       }
 
       // Initialize Gun.js FIRST (needed for user auth)
-      console.log('🔧 Starting Gun.js initialization...')
-      const gunInstance = await initializeGunJS()
-      console.log('🔧 Gun instance returned:', gunInstance ? 'Valid' : 'Null')
+      let gunInstance = null;
+      try {
+        console.log('🔧 Starting Gun.js initialization...')
+        gunInstance = await initializeGunJS()
+        console.log('🔧 Gun instance returned:', gunInstance ? 'Valid' : 'Null')
+      } catch (gunError) {
+        console.error('🔴 Gun.js initialization failed:', gunError)
+        console.error('Stack:', gunError.stack)
+      }
       
       // Wait a moment for Gun.js to fully initialize
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Load users from Gun.js instead of localStorage
       if (gunInstance) {
-        console.log('🔧 Attempting to load users from Gun.js...')
-        const gunUsers = await getAllGunUsers(gunInstance)
-        setAllUsers(gunUsers)
-        console.log('📊 Loaded users from Gun.js:', gunUsers.length)
+        try {
+          console.log('🔧 Attempting to load users from Gun.js...')
+          const gunUsers = await getAllGunUsers(gunInstance)
+          setAllUsers(gunUsers)
+          console.log('📊 Loaded users from Gun.js:', gunUsers.length)
+        } catch (loadError) {
+          console.error('🔴 Failed to load Gun.js users:', loadError)
+          console.error('Stack:', loadError.stack)
+          // Fallback to localStorage
+          const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+          setAllUsers(existingUsers)
+        }
       } else {
         // Fallback to localStorage if Gun.js failed
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
@@ -192,9 +206,9 @@ function App() {
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession)
-          // Find the user in all loaded users
-          const loadedUsers = allUsers || []
-          const savedUser = loadedUsers.find(u => u.id === session.id)
+          // Find the user in all loaded users (use the ones we just loaded, not state)
+          const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+          const savedUser = existingUsers.find(u => u.id === session.id)
           if (savedUser) {
             setUser(savedUser)
             setCurrentView('chat')
@@ -241,8 +255,9 @@ function App() {
       // No need to handle them in React app
 
       // If no invite and no users exist, show error
-      const allUsersCount = allUsers.length || 0
-      if (allUsersCount === 0) {
+      // Use localStorage to check for users since Gun.js might not be ready
+      const existingUsersCheck = JSON.parse(localStorage.getItem('users') || '[]')
+      if (existingUsersCheck.length === 0) {
         setCurrentView('needInvite')
       } else {
         setCurrentView('login')
