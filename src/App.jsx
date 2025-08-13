@@ -564,6 +564,43 @@ function App() {
   // Registration now handled by separate HTML page (/register.html)
   // This function is kept for compatibility but not used
 
+  // Handle login from LoginView component
+  const handleLogin = async (nickname, password, rememberMe = true) => {
+    return login(nickname, password, rememberMe)
+  }
+
+  // Handle admin account creation
+  const handleCreateAdmin = async () => {
+    try {
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      
+      // Check if admin already exists
+      const adminExists = existingUsers.some(u => u.nickname.toLowerCase() === 'admin')
+      if (adminExists) {
+        alert('Admin user already exists! Please login.')
+        return
+      }
+      
+      // Create admin account
+      const adminUser = await createUserAccount('Admin', 'admin123', null)
+      console.log('👤 Admin user created:', adminUser)
+      
+      // Save to localStorage
+      const updatedUsers = [...existingUsers, adminUser]
+      localStorage.setItem('users', JSON.stringify(updatedUsers))
+      localStorage.setItem('adminUser', JSON.stringify(adminUser))
+      
+      // Auto-login as admin
+      setUser(adminUser)
+      setCurrentView('chat')
+      
+      alert('✅ Admin account created successfully!\nUsername: Admin\nPassword: admin123')
+    } catch (error) {
+      console.error('Failed to create admin:', error)
+      alert('Failed to create admin account: ' + error.message)
+    }
+  }
+
   const login = async (nickname, password, rememberMe = true) => {
     if (!nickname.trim() || !password.trim()) {
       alert('Nickname and password are required')
