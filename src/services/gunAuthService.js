@@ -415,6 +415,38 @@ export const clearGunDatabase = async (gun) => {
       }
     }
     
+    // Clear all message channels
+    logger.log('🗑️ Clearing message channels...')
+    
+    // Clear general chat messages by iterating through them
+    await new Promise((resolve) => {
+      let count = 0
+      let timeout = setTimeout(() => {
+        logger.log(`Cleared ${count} general chat messages`)
+        resolve()
+      }, 2000)
+      
+      gun.get('general_chat').map().once((msg, key) => {
+        if (msg && key) {
+          gun.get('general_chat').get(key).put(null)
+          count++
+          clearTimeout(timeout)
+          timeout = setTimeout(() => {
+            logger.log(`Cleared ${count} general chat messages`)
+            resolve()
+          }, 500)
+        }
+      })
+    })
+    
+    // Clear private message channels
+    for (let i = 0; i < users.length; i++) {
+      for (let j = i + 1; j < users.length; j++) {
+        const channelName = `private_${[users[i].id, users[j].id].sort().join('_')}`
+        await gun.get(channelName).put(null)
+      }
+    }
+    
     // Clear all root nodes
     await gun.get('chat_users').put(null)
     await gun.get('chat_users_by_nick').put(null)
@@ -435,10 +467,20 @@ export const clearGunDatabase = async (gun) => {
     // Wait for Gun.js to sync deletions
     await new Promise(resolve => setTimeout(resolve, 2000))
     
+    // Force clear by overwriting with empty objects
+    const emptyData = { cleared: true, timestamp: Date.now() }
+    await gun.get('general_chat').put(emptyData)
+    await gun.get('messages').put(emptyData)
+    await gun.get('chat_messages').put(emptyData)
+    
+    // Wait a bit more for sync
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
     // Re-initialize empty nodes
     await gun.get('chat_users').put({ initialized: Date.now() })
     await gun.get('chat_users_by_nick').put({ initialized: Date.now() })
     await gun.get('messages').put({ initialized: Date.now() })
+    await gun.get('general_chat').put({ initialized: Date.now() })
     
     logger.log('✅ Gun.js database and localStorage completely cleared!')
     return true
