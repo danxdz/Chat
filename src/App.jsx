@@ -173,9 +173,16 @@ function App() {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Load users from Gun.js instead of localStorage
-      const gunUsers = await getAllGunUsers(gunInstance || gun || window.gun)
-      setAllUsers(gunUsers)
-      console.log('📊 Loaded users from Gun.js:', gunUsers.length)
+      if (gunInstance) {
+        const gunUsers = await getAllGunUsers(gunInstance)
+        setAllUsers(gunUsers)
+        console.log('📊 Loaded users from Gun.js:', gunUsers.length)
+      } else {
+        // Fallback to localStorage if Gun.js failed
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        setAllUsers(existingUsers)
+        console.log('⚠️ Gun.js not available, using localStorage:', existingUsers.length)
+      }
       
       // Check for saved session (Remember Me)
       const savedSession = localStorage.getItem('savedSession')
@@ -230,7 +237,8 @@ function App() {
       // No need to handle them in React app
 
       // If no invite and no users exist, show error
-      if (existingUsers.length === 0) {
+      const allUsersCount = allUsers.length || 0
+      if (allUsersCount === 0) {
         setCurrentView('needInvite')
       } else {
         setCurrentView('login')
@@ -295,13 +303,14 @@ function App() {
         }
       }, 5000)
 
-      // Return the gun instance for use in initialization
+            // Return the gun instance for use in initialization
       return gunInstance
 
     } catch (error) {
       logger.error('❌ Gun.js initialization failed:', error)
       setInitStatus('P2P connection failed')
       setChatError('Failed to connect to P2P network: ' + error.message)
+      return null // Return null if initialization fails
     }
   }
 
