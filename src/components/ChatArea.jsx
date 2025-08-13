@@ -176,7 +176,10 @@ export default function ChatArea({
       </div>
 
       {/* Message Input */}
-      <form onSubmit={onSendMessage} className="message-input-container" style={{ 
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        onSendMessage(e);
+      }} className="message-input-container" style={{ 
         padding: '0.7rem 0.5rem', 
         background: '#2d2d2d',
         borderTop: '1px solid #555',
@@ -220,17 +223,19 @@ export default function ChatArea({
         <button 
           type="submit" 
           className="btn send-button"
+          disabled={!newMessage.trim()}
           style={{ 
-            background: '#0066cc', 
+            background: newMessage.trim() ? '#0066cc' : '#555', 
             padding: '0.8rem 1rem',
             width: 'auto',
             margin: 0,
             fontSize: '0.9rem',
             minHeight: '44px',
             borderRadius: '8px',
+            cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
+            opacity: newMessage.trim() ? 1 : 0.5,
             border: 'none',
             color: 'white',
-            cursor: 'pointer',
             transition: 'background 0.2s'
           }}
         >

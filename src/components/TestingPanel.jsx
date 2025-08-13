@@ -83,14 +83,14 @@ export default function TestingPanel({
           {/* Clear Gun.js Database */}
           <button 
             onClick={async () => {
-              if (confirm('⚠️ CLEAR GUN.JS P2P DATABASE?\n\nThis will delete:\n• All users from P2P network\n• All messages\n• All friendships\n\nThis affects ALL connected peers!')) {
+              if (confirm('⚠️ COMPLETE RESET - ARE YOU SURE?\n\nThis will delete EVERYTHING:\n• All Gun.js P2P data\n• All localStorage data\n• All users & passwords\n• All messages & chats\n• All friendships\n\nThe app will restart completely fresh!')) {
                 try {
                   const { clearGunDatabase } = await import('../services/gunAuthService.js')
                   await clearGunDatabase(gun)
-                  alert('✅ Gun.js database cleared!')
-                  window.location.reload()
+                  alert('✅ Complete reset successful! Restarting...')
+                  setTimeout(() => window.location.reload(), 1000)
                 } catch (error) {
-                  alert(`❌ Failed to clear Gun.js: ${error.message}`)
+                  alert(`❌ Failed to reset: ${error.message}`)
                 }
               }
             }}
@@ -107,7 +107,7 @@ export default function TestingPanel({
               marginTop: '10px'
             }}
           >
-            💥 Clear Gun.js P2P Database
+            💥 Complete Reset (Clear Everything)
           </button>
           
           {/* Restart App Button */}

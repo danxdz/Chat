@@ -401,30 +401,46 @@ export const migrateUsersToGun = async (gun) => {
  */
 export const clearGunDatabase = async (gun) => {
   try {
-    logger.log('🗑️ Clearing Gun.js database...')
+    logger.log('🗑️ Starting complete Gun.js database cleanup...')
     
-    // Clear users
+    // First get all users to clear them individually
+    const users = await getAllGunUsers(gun)
+    logger.log(`Found ${users.length} users to clear`)
+    
+    // Clear each user individually
+    for (const user of users) {
+      await gun.get('chat_users').get(user.id).put(null)
+      if (user.nickname) {
+        await gun.get('chat_users_by_nick').get(user.nickname.toLowerCase()).put(null)
+      }
+    }
+    
+    // Clear all root nodes
     await gun.get('chat_users').put(null)
     await gun.get('chat_users_by_nick').put(null)
-    
-    // Clear messages
     await gun.get('general_chat').put(null)
     await gun.get('chat_messages').put(null)
-    
-    // Clear invites
+    await gun.get('messages').put(null)
     await gun.get('secure_invites').put(null)
-    
-    // Clear presence/online data
+    await gun.get('invites').put(null)
     await gun.get('user_presence').put(null)
     await gun.get('online_users').put(null)
-    
-    // Clear friendships
+    await gun.get('presence').put(null)
     await gun.get('friendships').put(null)
     
-    // Re-initialize the users system
-    gun.get('chat_users').put({ initialized: true })
+    // Clear localStorage too for complete reset
+    localStorage.clear()
+    sessionStorage.clear()
     
-    logger.log('✅ Gun.js database cleared!')
+    // Wait for Gun.js to sync deletions
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Re-initialize empty nodes
+    await gun.get('chat_users').put({ initialized: Date.now() })
+    await gun.get('chat_users_by_nick').put({ initialized: Date.now() })
+    await gun.get('messages').put({ initialized: Date.now() })
+    
+    logger.log('✅ Gun.js database and localStorage completely cleared!')
     return true
   } catch (error) {
     logger.error('Failed to clear Gun.js database:', error)
