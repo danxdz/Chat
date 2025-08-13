@@ -251,6 +251,41 @@ export default function TestingPanel({
                     • Current user in users list: {JSON.parse(localStorage.getItem('users') || '[]').find(u => u.id === user?.id) ? 'Yes ✅' : 'No ❌'}
                   </div>
                 </div>
+                <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '10px' }}>
+                  <strong>Gun.js Status:</strong>
+                  <div style={{ fontSize: '11px', marginLeft: '10px' }}>
+                    • Gun instance: {gun ? 'Connected ✅' : 'Not connected ❌'}
+                    • Gun.js available: {typeof window !== 'undefined' && window.Gun ? 'Yes ✅' : 'No ❌'}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (gun) {
+                        try {
+                          const { getAllGunUsers } = await import('../services/gunAuthService.js')
+                          const gunUsers = await getAllGunUsers(gun)
+                          alert(`Gun.js Users: ${gunUsers.length}\n\n${gunUsers.map(u => `• ${u.nickname} (${u.id.substring(0,8)})`).join('\n')}`)
+                        } catch (e) {
+                          alert('Error loading Gun.js users: ' + e.message)
+                        }
+                      } else {
+                        alert('Gun.js not connected')
+                      }
+                    }}
+                    style={{
+                      marginTop: '10px',
+                      padding: '8px',
+                      background: '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      width: '100%'
+                    }}
+                  >
+                    📊 Check Gun.js Users
+                  </button>
+                </div>
               </div>
 
               {/* Admin Data Panel */}
