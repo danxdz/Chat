@@ -1,12 +1,7 @@
 import { useState, useEffect, Component } from 'react'
-import Header from './components/Header'
-import ContactSidebar from './components/ContactSidebar'
-import ChatArea from './components/ChatArea'
-import TestingPanel from './components/TestingPanel'
-import SecureInviteModal from './components/SecureInviteModal'
-import MobileLayout from './components/MobileLayout'
 import LoginView from './components/LoginView'
 import NeedInviteView from './components/NeedInviteView'
+import ChatView from './components/ChatView'
 import { 
   ircLogin, 
   createUserAccount, 
@@ -1672,147 +1667,44 @@ function App() {
     )
   }
 
-  // Debug Notifications Component (only in development)
-  const DebugNotifications = () => {
-    if (!isDev) return null
-    
-    return (
-      <div style={{
-        position: 'fixed',
-        top: '10px',
-        left: '10px',
-        zIndex: 10000,
-        pointerEvents: 'none'
-      }}>
-        {debugNotifications.map((notif) => (
-          <div
-            key={notif.id}
-            style={{
-              background: notif.type === 'error' ? '#ff6666' : 
-                         notif.type === 'success' ? '#66ff66' : '#66bbff',
-              color: '#000',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              marginBottom: '4px',
-              fontSize: '12px',
-              maxWidth: '300px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              fontWeight: 'bold',
-              border: '1px solid rgba(0,0,0,0.2)'
-            }}
-          >
-            {notif.message}
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   if (currentView === 'chat') {
-    const isMobile = true // Force mobile for now
-    
     return (
-      <div className="app" style={{ background: '#0a0a0a' }}>
-        <DebugNotifications />
-        <Header
-          user={user}
-          activeContact={activeContact}
-          initStatus={initStatus}
-          onlineUsers={onlineUsers.size}
-          totalUsers={allUsers.length}
-          connectionStatus={connectionStatus}
-          onShowInvite={() => setShowSecureInviteModal(true)}
-          onShowTests={() => setShowTests(true)}
-          onChangeNickname={handleNicknameChange}
-          onLogout={logout}
-        />
-
-        {isMobile ? (
-          <MobileLayout
-            user={user}
-            messages={messages}
-            displayMessages={displayMessages}
-            friends={friends}
-            onlineUsers={onlineUsers}
-            pendingInvites={pendingInvites}
-            activeContact={activeContact}
-            newMessage={newMessage}
-            chatError={chatError}
-            messageDeliveryStatus={messageDeliveryStatus}
-            connectionStatus={connectionStatus}
-            lastSeen={lastSeen}
-            onMessageChange={(e) => setNewMessage(e.target.value)}
-            onSendMessage={sendMessage}
-            onContactSelect={setActiveContact}
-            onShowInvite={() => setShowSecureInviteModal(true)}
-          />
-        ) : (
-          // Desktop layout
-          <div className="main-layout">
-            <ContactSidebar
-              contacts={friends}
-              activeContact={activeContact}
-              connectionStatus={connectionStatus}
-              lastSeen={lastSeen}
-              onlineUsers={onlineUsers}
-              pendingInvites={pendingInvites}
-              onContactSelect={setActiveContact}
-            />
-
-            <ChatArea
-              chatError={chatError}
-              messages={messages}
-              displayMessages={displayMessages}
-              user={user}
-              activeContact={activeContact}
-              newMessage={newMessage}
-              messageDeliveryStatus={messageDeliveryStatus}
-              onMessageChange={(e) => setNewMessage(e.target.value)}
-              onSendMessage={sendMessage}
-            />
-          </div>
-        )}
-
-        <TestingPanel
-          isVisible={showTests}
-          user={user}
-          gun={gun}
-          initStatus={initStatus}
-          onClose={() => setShowTests(false)}
-          onSendTestMessage={sendTestMessage}
-          onClearCurrentClient={clearCurrentClientData}
-          onClearAllClients={clearAllClientsData}
-          onForceReload={forceReload}
-        />
-
-        {showSecureInviteModal && (
-          <SecureInviteModal
-            user={user}
-            gun={gun}
-            onClose={() => setShowSecureInviteModal(false)}
-            onInviteCreated={(invite) => {
-              console.log('🎫 Secure invite created:', invite)
-              // Add to pending invites
-              const newInvite = {
-                id: invite.inviteId,
-                inviteUrl: invite.inviteUrl,
-                expiresAt: invite.expiresAt,
-                createdAt: Date.now(),
-                fromNick: user.nickname,
-                status: 'pending'
-              }
-              setPendingInvites(prev => {
-                const updated = [...prev, newInvite]
-                // Save to localStorage
-                localStorage.setItem('pendingInvites', JSON.stringify(updated))
-                return updated
-              })
-              console.log('📋 Pending invites updated')
-              // Don't close modal - let user see QR code and copy link
-            }}
-          />
-        )}
-      </div>
+      <ChatView
+        user={user}
+        gun={gun}
+        messages={messages}
+        displayMessages={displayMessages}
+        friends={friends}
+        onlineUsers={onlineUsers}
+        allUsers={allUsers}
+        pendingInvites={pendingInvites}
+        activeContact={activeContact}
+        newMessage={newMessage}
+        chatError={chatError}
+        messageDeliveryStatus={messageDeliveryStatus}
+        connectionStatus={connectionStatus}
+        lastSeen={lastSeen}
+        initStatus={initStatus}
+        debugNotifications={debugNotifications}
+        isDev={isDev}
+        onMessageChange={(e) => setNewMessage(e.target.value)}
+        onSendMessage={sendMessage}
+        onContactSelect={setActiveContact}
+        onNicknameChange={handleNicknameChange}
+        onLogout={logout}
+        onInviteCreated={(newInvite) => {
+          setPendingInvites(prev => {
+            const updated = [...prev, newInvite]
+            // Save to localStorage
+            localStorage.setItem('pendingInvites', JSON.stringify(updated))
+            return updated
+          })
+        }}
+        onSendTestMessage={sendTestMessage}
+        onClearCurrentClient={clearCurrentClientData}
+        onClearAllClients={clearAllClientsData}
+        onForceReload={forceReload}
+      />
     )
   }
 
