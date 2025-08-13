@@ -229,7 +229,16 @@ function App() {
               console.log('🔑 Restored private key from session')
             } else {
               // Generate a new key for this session if missing
-              console.log('⚠️ No private key in session, will generate on demand')
+              console.log('⚠️ No private key in session, generating one now...')
+              if (window.Gun && window.Gun.SEA) {
+                try {
+                  const pair = await window.Gun.SEA.pair()
+                  savedUser.privateKey = pair.priv
+                  console.log('✅ Generated new private key for session')
+                } catch (e) {
+                  console.error('❌ Failed to generate private key:', e)
+                }
+              }
             }
             
             setUser(savedUser)
