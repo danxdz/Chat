@@ -274,33 +274,9 @@ function App() {
       // Invite links now go to separate HTML page (/register.html)
       // No need to handle them in React app
 
-      // Determine initial view based on Gun.js users (with localStorage fallback)
-      let hasUsers = false
-      
-      // First check Gun.js for users
-      if (gunInstance) {
-        try {
-          const gunUsers = await getAllGunUsers(gunInstance)
-          hasUsers = gunUsers && gunUsers.length > 0
-          console.log('🔍 Gun.js users check:', gunUsers?.length || 0, 'users found')
-        } catch (e) {
-          console.error('Failed to check Gun.js users:', e)
-        }
-      }
-      
-      // Fallback to localStorage if Gun.js check failed
-      if (!hasUsers) {
-        const existingUsersCheck = JSON.parse(localStorage.getItem('users') || '[]')
-        hasUsers = existingUsersCheck.length > 0
-        console.log('🔍 localStorage users check:', existingUsersCheck.length, 'users found')
-      }
-      
-      // Set view based on whether users exist
-      if (!hasUsers) {
-        setCurrentView('needInvite')
-      } else {
-        setCurrentView('login')
-      }
+      // Always show login page - users can create admin from there
+      setCurrentView('login')
+      console.log('📱 Starting at login page')
     } catch (error) {
       logger.error('❌ App initialization failed:', error)
       setChatError('Failed to initialize app: ' + error.message)
