@@ -157,6 +157,43 @@ export default function TestingPanel({
                 👑 Show/Hide Admin Data
               </button>
               
+              {/* Debug Info - Always visible */}
+              <div style={{
+                marginTop: '15px',
+                padding: '15px',
+                background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+                borderRadius: '8px',
+                border: '1px solid #2196F3',
+                fontSize: '12px',
+                color: '#fff',
+                marginBottom: '15px'
+              }}>
+                <h4 style={{ marginBottom: '10px' }}>🔍 Debug Info - Current User</h4>
+                <div><strong>Nickname:</strong> {user?.nickname}</div>
+                <div><strong>User ID:</strong> {user?.id?.slice(-8) || 'N/A'}</div>
+                <div><strong>Friends in user object:</strong> {user?.friends ? `${user.friends.length} friends` : 'No friends array'}</div>
+                {user?.friends && user.friends.length > 0 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <strong>Friend IDs:</strong>
+                    {user.friends.map((fId, i) => (
+                      <div key={i} style={{ marginLeft: '10px', fontSize: '11px' }}>
+                        • {fId.slice(-8)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ marginTop: '10px' }}>
+                  <strong>Pending Invites:</strong> {JSON.parse(localStorage.getItem('pendingInvites') || '[]').length}
+                </div>
+                <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '10px' }}>
+                  <strong>Data from localStorage:</strong>
+                  <div style={{ fontSize: '11px', marginLeft: '10px' }}>
+                    • Total Users: {JSON.parse(localStorage.getItem('users') || '[]').length}
+                    • Current user in users list: {JSON.parse(localStorage.getItem('users') || '[]').find(u => u.id === user?.id) ? 'Yes ✅' : 'No ❌'}
+                  </div>
+                </div>
+              </div>
+
               {/* Admin Data Panel */}
               <div id="admin-data-panel" style={{
                 display: 'none',
