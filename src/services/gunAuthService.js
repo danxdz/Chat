@@ -89,8 +89,8 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     
     logger.log('✅ User created in Gun.js:', nickname)
     
-    // Note: Private key should NOT be stored - it's only needed for this session
-    // User will need to login with password to regenerate keys
+    // Keep private key in memory for this session only (needed for invites)
+    // It will be lost on page refresh - user must login again
     
     return newUser
     
@@ -215,13 +215,26 @@ export const loginGunUser = async (gun, nickname, password) => {
       id: userRef.userId,
       nickname: userData.nickname,
       passwordHash: userData.passwordHash,
+      passwordSalt: userData.passwordSalt,
       publicKey: userData.publicKey || userRef.userId,
       createdAt: userData.createdAt,
       invitedBy: userData.invitedBy,
       friends: userData.friends || []
     }
     
-    // Private keys are not stored for security - regenerate from password if needed
+    // For existing users, we need to generate a new key pair for this session
+    // since we don't store private keys for security
+    // This means invites will have different signatures each session
+    try {
+      const pair = await window.Gun.SEA.pair()
+      user.privateKey = pair.priv
+      // Keep the original public key from registration for identity
+      // But use new private key for this session's operations
+      logger.log('Generated session private key for invites')
+    } catch (e) {
+      logger.warn('Could not generate session keys:', e)
+      // User can still login but won't be able to create invites
+    }
     
     logger.log('✅ User logged in from Gun.js:', nickname)
     return user

@@ -109,6 +109,18 @@ export const ircLogin = async (nickname, password) => {
       nickname: user.nickname
     })
     
+    // Generate session keys if Gun.SEA is available
+    if (window.Gun && window.Gun.SEA) {
+      try {
+        const pair = await window.Gun.SEA.pair()
+        user.privateKey = pair.priv
+        // Keep original public key but add session private key
+        console.log('Generated session private key for invites')
+      } catch (e) {
+        console.warn('Could not generate session keys:', e)
+      }
+    }
+    
     return user
     
   } catch (error) {
