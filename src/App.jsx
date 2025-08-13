@@ -201,14 +201,29 @@ function App() {
         console.log('⚠️ Gun.js not available, using localStorage:', existingUsers.length)
       }
       
-      // Check for saved session (Remember Me)
-      const savedSession = localStorage.getItem('savedSession')
+      // Check for saved session (Remember Me) - try sessionStorage first for private mode
+      let savedSession = sessionStorage.getItem('savedSession') || localStorage.getItem('savedSession')
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession)
-          // Find the user in all loaded users (use the ones we just loaded, not state)
-          const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-          const savedUser = existingUsers.find(u => u.id === session.id)
+          
+          // First try to find user in Gun.js
+          let savedUser = null
+          if (gunInstance) {
+            try {
+              const gunUsers = await getAllGunUsers(gunInstance)
+              savedUser = gunUsers.find(u => u.id === session.id)
+            } catch (e) {
+              console.error('Failed to find user in Gun.js:', e)
+            }
+          }
+          
+          // Fallback to localStorage
+          if (!savedUser) {
+            const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+            savedUser = existingUsers.find(u => u.id === session.id)
+          }
+          
           if (savedUser) {
             setUser(savedUser)
             setCurrentView('chat')
@@ -222,9 +237,11 @@ function App() {
             return
           } else {
             // Session invalid, clear it
+            sessionStorage.removeItem('savedSession')
             localStorage.removeItem('savedSession')
           }
         } catch (e) {
+          sessionStorage.removeItem('savedSession')
           localStorage.removeItem('savedSession')
         }
       }
@@ -254,10 +271,29 @@ function App() {
       // Invite links now go to separate HTML page (/register.html)
       // No need to handle them in React app
 
-      // If no invite and no users exist, show error
-      // Use localStorage to check for users since Gun.js might not be ready
-      const existingUsersCheck = JSON.parse(localStorage.getItem('users') || '[]')
-      if (existingUsersCheck.length === 0) {
+      // Determine initial view based on Gun.js users (with localStorage fallback)
+      let hasUsers = false
+      
+      // First check Gun.js for users
+      if (gunInstance) {
+        try {
+          const gunUsers = await getAllGunUsers(gunInstance)
+          hasUsers = gunUsers && gunUsers.length > 0
+          console.log('🔍 Gun.js users check:', gunUsers?.length || 0, 'users found')
+        } catch (e) {
+          console.error('Failed to check Gun.js users:', e)
+        }
+      }
+      
+      // Fallback to localStorage if Gun.js check failed
+      if (!hasUsers) {
+        const existingUsersCheck = JSON.parse(localStorage.getItem('users') || '[]')
+        hasUsers = existingUsersCheck.length > 0
+        console.log('🔍 localStorage users check:', existingUsersCheck.length, 'users found')
+      }
+      
+      // Set view based on whether users exist
+      if (!hasUsers) {
         setCurrentView('needInvite')
       } else {
         setCurrentView('login')
@@ -720,13 +756,19 @@ function App() {
       
       setUser(user)
       
-      // Save session if remember me
+      // Save session data
+      const sessionData = JSON.stringify({
+        nickname: user.nickname,
+        id: user.id,
+        timestamp: Date.now()
+      })
+      
+      // Always save to sessionStorage for current session (works in private mode)
+      sessionStorage.setItem('savedSession', sessionData)
+      
+      // Save to localStorage if remember me is checked
       if (rememberMe) {
-        localStorage.setItem('savedSession', JSON.stringify({
-          nickname: user.nickname,
-          id: user.id,
-          timestamp: Date.now()
-        }))
+        localStorage.setItem('savedSession', sessionData)
       }
       
       // Load user's friends
@@ -909,6 +951,11 @@ function App() {
     setActiveContact(null)
     setOnlineUsers(new Map())
     setCurrentView('login')
+    
+    // Clear both session storages
+    sessionStorage.removeItem('savedSession')
+    localStorage.removeItem('savedSession')
+    
     logger.log('✅ User logged out')
   }
 
