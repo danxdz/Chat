@@ -158,34 +158,34 @@ export default function TestingPanel({
             🔄 Restart App
           </button>
           
-          {/* Migrate to Gun.js Button */}
-          <button 
-            onClick={async () => {
-              if (confirm('Migrate all users from localStorage to Gun.js for cross-platform access?')) {
-                try {
-                  const { migrateUsersToGun } = await import('../services/gunAuthService.js')
-                  const count = await migrateUsersToGun(gun)
-                  alert(`✅ Migrated ${count} users to Gun.js! Users can now login from any device.`)
-                } catch (error) {
-                  alert(`❌ Migration failed: ${error.message}`)
-                }
-              }
-            }}
-            style={{ 
-              background: 'linear-gradient(135deg, #9C27B0, #673AB7)',
-              color: 'white',
-              border: 'none',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              width: '100%',
-              marginTop: '10px'
-            }}
-          >
-            🚀 Migrate Users to Gun.js (Cross-Platform)
-          </button>
+
+          
+          {/* Fix Private Key Issue */}
+          {!user?.privateKey && (
+            <button 
+              onClick={() => {
+                alert('⚠️ Private key missing!\n\nTo fix this:\n1. Click OK\n2. Logout\n3. Login again\n\nThis will generate a new private key for creating invites.')
+                setTimeout(() => {
+                  if (onLogout) onLogout()
+                }, 1000)
+              }}
+              style={{
+                padding: '15px',
+                background: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                width: '100%',
+                marginTop: '10px',
+                animation: 'pulse 2s infinite'
+              }}
+            >
+              🔧 FIX: Missing Private Key - Click to Logout
+            </button>
+          )}
           
           {/* Test Message Sending */}
           <button 
@@ -220,57 +220,7 @@ export default function TestingPanel({
             📤 Send Test Message
           </button>
           
-          {/* Force Sync Gun.js */}
-          <button 
-            onClick={async () => {
-              if (!gun) {
-                alert('Gun.js not connected')
-                return
-              }
-              try {
-                // Force sync by reading all data
-                const syncPromises = []
-                
-                // Sync users
-                syncPromises.push(new Promise((resolve) => {
-                  let timeout = setTimeout(resolve, 2000)
-                  gun.get('chat_users').map().on((data) => {
-                    clearTimeout(timeout)
-                    timeout = setTimeout(resolve, 500)
-                  })
-                }))
-                
-                // Sync messages
-                syncPromises.push(new Promise((resolve) => {
-                  let timeout = setTimeout(resolve, 2000)
-                  gun.get('general_chat').map().on((data) => {
-                    clearTimeout(timeout)
-                    timeout = setTimeout(resolve, 500)
-                  })
-                }))
-                
-                await Promise.all(syncPromises)
-                alert('✅ Gun.js sync forced! Reloading...')
-                window.location.reload()
-              } catch (error) {
-                alert('❌ Sync failed: ' + error.message)
-              }
-            }}
-            style={{
-              padding: '15px',
-              background: '#FF9800',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              width: '100%',
-              marginTop: '10px'
-            }}
-          >
-            🔄 Force Gun.js Sync
-          </button>
+
           
           {/* Test Connection */}
           <button 
@@ -413,6 +363,14 @@ export default function TestingPanel({
                 <h4 style={{ marginBottom: '10px' }}>🔍 Debug Info - Current User</h4>
                 <div><strong>Nickname:</strong> {user?.nickname}</div>
                 <div><strong>User ID:</strong> {user?.id?.slice(-8) || 'N/A'}</div>
+                <div style={{ 
+                  padding: '5px', 
+                  background: user?.privateKey ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)',
+                  borderRadius: '4px',
+                  margin: '5px 0'
+                }}>
+                  <strong>🔑 Private Key:</strong> {user?.privateKey ? '✅ PRESENT - Can create invites' : '❌ MISSING - Cannot create invites! Logout and login again.'}
+                </div>
                 <div><strong>Friends in user object:</strong> {user?.friends ? `${user.friends.length} friends` : 'No friends array'}</div>
                 {user?.friends && user.friends.length > 0 && (
                   <div style={{ marginTop: '10px' }}>

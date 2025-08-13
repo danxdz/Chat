@@ -149,6 +149,7 @@ function ChatView({
         onClearCurrentClient={onClearCurrentClient}
         onClearAllClients={onClearAllClients}
         onForceReload={onForceReload}
+        onLogout={onLogout}
       />
 
       {showSecureInviteModal && (
