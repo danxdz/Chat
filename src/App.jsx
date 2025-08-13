@@ -192,9 +192,16 @@ function App() {
       
       // Check if user was auto-logged in from registration
       const currentUser = localStorage.getItem('currentUser')
+      console.log('🔍 Checking for currentUser in localStorage:', currentUser ? 'Found' : 'Not found')
       if (currentUser) {
         try {
           const userData = JSON.parse(currentUser)
+          console.log('📋 Auto-login user data:', {
+            nickname: userData.nickname,
+            id: userData.id?.substring(0, 8),
+            hasPrivateKey: !!userData.privateKey,
+            hasFriends: !!userData.friends
+          })
           setUser(userData)
           setCurrentView('chat')
           localStorage.removeItem('currentUser') // Clean up
