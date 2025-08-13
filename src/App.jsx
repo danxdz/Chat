@@ -710,13 +710,29 @@ function App() {
   // Handle admin account creation
   const handleCreateAdmin = async () => {
     try {
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      // Check if admin already exists in Gun.js first
+      let adminExists = false
       
-      // Check if admin already exists
-      const adminExists = existingUsers.some(u => u.nickname.toLowerCase() === 'admin')
+      if (gun) {
+        try {
+          const gunUsers = await getAllGunUsers(gun)
+          adminExists = gunUsers.some(u => u.nickname.toLowerCase() === 'admin')
+          console.log('🔍 Checking Gun.js for admin:', adminExists ? 'Found' : 'Not found')
+        } catch (e) {
+          console.log('Could not check Gun.js for admin:', e)
+        }
+      }
+      
+      // Fallback to localStorage check
+      if (!adminExists) {
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        adminExists = existingUsers.some(u => u.nickname.toLowerCase() === 'admin')
+        console.log('🔍 Checking localStorage for admin:', adminExists ? 'Found' : 'Not found')
+      }
+      
       if (adminExists) {
         alert('Admin user already exists! Please login.')
-        return
+        return { success: false, error: 'Admin already exists' }
       }
       
       // Create admin account in Gun.js
@@ -724,56 +740,80 @@ function App() {
       console.log('👤 Admin user created in Gun.js:', adminUser)
       
       // Update allUsers state
-      const updatedUsers = [...existingUsers, adminUser]
-      setAllUsers(updatedUsers)
+      setAllUsers(prev => [...prev, adminUser])
+      
+      // Also save to localStorage for fallback
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+      existingUsers.push(adminUser)
+      localStorage.setItem('users', JSON.stringify(existingUsers))
       
       // Auto-login as admin
       setUser(adminUser)
       setCurrentView('chat')
       
       alert('✅ Admin account created successfully!\nUsername: Admin\nPassword: admin123')
+      return { success: true }
     } catch (error) {
       console.error('Failed to create admin:', error)
       alert('Failed to create admin account: ' + error.message)
+      return { success: false, error: error.message }
     }
   }
 
   const login = async (nickname, password, rememberMe = true) => {
     if (!nickname.trim() || !password.trim()) {
-      alert('Nickname and password are required')
-      return false
+      return { success: false, error: 'Nickname and password are required' }
     }
 
     try {
       console.log('🎯 Trying to login as:', nickname)
 
-      // Try Gun.js first
+      // Try Gun.js first (works in private mode)
       let user = null;
-      try {
-        user = await loginGunUser(gun, nickname, password)
-        console.log('🔐 Logged in user from Gun.js:', { 
-          id: user.id, 
-          nickname: user.nickname, 
-          friends: user.friends,
-          friendsCount: user.friends ? user.friends.length : 0
-        })
-      } catch (gunError) {
-        console.log('⚠️ Gun.js login failed, trying localStorage:', gunError.message)
-        
-        // Fallback to localStorage
-        const { ircLogin } = await import('./utils/secureAuth')
-        user = await ircLogin(nickname, password)
-        console.log('🔐 Logged in user from localStorage')
-        
-        // Migrate this user to Gun.js for next time
-        if (gun && user) {
+      let loginSource = null;
+      
+      if (gun) {
+        try {
+          user = await loginGunUser(gun, nickname, password)
+          loginSource = 'Gun.js'
+          console.log('🔐 Logged in user from Gun.js:', { 
+            id: user.id, 
+            nickname: user.nickname, 
+            friends: user.friends,
+            friendsCount: user.friends ? user.friends.length : 0
+          })
+        } catch (gunError) {
+          console.log('⚠️ Gun.js login failed:', gunError.message)
+        }
+      }
+      
+      // Only try localStorage if Gun.js failed and localStorage has data
+      if (!user) {
+        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
+        if (existingUsers.length > 0) {
           try {
-            await createGunUser(gun, user.nickname, password, null)
-            console.log('✅ User migrated to Gun.js')
-          } catch (e) {
-            console.log('Could not migrate user to Gun.js:', e.message)
+            const { ircLogin } = await import('./utils/secureAuth')
+            user = await ircLogin(nickname, password)
+            loginSource = 'localStorage'
+            console.log('🔐 Logged in user from localStorage')
+            
+            // Migrate this user to Gun.js for next time
+            if (gun && user) {
+              try {
+                await createGunUser(gun, user.nickname, password, null)
+                console.log('✅ User migrated to Gun.js')
+              } catch (e) {
+                console.log('Could not migrate user to Gun.js:', e.message)
+              }
+            }
+          } catch (localError) {
+            console.log('localStorage login also failed:', localError.message)
           }
         }
+      }
+      
+      if (!user) {
+        return { success: false, error: 'Invalid nickname or password' }
       }
       
       setUser(user)
@@ -852,18 +892,11 @@ function App() {
         logger.log('💓 Started presence heartbeat')
       }, 1000)
       
-      return true
+      setCurrentView('chat')
+      return { success: true }
     } catch (error) {
-      logger.error('❌ IRC login failed:', error)
-      
-      // Enhanced error message with debugging info
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      if (allUsers.length === 0) {
-        alert('❌ No users found! Please create an admin account first.')
-      } else {
-        alert(`❌ Login failed: ${error.message}\n\nAvailable users: ${allUsers.map(u => u.nickname).join(', ')}`)
-      }
-      return false
+      logger.error('❌ Login failed:', error)
+      return { success: false, error: error.message }
     }
   }
 
