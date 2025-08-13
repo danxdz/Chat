@@ -343,25 +343,25 @@ function App() {
       
       // Wait for Gun.js to sync with peers
       await new Promise((resolve) => {
-        let subscription = gunInstance.get(testKey).on((data) => {
-          if (data) {
+        let resolved = false
+        gunInstance.get(testKey).once((data) => {
+          if (data && !resolved) {
+            resolved = true
             logger.log('✅ Gun.js connectivity test successful')
             setInitStatus('Connected to P2P network')
-            if (subscription && subscription.off) {
-              subscription.off()
-            }
             resolve()
           }
         })
         
-        // Timeout after 3 seconds
+        // Timeout after 2 seconds
         setTimeout(() => {
-          logger.log('⚠️ Gun.js connectivity test timed out')
-          if (subscription && subscription.off) {
-            subscription.off()
+          if (!resolved) {
+            resolved = true
+            logger.log('⚠️ Gun.js connectivity test timed out - continuing anyway')
+            setInitStatus('Connected to P2P network (limited)')
+            resolve()
           }
-          resolve()
-        }, 3000)
+        }, 2000)
       })
 
       setGun(gunInstance)

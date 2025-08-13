@@ -105,32 +105,34 @@ export const checkUserExists = async (gun, nickname) => {
   
   return new Promise((resolve) => {
     try {
-      let subscription
       let timeout
       let resolved = false
       
-      // Use .on() to sync from peers
-      subscription = gun.get('chat_users_by_nick').get(nickname.toLowerCase()).on((data) => {
+      // Use .once() first for quick check, then .on() for sync
+      gun.get('chat_users_by_nick').get(nickname.toLowerCase()).once((data) => {
         if (!resolved && data && data.userId) {
           resolved = true
-          if (subscription && subscription.off) {
-            subscription.off()
-          }
           clearTimeout(timeout)
           resolve(data)
         }
       })
       
-      // Timeout after 3 seconds
+      // Also subscribe for updates in case data arrives later
+      gun.get('chat_users_by_nick').get(nickname.toLowerCase()).on((data) => {
+        if (!resolved && data && data.userId) {
+          resolved = true
+          clearTimeout(timeout)
+          resolve(data)
+        }
+      })
+      
+      // Timeout after 2 seconds
       timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true
-          if (subscription && subscription.off) {
-            subscription.off()
-          }
           resolve(null)
         }
-      }, 3000)
+      }, 2000)
     } catch (error) {
       logger.error('Error in checkUserExists:', error)
       resolve(null)
@@ -153,18 +155,24 @@ export const loginGunUser = async (gun, nickname, password) => {
       throw new Error('User not found')
     }
     
-    // Get full user data (sync from peers)
+    // Get full user data (try once first, then sync from peers)
     const userData = await new Promise((resolve) => {
-      let subscription
       let timeout
       let resolved = false
       
-      subscription = gun.get('chat_users').get(userRef.userId).on((data) => {
+      // Try .once() first for quick response
+      gun.get('chat_users').get(userRef.userId).once((data) => {
         if (!resolved && data && data.nickname) {
           resolved = true
-          if (subscription && subscription.off) {
-            subscription.off()
-          }
+          clearTimeout(timeout)
+          resolve(data)
+        }
+      })
+      
+      // Also use .on() to sync from peers if needed
+      gun.get('chat_users').get(userRef.userId).on((data) => {
+        if (!resolved && data && data.nickname) {
+          resolved = true
           clearTimeout(timeout)
           resolve(data)
         }
@@ -173,12 +181,9 @@ export const loginGunUser = async (gun, nickname, password) => {
       timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true
-          if (subscription && subscription.off) {
-            subscription.off()
-          }
           resolve(null)
         }
-      }, 3000)
+      }, 2000)
     })
     
     if (!userData) {
@@ -230,10 +235,9 @@ export const getAllGunUsers = async (gun) => {
     const users = []
     const seenUsers = new Set()
     let timeout
-    let subscription
     
-    // Use .on() to sync from peers, not just local cache
-    subscription = gun.get('chat_users').map().on((userData, userId) => {
+    // Use .map().on() to get all users - this syncs from peers
+    gun.get('chat_users').map().on((userData, userId) => {
       if (userData && userData.nickname && userId !== 'initialized' && !seenUsers.has(userId)) {
         seenUsers.add(userId)
         users.push({
@@ -243,28 +247,21 @@ export const getAllGunUsers = async (gun) => {
           friends: userData.friends || [],
           passwordHash: userData.passwordHash  // Include for login
         })
+        
+        // Reset timeout on each user found
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+          logger.log(`📊 Found ${users.length} users in Gun.js`)
+          resolve(users)
+        }, 500)
       }
-      
-      // Reset timeout on each user found
-      clearTimeout(timeout)
-      timeout = setTimeout(() => {
-        // Unsubscribe after getting all users
-        if (subscription && subscription.off) {
-          subscription.off()
-        }
-        logger.log(`📊 Found ${users.length} users in Gun.js (synced from peers)`)
-        resolve(users)
-      }, 1000)  // Wait a bit longer for sync
     })
     
     // Initial timeout if no users found
     timeout = setTimeout(() => {
-      if (subscription && subscription.off) {
-        subscription.off()
-      }
-      logger.log('📊 No users found in Gun.js after peer sync')
-      resolve([])
-    }, 3000)  // Give more time for initial sync
+      logger.log('📊 No users found in Gun.js')
+      resolve(users) // Return empty array or whatever we found
+    }, 2000)
   })
 }
 
