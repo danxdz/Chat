@@ -282,13 +282,13 @@ export default function TestingPanel({
                 return
               }
               
-              const onlineUsers = []
+              const onlineUsers = new Map()
               await new Promise((resolve) => {
                 let timeout = setTimeout(resolve, 2000)
                 gun.get('presence').map().once((data, key) => {
                   if (data && data.nickname && data.timestamp) {
                     const isOnline = Date.now() - data.timestamp < 30000 // 30 seconds
-                    onlineUsers.push({
+                    onlineUsers.set(key, {
                       nickname: data.nickname,
                       status: isOnline ? '🟢 Online' : '🔴 Offline',
                       lastSeen: new Date(data.timestamp).toLocaleTimeString()
@@ -299,9 +299,9 @@ export default function TestingPanel({
                 })
               })
               
-              if (onlineUsers.length > 0) {
-                alert('Online Users:\n\n' + onlineUsers.map(u => 
-                  `${u.status} ${u.nickname} (last: ${u.lastSeen})`
+              if (onlineUsers.size > 0) {
+                alert('Online Users:\n\n' + Array.from(onlineUsers.entries()).map(([key, user]) => 
+                  `${user.status} ${user.nickname} (last: ${user.lastSeen})`
                 ).join('\n'))
               } else {
                 alert('No users online data found')
@@ -323,154 +323,56 @@ export default function TestingPanel({
             👥 Show Online Users
           </button>
           
-          {/* Admin Panel - Only for Admin user */}
-          {user?.nickname === 'Admin' && (
+          {/* Admin Panel - Only show for bootstrap user */}
+          {user && user.id === 'bootstrap_admin' && (
             <>
-              <button 
-                onClick={() => {
-                  const adminPanel = document.getElementById('admin-data-panel')
-                  if (adminPanel) {
-                    adminPanel.style.display = adminPanel.style.display === 'none' ? 'block' : 'none'
-                  }
-                }}
-                style={{
-                  padding: '15px',
-                  background: '#9C27B0',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  width: '100%',
-                  marginTop: '10px'
-                }}
-              >
-                👑 Show/Hide Admin Data
-              </button>
-              
-              {/* Debug Info - Always visible */}
               <div style={{
-                marginTop: '15px',
-                padding: '15px',
-                background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+                padding: '10px',
+                background: 'linear-gradient(135deg, #2a0845 0%, #1a0530 100%)',
                 borderRadius: '8px',
-                border: '1px solid #2196F3',
-                fontSize: '12px',
-                color: '#fff',
-                marginBottom: '15px'
-              }}>
-                <h4 style={{ marginBottom: '10px' }}>🔍 Debug Info - Current User</h4>
-                <div><strong>Nickname:</strong> {user?.nickname}</div>
-                <div><strong>User ID:</strong> {user?.id?.slice(-8) || 'N/A'}</div>
-                <div style={{ 
-                  padding: '5px', 
-                  background: user?.privateKey ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)',
-                  borderRadius: '4px',
-                  margin: '5px 0'
-                }}>
-                  <strong>🔑 Private Key:</strong> {user?.privateKey ? '✅ PRESENT - Can create invites' : '❌ MISSING - Cannot create invites! Logout and login again.'}
-                </div>
-                <div><strong>Friends in user object:</strong> {user?.friends ? `${user.friends.length} friends` : 'No friends array'}</div>
-                {user?.friends && user.friends.length > 0 && (
-                  <div style={{ marginTop: '10px' }}>
-                    <strong>Friend IDs:</strong>
-                    {user.friends.map((fId, i) => (
-                      <div key={i} style={{ marginLeft: '10px', fontSize: '11px' }}>
-                        • {fId.slice(-8)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div style={{ marginTop: '10px' }}>
-                  <strong>Pending Invites:</strong> {JSON.parse(localStorage.getItem('pendingInvites') || '[]').length}
-                </div>
-                <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '10px' }}>
-                  <strong>Data from localStorage:</strong>
-                  <div style={{ fontSize: '11px', marginLeft: '10px' }}>
-                    • Total Users: {JSON.parse(localStorage.getItem('users') || '[]').length}
-                    • Current user in users list: {JSON.parse(localStorage.getItem('users') || '[]').find(u => u.id === user?.id) ? 'Yes ✅' : 'No ❌'}
-                  </div>
-                </div>
-                <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '10px' }}>
-                  <strong>Gun.js Status:</strong>
-                  <div style={{ fontSize: '11px', marginLeft: '10px' }}>
-                    • Gun instance: {gun ? 'Connected ✅' : 'Not connected ❌'}
-                    • Gun.js available: {typeof window !== 'undefined' && window.Gun ? 'Yes ✅' : 'No ❌'}
-                  </div>
-                  <button
-                    onClick={async () => {
-                      if (gun) {
-                        try {
-                          const { getAllGunUsers } = await import('../services/gunAuthService.js')
-                          const gunUsers = await getAllGunUsers(gun)
-                          alert(`Gun.js Users: ${gunUsers.length}\n\n${gunUsers.map(u => `• ${u.nickname} (${u.id.substring(0,8)})`).join('\n')}`)
-                        } catch (e) {
-                          alert('Error loading Gun.js users: ' + e.message)
-                        }
-                      } else {
-                        alert('Gun.js not connected')
-                      }
-                    }}
-                    style={{
-                      marginTop: '10px',
-                      padding: '8px',
-                      background: '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      cursor: 'pointer',
-                      width: '100%'
-                    }}
-                  >
-                    📊 Check Gun.js Users
-                  </button>
-                </div>
-              </div>
-
-              {/* Admin Data Panel */}
-              <div id="admin-data-panel" style={{
-                display: 'none',
-                maxHeight: '300px',
-                overflow: 'auto',
-                background: '#2a2a2a',
-                borderRadius: '8px',
-                padding: '15px',
+                marginBottom: '10px',
                 fontSize: '12px',
                 color: '#ddd'
               }}>
                 <h4 style={{ color: '#9C27B0', marginBottom: '10px' }}>👑 Admin Panel</h4>
                 
                 {(() => {
-                  const allUsers = JSON.parse(localStorage.getItem('users') || '[]')
-                  const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
+                  // Use real Gun.js data from props
+                  const allUsersData = allUsers || []
+                  const pendingInvitesData = pendingInvites || []
+                  const friendsData = friends || []
                   
                   return (
                     <>
                       <div style={{ marginBottom: '10px' }}>
-                        <strong>📊 Total Users:</strong> {allUsers.length}
+                        <strong>📊 Total Users:</strong> {allUsersData.length}
                       </div>
                       
                       <div style={{ marginBottom: '10px' }}>
                         <strong>🌳 User Connections:</strong>
-                        {allUsers.map((user, i) => (
+                        {allUsersData.map((userData, i) => (
                           <div key={i} style={{ marginLeft: '10px', marginTop: '5px' }}>
                             <div style={{ color: '#4CAF50' }}>
-                              👤 {user.nickname}
+                              👤 {userData.nickname || 'Unknown'} 
+                              {userData.id === user.id && ' (You)'}
+                              {onlineUsers.has(userData.id) && ' 🟢'}
                             </div>
-                            {user.friends && user.friends.length > 0 ? (
-                              user.friends.map((friendId, j) => {
-                                const friend = allUsers.find(u => u.id === friendId)
-                                return (
-                                  <div key={j} style={{ marginLeft: '20px', color: '#888' }}>
-                                    └─ 🤝 {friend ? friend.nickname : 'Unknown'}
-                                  </div>
-                                )
-                              })
-                            ) : (
+                            {/* Show friends for current user */}
+                            {userData.id === user.id && friendsData.length > 0 ? (
+                              friendsData.map((friend, j) => (
+                                <div key={j} style={{ marginLeft: '20px', color: '#888' }}>
+                                  └─ 🤝 {friend.nickname} {friend.status === 'online' ? '🟢' : '⚫'}
+                                </div>
+                              ))
+                            ) : userData.id === user.id ? (
                               <div style={{ marginLeft: '20px', color: '#666' }}>
-                                └─ No friends
+                                └─ No friends yet
+                              </div>
+                            ) : null}
+                            {/* Show invited by info */}
+                            {userData.invitedBy && (
+                              <div style={{ marginLeft: '20px', color: '#9C27B0', fontSize: '10px' }}>
+                                └─ Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
                               </div>
                             )}
                           </div>
@@ -478,11 +380,32 @@ export default function TestingPanel({
                       </div>
                       
                       <div style={{ marginTop: '10px' }}>
-                        <strong>📨 Invites ({pendingInvites.length}):</strong>
-                        {pendingInvites.map((invite, i) => (
-                          <div key={i} style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px' }}>
-                            • {invite.fromNick} → {invite.acceptedNickname || 'Pending'}
-                            {invite.status === 'accepted' && ' ✅'}
+                        <strong>📨 Pending Invites ({pendingInvitesData.length}):</strong>
+                        {pendingInvitesData.length > 0 ? (
+                          pendingInvitesData.map((invite, i) => (
+                            <div key={i} style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#FFA726' }}>
+                              • Token: {invite.token.substring(0, 12)}...
+                              <br />
+                              • Created: {new Date(invite.createdAt).toLocaleString()}
+                              <br />
+                              • Expires: {new Date(invite.expiresAt).toLocaleString()}
+                              <br />
+                              • Status: {invite.status || 'pending'}
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#666' }}>
+                            No pending invites
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Add accepted invites section */}
+                      <div style={{ marginTop: '10px' }}>
+                        <strong>✅ Accepted Invites:</strong>
+                        {allUsersData.filter(u => u.invitedBy === user.id).map((invitedUser, i) => (
+                          <div key={i} style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#4CAF50' }}>
+                            • {invitedUser.nickname} joined {invitedUser.createdAt ? new Date(invitedUser.createdAt).toLocaleDateString() : 'recently'}
                           </div>
                         ))}
                       </div>

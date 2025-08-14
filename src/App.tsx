@@ -134,7 +134,10 @@ const App: React.FC = () => {
     if (!user || !gun) return;
     
     try {
+      logger.log('🔍 Loading friends for user:', user.id, user.nickname);
+      
       const friendsWithDetails = await getFriendsWithDetails(gun, user.id, allUsers);
+      logger.log('📋 Friends with details received:', friendsWithDetails);
       
       // Update status based on online users
       const friendContacts: Contact[] = friendsWithDetails.map(friend => ({
@@ -143,7 +146,14 @@ const App: React.FC = () => {
       }));
       
       setFriends(friendContacts);
-      logger.log(`Loaded ${friendContacts.length} friends`);
+      logger.log(`✅ Loaded ${friendContacts.length} friends for ${user.nickname}`);
+      
+      // Also log the raw friends data from Gun.js for debugging
+      if (isDev) {
+        gun.get('chat_users').get(user.id).get('friends').once((data) => {
+          logger.log('🔍 Raw friends data in Gun.js:', data);
+        });
+      }
     } catch (error) {
       logger.error('Failed to load friends:', error);
     }

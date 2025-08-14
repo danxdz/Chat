@@ -1,6 +1,76 @@
 import { createGunUser, getAllGunUsers } from './gunAuthService'
 import { logger } from '../utils/logger'
 
+// Create admin user with fixed ID for consistency
+export const createAdminUser = async (gun) => {
+  try {
+    logger.log('🎯 Creating bootstrap admin user...')
+    
+    // Check if admin already exists in Gun.js
+    return new Promise((resolve, reject) => {
+      const adminId = 'bootstrap_admin';
+      
+      gun.get('chat_users').get(adminId).once(async (existingData) => {
+        if (existingData && existingData.nickname) {
+          logger.log('👤 Admin user already exists in Gun.js');
+          
+          // Return the existing admin user
+          const adminUser = {
+            id: adminId,
+            nickname: existingData.nickname,
+            publicKey: adminId,
+            privateKey: existingData.privateKey || null,
+            createdAt: existingData.createdAt,
+            isAdmin: true,
+            friends: []
+          };
+          
+          resolve(adminUser);
+        } else {
+          // Create new admin user
+          logger.log('Creating new admin user...');
+          
+          // Generate keypair for the admin
+          const identity = await window.Gun.SEA.pair();
+          
+          const adminUser = {
+            id: adminId,
+            nickname: 'Admin',
+            publicKey: adminId,
+            privateKey: identity.priv, // Store private key for admin
+            createdAt: Date.now(),
+            isAdmin: true,
+            friends: []
+          };
+          
+          // Store in Gun.js
+          await gun.get('chat_users').get(adminId).put({
+            nickname: 'Admin',
+            publicKey: adminId,
+            privateKey: identity.priv, // Admin keeps private key for creating invites
+            createdAt: Date.now(),
+            isAdmin: true,
+            invitedBy: null,
+            friends: {}
+          });
+          
+          // Also store by nickname
+          await gun.get('chat_users_by_nick').get('admin').put({
+            userId: adminId,
+            nickname: 'Admin'
+          });
+          
+          logger.log('✅ Admin user created successfully');
+          resolve(adminUser);
+        }
+      });
+    });
+  } catch (error) {
+    logger.error('❌ Failed to create admin user:', error);
+    throw error;
+  }
+}
+
 // Bootstrap function to create first admin user for demo
 export const createBootstrapUser = async () => {
   try {

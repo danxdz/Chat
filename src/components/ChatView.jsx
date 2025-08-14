@@ -110,6 +110,10 @@ function ChatView({
         isVisible={showTests}
         user={user}
         gun={gun}
+        allUsers={allUsers}
+        friends={friends}
+        onlineUsers={onlineUsers}
+        pendingInvites={pendingInvites}
         initStatus={initStatus}
         onClose={() => setShowTests(false)}
         onSendTestMessage={onSendTestMessage}

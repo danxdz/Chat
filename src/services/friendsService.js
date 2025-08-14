@@ -23,10 +23,41 @@ export const getFriendsFromGun = async (gun, userId) => {
         resolve([]);
       }, 3000);
       
-      gun.get('chat_users').get(userId).get('friends').once((friends) => {
+      const friends = [];
+      let hasData = false;
+      
+      // Use .map().once() to get all friends
+      gun.get('chat_users').get(userId).get('friends').map().once((friendData, friendId) => {
+        if (friendData && friendId && friendId !== '_') {
+          hasData = true;
+          friends.push(friendId);
+          logger.log(`Found friend ${friendId} for user ${userId}`);
+        }
+      });
+      
+      // Also check with a direct .once() in case the data structure is different
+      gun.get('chat_users').get(userId).get('friends').once((friendsData) => {
         clearTimeout(timeout);
-        if (friends && Array.isArray(friends)) {
-          logger.log('✅ Friends loaded from Gun.js:', friends);
+        
+        if (!hasData && friendsData) {
+          // Handle if friends is stored as an object
+          if (typeof friendsData === 'object' && !Array.isArray(friendsData)) {
+            const friendIds = Object.keys(friendsData).filter(key => 
+              key !== '_' && friendsData[key] === true
+            );
+            logger.log('✅ Friends loaded from Gun.js (object):', friendIds);
+            resolve(friendIds);
+          } 
+          // Handle if friends is stored as an array (legacy)
+          else if (Array.isArray(friendsData)) {
+            logger.log('✅ Friends loaded from Gun.js (array):', friendsData);
+            resolve(friendsData);
+          } else {
+            logger.log('No friends found for user:', userId);
+            resolve([]);
+          }
+        } else if (hasData) {
+          logger.log('✅ Friends loaded from Gun.js (map):', friends);
           resolve(friends);
         } else {
           logger.log('No friends found for user:', userId);
@@ -50,35 +81,18 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
   }
   
   try {
-    // Get current friends lists
-    const [user1Friends, user2Friends] = await Promise.all([
-      getFriendsFromGun(gun, userId1),
-      getFriendsFromGun(gun, userId2)
-    ]);
+    // Store friends as an object for better Gun.js compatibility
+    // Each friend ID is a key with value true
     
-    // Add each user to the other's friends list if not already there
-    let updated = false;
+    // Add userId2 to userId1's friends
+    await gun.get('chat_users').get(userId1).get('friends').get(userId2).put(true);
+    logger.log(`Added ${userId2} to ${userId1}'s friends`);
     
-    if (!user1Friends.includes(userId2)) {
-      const updatedFriends1 = [...user1Friends, userId2];
-      await gun.get('chat_users').get(userId1).get('friends').put(updatedFriends1);
-      logger.log(`Added ${userId2} to ${userId1}'s friends`);
-      updated = true;
-    }
+    // Add userId1 to userId2's friends  
+    await gun.get('chat_users').get(userId2).get('friends').get(userId1).put(true);
+    logger.log(`Added ${userId1} to ${userId2}'s friends`);
     
-    if (!user2Friends.includes(userId1)) {
-      const updatedFriends2 = [...user2Friends, userId1];
-      await gun.get('chat_users').get(userId2).get('friends').put(updatedFriends2);
-      logger.log(`Added ${userId1} to ${userId2}'s friends`);
-      updated = true;
-    }
-    
-    if (updated) {
-      logger.log('✅ Mutual friendship established');
-    } else {
-      logger.log('ℹ️ Users were already friends');
-    }
-    
+    logger.log('✅ Mutual friendship established');
     return true;
   } catch (error) {
     logger.error('Failed to add mutual friendship:', error);
@@ -93,20 +107,9 @@ export const removeFriendship = async (gun, userId1, userId2) => {
   if (!gun || !userId1 || !userId2) return false;
   
   try {
-    // Get current friends lists
-    const [user1Friends, user2Friends] = await Promise.all([
-      getFriendsFromGun(gun, userId1),
-      getFriendsFromGun(gun, userId2)
-    ]);
-    
-    // Remove each user from the other's friends list
-    const updatedFriends1 = user1Friends.filter(id => id !== userId2);
-    const updatedFriends2 = user2Friends.filter(id => id !== userId1);
-    
-    await Promise.all([
-      gun.get('chat_users').get(userId1).get('friends').put(updatedFriends1),
-      gun.get('chat_users').get(userId2).get('friends').put(updatedFriends2)
-    ]);
+    // Remove by setting to null
+    await gun.get('chat_users').get(userId1).get('friends').get(userId2).put(null);
+    await gun.get('chat_users').get(userId2).get('friends').get(userId1).put(null);
     
     logger.log('✅ Friendship removed');
     return true;
