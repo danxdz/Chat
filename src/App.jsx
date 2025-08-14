@@ -180,11 +180,6 @@ function App() {
       if (currentUser) {
         try {
           const userData = JSON.parse(currentUser)
-// [REMOVED CONSOLE LOG]
-            id: userData.id?.substring(0, 8),
-            hasPrivateKey: !!userData.privateKey,
-            hasFriends: !!userData.friends
-          })
           setUser(userData)
           setCurrentView('chat')
           localStorage.removeItem('currentUser') // Clean up
@@ -567,10 +562,6 @@ function App() {
       
       // Decrypt message if it's encrypted
       let messageData = { ...data }
-// [REMOVED CONSOLE LOG]
-        seaAvailable: !!(window.Gun && window.Gun.SEA),
-        encryptedText: data.encrypted ? data.text : 'not encrypted'
-      })
       
       if (data.encrypted && window.Gun && window.Gun.SEA) {
         try {
@@ -828,9 +819,6 @@ function App() {
     
       // Test encryption availability immediately after login
 // [REMOVED CONSOLE LOG]
-        seaAvailable: !!(window.Gun && window.Gun.SEA),
-        seaObject: window.Gun ? window.Gun.SEA : 'Gun not available'
-      })
       
       // Quick encryption test
       if (window.Gun && window.Gun.SEA) {
@@ -1102,9 +1090,6 @@ function App() {
       // Encrypt message text if SEA is available
       const messageToSend = { ...message }
 // [REMOVED CONSOLE LOG]
-        seaAvailable: !!(window.Gun && window.Gun.SEA),
-        messageText: message.text
-      })
       
       if (window.Gun && window.Gun.SEA) {
         try {
