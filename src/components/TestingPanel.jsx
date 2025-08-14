@@ -105,10 +105,40 @@ export default function TestingPanel({
       
       // Force reload
       window.location.reload()
+    } else if (type === 'all-users') {
+      // Clear all users except admin
+      if (gun) {
+        const usersToDelete = allUsers.filter(u => u.id !== 'bootstrap_admin')
+        
+        for (const userData of usersToDelete) {
+          // Remove user from Gun.js
+          await gun.get('chat_users').get(userData.id).put(null)
+          if (userData.nickname) {
+            await gun.get('chat_users_by_nick').get(userData.nickname.toLowerCase()).put(null)
+          }
+          
+          // Remove user's presence
+          await gun.get('user_presence').get(userData.id).put(null)
+          
+          // Remove user's invites
+          await gun.get('user_invites').get(userData.id).put(null)
+        }
+        
+        // Clear all messages
+        await gun.get('chat_messages').put(null)
+        await gun.get('general_chat').put({ initialized: true })
+        
+        // Clear admin's friends list
+        await gun.get('chat_users').get('bootstrap_admin').get('friends').put(null)
+        
+        console.log(`✅ Deleted ${usersToDelete.length} users`)
+        
+        // Reload to refresh the UI
+        window.location.reload()
+      }
+      setShowClearConfirm(false)
+      setClearType(null)
     }
-    
-    setShowClearConfirm(false)
-    setClearType(null)
   }
 
   const handleDeleteUser = async (userId, nickname) => {
@@ -151,95 +181,150 @@ export default function TestingPanel({
     setUserToDelete(null)
   }
 
+  const handleDeleteAllUsers = async () => {
+    if (!gun) return
+    
+    try {
+      const usersToDelete = allUsers.filter(u => u.id !== 'bootstrap_admin')
+      
+      for (const userData of usersToDelete) {
+        // Remove user from Gun.js
+        await gun.get('chat_users').get(userData.id).put(null)
+        if (userData.nickname) {
+          await gun.get('chat_users_by_nick').get(userData.nickname.toLowerCase()).put(null)
+        }
+        
+        // Remove user's presence
+        await gun.get('user_presence').get(userData.id).put(null)
+        
+        // Remove user's invites
+        await gun.get('user_invites').get(userData.id).put(null)
+      }
+      
+      // Clear all messages
+      await gun.get('chat_messages').put(null)
+      await gun.get('general_chat').put({ initialized: true })
+      
+      // Clear admin's friends list
+      await gun.get('chat_users').get('bootstrap_admin').get('friends').put(null)
+      
+      console.log(`✅ Deleted ${usersToDelete.length} users`)
+      
+      // Reload to refresh the UI
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to delete all users:', error)
+      alert('Failed to delete all users: ' + error.message)
+    }
+    
+    setShowClearConfirm(false)
+    setClearType(null)
+  }
+
   return (
     <>
-      <div className="testing-panel">
+      <div className="testing-panel-fullscreen">
         <div className="testing-header">
           <h2>🛠️ Testing Panel</h2>
           <button onClick={onClose} className="close-btn">✕</button>
         </div>
         
-        <div className="testing-content">
-          {/* Status Info */}
-          <div className="status-section">
-            <h3>📊 Status</h3>
-            <div className="status-item">
-              <span>User:</span> <span>{user?.nickname || 'Not logged in'}</span>
+        <div className="testing-content-grid">
+          {/* Left Column - Status & Actions */}
+          <div className="testing-sidebar">
+            {/* Status Info */}
+            <div className="status-section">
+              <h3>📊 Status</h3>
+              <div className="status-item">
+                <span>User:</span> <span>{user?.nickname || 'Not logged in'}</span>
+              </div>
+              <div className="status-item">
+                <span>ID:</span> <span>{user?.id?.substring(0, 8) || 'N/A'}...</span>
+              </div>
+              <div className="status-item">
+                <span>Role:</span> <span>{user?.id === 'bootstrap_admin' ? '👑 Admin' : '👤 User'}</span>
+              </div>
+              <div className="status-item">
+                <span>Gun.js:</span> <span>{gun ? '✅ Connected' : '❌ Not connected'}</span>
+              </div>
+              <div className="status-item">
+                <span>Total Users:</span> <span>{allUsers?.length || 0}</span>
+              </div>
+              <div className="status-item">
+                <span>Online:</span> <span>{onlineUsers?.size || 0}</span>
+              </div>
             </div>
-            <div className="status-item">
-              <span>ID:</span> <span>{user?.id?.substring(0, 8) || 'N/A'}...</span>
-            </div>
-            <div className="status-item">
-              <span>Role:</span> <span>{user?.id === 'bootstrap_admin' ? '👑 Admin' : '👤 User'}</span>
-            </div>
-            <div className="status-item">
-              <span>Gun.js:</span> <span>{gun ? '✅ Connected' : '❌ Not connected'}</span>
-            </div>
-            <div className="status-item">
-              <span>Total Users:</span> <span>{allUsers?.length || 0}</span>
-            </div>
-            <div className="status-item">
-              <span>Online:</span> <span>{onlineUsers?.size || 0}</span>
-            </div>
-          </div>
 
-          {/* Quick Actions */}
-          <div className="actions-section">
-            <h3>🚀 Quick Actions</h3>
-            
-            <button 
-              onClick={loadOnlineUsers}
-              className="test-btn info"
-            >
-              👥 View Online Users
-            </button>
-            
-            <button 
-              onClick={onSendTestMessage}
-              className="test-btn primary"
-            >
-              📤 Send Test Message
-            </button>
-            
-            <button 
-              onClick={() => {
-                setClearType('messages')
-                setShowClearConfirm(true)
-              }}
-              className="test-btn warning"
-            >
-              🗑️ Clear All Messages
-            </button>
-            
-            <button 
-              onClick={() => {
-                setClearType('current')
-                setShowClearConfirm(true)
-              }}
-              className="test-btn warning"
-            >
-              🧹 Clear My Data & Logout
-            </button>
-            
-            {user?.id === 'bootstrap_admin' && (
+            {/* Quick Actions */}
+            <div className="actions-section">
+              <h3>🚀 Quick Actions</h3>
+              
+              <button 
+                onClick={loadOnlineUsers}
+                className="test-btn info"
+              >
+                👥 View Online Users
+              </button>
+              
+              <button 
+                onClick={onSendTestMessage}
+                className="test-btn primary"
+              >
+                📤 Send Test Message
+              </button>
+              
               <button 
                 onClick={() => {
-                  setClearType('all')
+                  setClearType('messages')
                   setShowClearConfirm(true)
                 }}
-                className="test-btn danger"
+                className="test-btn warning"
               >
-                💣 Factory Reset (Delete Everything)
+                🗑️ Clear All Messages
               </button>
-            )}
+              
+              <button 
+                onClick={() => {
+                  setClearType('current')
+                  setShowClearConfirm(true)
+                }}
+                className="test-btn warning"
+              >
+                🧹 Clear My Data & Logout
+              </button>
+              
+              {user?.id === 'bootstrap_admin' && (
+                <>
+                  <button 
+                    onClick={() => {
+                      setClearType('all-users')
+                      setShowClearConfirm(true)
+                    }}
+                    className="test-btn danger"
+                  >
+                    👥💣 Delete All Users (Keep Admin)
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      setClearType('all')
+                      setShowClearConfirm(true)
+                    }}
+                    className="test-btn danger"
+                  >
+                    💣 Factory Reset (Delete Everything)
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Admin Panel - Only show for bootstrap user */}
+          {/* Right Column - Admin Panel */}
           {user && user.id === 'bootstrap_admin' && (
-            <div className="admin-section">
+            <div className="admin-section-fullscreen">
               <h3>👑 Admin Control Panel</h3>
               
-              <div className="admin-panel">
+              <div className="admin-panel-fullscreen">
                 {(() => {
                   // Use real Gun.js data from props
                   const allUsersData = allUsers || []
@@ -456,22 +541,41 @@ export default function TestingPanel({
             setShowClearConfirm(false)
             setClearType(null)
           }}
-          title={clearType === 'current' ? 'Clear Current User Data' : 'Clear All Data'}
+          title={
+            clearType === 'current' ? 'Clear Current User Data' : 
+            clearType === 'messages' ? 'Clear All Messages' :
+            clearType === 'all-users' ? 'Delete All Users' :
+            'Clear All Data'
+          }
           size="small"
         >
           <div className="confirm-modal">
             <p className="warning-text">
               {clearType === 'current' 
                 ? '⚠️ This will clear all data for your current user session.'
+                : clearType === 'messages'
+                ? '⚠️ This will delete all chat messages but keep users.'
+                : clearType === 'all-users'
+                ? '⚠️ This will DELETE ALL USERS except the admin account!'
                 : '⚠️ This will DELETE EVERYTHING and reset the app completely!'}
             </p>
-            <p>Are you sure you want to continue?</p>
+            <p>
+              {clearType === 'all-users' 
+                ? `${allUsers?.filter(u => u.id !== 'bootstrap_admin').length || 0} users will be deleted.`
+                : 'Are you sure you want to continue?'}
+            </p>
             <div className="modal-buttons">
               <button 
-                onClick={() => handleClearData(clearType)}
+                onClick={() => {
+                  if (clearType === 'all-users') {
+                    handleClearData('all-users')
+                  } else {
+                    handleClearData(clearType)
+                  }
+                }}
                 className="btn-danger"
               >
-                Yes, Clear Data
+                {clearType === 'all-users' ? 'Delete All Users' : 'Yes, Clear Data'}
               </button>
               <button 
                 onClick={() => {
