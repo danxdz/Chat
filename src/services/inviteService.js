@@ -70,14 +70,38 @@ export const markInviteAsUsed = async (gun, inviterId, inviteId, acceptedBy) => 
   if (!gun || !inviterId || !inviteId) return false;
   
   try {
-    // Update the invite status
-    await gun.get('user_invites').get(inviterId).get(inviteId).put({
-      used: true,
-      usedAt: Date.now(),
-      acceptedBy: acceptedBy
+    // First get the existing invite data
+    const existingInvite = await new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 1000);
+      gun.get('user_invites').get(inviterId).get(inviteId).once((data) => {
+        clearTimeout(timeout);
+        resolve(data);
+      });
     });
     
-    logger.log('✅ Invite marked as used:', inviteId);
+    if (existingInvite) {
+      // Update the invite with new status while preserving other fields
+      const updatedInvite = {
+        ...existingInvite,
+        status: 'used',
+        used: true,
+        usedAt: Date.now(),
+        acceptedBy: acceptedBy
+      };
+      
+      await gun.get('user_invites').get(inviterId).get(inviteId).put(updatedInvite);
+      logger.log('✅ Invite marked as used:', inviteId, 'by', acceptedBy);
+    } else {
+      // If invite doesn't exist in the new structure, just mark it as used
+      await gun.get('user_invites').get(inviterId).get(inviteId).put({
+        status: 'used',
+        used: true,
+        usedAt: Date.now(),
+        acceptedBy: acceptedBy
+      });
+      logger.log('✅ Invite marked as used (minimal data):', inviteId);
+    }
+    
     return true;
   } catch (error) {
     logger.error('Failed to mark invite as used:', error);

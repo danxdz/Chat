@@ -76,9 +76,11 @@ export const getFriendsFromGun = async (gun, userId) => {
  */
 export const addMutualFriendship = async (gun, userId1, userId2) => {
   if (!gun || !userId1 || !userId2) {
-    logger.error('Invalid parameters for addMutualFriendship');
+    logger.error('Invalid parameters for addMutualFriendship:', { userId1, userId2, gun: !!gun });
     return false;
   }
+  
+  logger.log(`🤝 Starting mutual friendship between ${userId1.substring(0, 8)} and ${userId2.substring(0, 8)}`);
   
   try {
     // Store friends as an object for better Gun.js compatibility
@@ -86,13 +88,32 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
     
     // Add userId2 to userId1's friends
     await gun.get('chat_users').get(userId1).get('friends').get(userId2).put(true);
-    logger.log(`Added ${userId2} to ${userId1}'s friends`);
+    logger.log(`✅ Added ${userId2.substring(0, 8)} to ${userId1.substring(0, 8)}'s friends`);
     
     // Add userId1 to userId2's friends  
     await gun.get('chat_users').get(userId2).get('friends').get(userId1).put(true);
-    logger.log(`Added ${userId1} to ${userId2}'s friends`);
+    logger.log(`✅ Added ${userId1.substring(0, 8)} to ${userId2.substring(0, 8)}'s friends`);
     
-    logger.log('✅ Mutual friendship established');
+    // Verify the friendship was created
+    const verifyFriendship = async (uid1, uid2) => {
+      return new Promise((resolve) => {
+        gun.get('chat_users').get(uid1).get('friends').get(uid2).once((data) => {
+          resolve(data === true);
+        });
+      });
+    };
+    
+    const [check1, check2] = await Promise.all([
+      verifyFriendship(userId1, userId2),
+      verifyFriendship(userId2, userId1)
+    ]);
+    
+    if (check1 && check2) {
+      logger.log('✅ Mutual friendship established and verified');
+    } else {
+      logger.warn('⚠️ Friendship created but verification failed:', { check1, check2 });
+    }
+    
     return true;
   } catch (error) {
     logger.error('Failed to add mutual friendship:', error);

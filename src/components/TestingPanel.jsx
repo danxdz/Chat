@@ -341,56 +341,120 @@ export default function TestingPanel({
                   const allUsersData = allUsers || []
                   const pendingInvitesData = pendingInvites || []
                   const friendsData = friends || []
+                  const onlineUsersSet = onlineUsers || new Set()
                   
                   return (
                     <>
                       <div style={{ marginBottom: '10px' }}>
                         <strong>📊 Total Users:</strong> {allUsersData.length}
+                        <span style={{ marginLeft: '10px', color: '#4CAF50' }}>
+                          🟢 Online: {onlineUsersSet.size}
+                        </span>
                       </div>
                       
                       <div style={{ marginBottom: '10px' }}>
-                        <strong>🌳 User Connections:</strong>
-                        {allUsersData.map((userData, i) => (
-                          <div key={i} style={{ marginLeft: '10px', marginTop: '5px' }}>
-                            <div style={{ color: '#4CAF50' }}>
-                              👤 {userData.nickname || 'Unknown'} 
-                              {userData.id === user.id && ' (You)'}
-                              {onlineUsers.has(userData.id) && ' 🟢'}
-                            </div>
-                            {/* Show friends for current user */}
-                            {userData.id === user.id && friendsData.length > 0 ? (
-                              friendsData.map((friend, j) => (
-                                <div key={j} style={{ marginLeft: '20px', color: '#888' }}>
-                                  └─ 🤝 {friend.nickname} {friend.status === 'online' ? '🟢' : '⚫'}
+                        <strong>🌳 Complete User Tree:</strong>
+                        {allUsersData.length > 0 ? (
+                          allUsersData.map((userData, i) => {
+                            // Get this user's friends from Gun.js data
+                            const userFriends = userData.id === user.id 
+                              ? friendsData 
+                              : [];
+                            
+                            return (
+                              <div key={i} style={{ 
+                                marginLeft: '10px', 
+                                marginTop: '8px',
+                                padding: '8px',
+                                background: userData.id === user.id ? 'rgba(156, 39, 176, 0.1)' : 'transparent',
+                                borderRadius: '4px',
+                                border: userData.id === user.id ? '1px solid #9C27B0' : 'none'
+                              }}>
+                                <div style={{ 
+                                  color: userData.id === 'bootstrap_admin' ? '#FFD700' : '#4CAF50',
+                                  fontWeight: userData.id === user.id ? 'bold' : 'normal'
+                                }}>
+                                  {userData.id === 'bootstrap_admin' ? '👑' : '👤'} {userData.nickname || 'Unknown'} 
+                                  {userData.id === user.id && ' (You)'}
+                                  {onlineUsersSet.has(userData.id) ? ' 🟢' : ' ⚫'}
+                                  {userData.id === 'bootstrap_admin' && ' [ADMIN]'}
                                 </div>
-                              ))
-                            ) : userData.id === user.id ? (
-                              <div style={{ marginLeft: '20px', color: '#666' }}>
-                                └─ No friends yet
+                                
+                                {/* Show user details */}
+                                <div style={{ marginLeft: '20px', fontSize: '10px', color: '#888', marginTop: '2px' }}>
+                                  ID: {userData.id?.substring(0, 8)}...
+                                  {userData.createdAt && ` | Joined: ${new Date(userData.createdAt).toLocaleDateString()}`}
+                                </div>
+                                
+                                {/* Show who invited this user */}
+                                {userData.invitedBy && (
+                                  <div style={{ marginLeft: '20px', color: '#9C27B0', fontSize: '10px', marginTop: '2px' }}>
+                                    └─ 📨 Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
+                                  </div>
+                                )}
+                                
+                                {/* Show friends for this user (only if it's the current user or we have the data) */}
+                                {userData.id === user.id && userFriends.length > 0 && (
+                                  <div style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                    <span style={{ color: '#FFA726', fontSize: '11px' }}>Friends ({userFriends.length}):</span>
+                                    {userFriends.map((friend, j) => (
+                                      <div key={j} style={{ marginLeft: '10px', color: '#888', fontSize: '11px' }}>
+                                        └─ 🤝 {friend.nickname} {friend.status === 'online' ? '🟢' : '⚫'}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* Show users this person invited */}
+                                {(() => {
+                                  const invitedUsers = allUsersData.filter(u => u.invitedBy === userData.id);
+                                  if (invitedUsers.length > 0) {
+                                    return (
+                                      <div style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                        <span style={{ color: '#4CAF50', fontSize: '11px' }}>Invited ({invitedUsers.length}):</span>
+                                        {invitedUsers.map((invitedUser, k) => (
+                                          <div key={k} style={{ marginLeft: '10px', color: '#4CAF50', fontSize: '11px' }}>
+                                            └─ ✅ {invitedUser.nickname}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
-                            ) : null}
-                            {/* Show invited by info */}
-                            {userData.invitedBy && (
-                              <div style={{ marginLeft: '20px', color: '#9C27B0', fontSize: '10px' }}>
-                                └─ Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
-                              </div>
-                            )}
+                            );
+                          })
+                        ) : (
+                          <div style={{ marginLeft: '10px', marginTop: '5px', color: '#666' }}>
+                            No users registered yet
                           </div>
-                        ))}
+                        )}
                       </div>
                       
-                      <div style={{ marginTop: '10px' }}>
+                      <div style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
                         <strong>📨 Pending Invites ({pendingInvitesData.length}):</strong>
                         {pendingInvitesData.length > 0 ? (
                           pendingInvitesData.map((invite, i) => (
-                            <div key={i} style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#FFA726' }}>
-                              • Token: {invite.token.substring(0, 12)}...
-                              <br />
-                              • Created: {new Date(invite.createdAt).toLocaleString()}
-                              <br />
-                              • Expires: {new Date(invite.expiresAt).toLocaleString()}
-                              <br />
-                              • Status: {invite.status || 'pending'}
+                            <div key={i} style={{ 
+                              marginLeft: '10px', 
+                              marginTop: '5px', 
+                              padding: '5px',
+                              background: 'rgba(255, 167, 38, 0.1)',
+                              borderRadius: '4px',
+                              fontSize: '11px', 
+                              color: '#FFA726' 
+                            }}>
+                              <div>🎫 Token: {invite.token?.substring(0, 12)}...</div>
+                              <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>
+                                Created: {new Date(invite.createdAt).toLocaleString()}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#888' }}>
+                                Expires: {new Date(invite.expiresAt).toLocaleString()}
+                              </div>
+                              <div style={{ fontSize: '10px', color: invite.status === 'used' ? '#4CAF50' : '#FFA726' }}>
+                                Status: {invite.status || 'pending'} {invite.status === 'used' && '✅'}
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -400,15 +464,20 @@ export default function TestingPanel({
                         )}
                       </div>
                       
-                      {/* Add accepted invites section */}
-                      <div style={{ marginTop: '10px' }}>
-                        <strong>✅ Accepted Invites:</strong>
-                        {allUsersData.filter(u => u.invitedBy === user.id).map((invitedUser, i) => (
-                          <div key={i} style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#4CAF50' }}>
-                            • {invitedUser.nickname} joined {invitedUser.createdAt ? new Date(invitedUser.createdAt).toLocaleDateString() : 'recently'}
+                      {/* Debug: Show online users data */}
+                      {isDev && (
+                        <div style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                          <strong>🔍 Debug - Online Users:</strong>
+                          <div style={{ fontSize: '10px', color: '#888', marginTop: '5px' }}>
+                            Set size: {onlineUsersSet.size}
+                            {onlineUsersSet.size > 0 && (
+                              <div>
+                                IDs: {Array.from(onlineUsersSet).map(id => id.substring(0, 8)).join(', ')}
+                              </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </>
                   )
                 })()}

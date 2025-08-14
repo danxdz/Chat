@@ -1,13 +1,8 @@
 // Gun.js Authentication Service - Cross-platform user management
-const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
+import { logger } from '../utils/logger'
+import { addMutualFriendship } from './friendsService'
 
-const logger = {
-  log: (...args) => isDev && console.log(...args),
-  error: (...args) => console.error(...args),
-  warn: (...args) => isDev && console.warn(...args),
-  info: (...args) => isDev && console.info(...args),
-  debug: (...args) => isDev && console.debug(...args)
-}
+const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
 
 /**
  * Initialize Gun.js user system
@@ -89,7 +84,7 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     
     // If invited, add mutual friendship
     if (inviteData?.fromId) {
-      const friendshipAdded = await addMutualFriendsGun(gun, inviteData.fromId, identity.pub)
+      const friendshipAdded = await addMutualFriendship(gun, inviteData.fromId, identity.pub)
       if (friendshipAdded) {
         logger.log('✅ Mutual friendship established with inviter')
       } else {
@@ -354,49 +349,6 @@ export const updateGunUser = async (gun, userId, updates) => {
 }
 
 /**
- * Add mutual friends in Gun.js
- */
-export const addMutualFriendsGun = async (gun, userId1, userId2) => {
-  try {
-    // Get both users
-    const user1Data = await new Promise((resolve) => {
-      gun.get('chat_users').get(userId1).once((data) => resolve(data))
-      setTimeout(() => resolve(null), 1000)
-    })
-    
-    const user2Data = await new Promise((resolve) => {
-      gun.get('chat_users').get(userId2).once((data) => resolve(data))
-      setTimeout(() => resolve(null), 1000)
-    })
-    
-    if (!user1Data || !user2Data) {
-      throw new Error('One or both users not found')
-    }
-    
-    // Update friends arrays
-    const user1Friends = user1Data.friends || []
-    const user2Friends = user2Data.friends || []
-    
-    if (!user1Friends.includes(userId2)) {
-      user1Friends.push(userId2)
-      await gun.get('chat_users').get(userId1).get('friends').put(user1Friends)
-    }
-    
-    if (!user2Friends.includes(userId1)) {
-      user2Friends.push(userId1)
-      await gun.get('chat_users').get(userId2).get('friends').put(user2Friends)
-    }
-    
-    logger.log('✅ Mutual friends added in Gun.js')
-    return true
-    
-  } catch (error) {
-    logger.error('Failed to add mutual friends in Gun.js:', error)
-    return false
-  }
-}
-
-/**
  * Migrate existing localStorage users to Gun.js
  */
 export const migrateUsersToGun = async (gun) => {
@@ -615,7 +567,6 @@ export default {
   loginGunUser,
   getAllGunUsers,
   updateGunUser,
-  addMutualFriendsGun,
   migrateUsersToGun,
   clearGunDatabase
 }
