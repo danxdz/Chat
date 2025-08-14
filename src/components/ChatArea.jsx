@@ -113,44 +113,113 @@ export default function ChatArea({
               return (
                 <div key={message.id} style={{
                   textAlign: 'center',
-                  margin: '0.8rem 0',
-                  padding: '0.5rem',
-                  fontSize: '0.8rem',
-                  color: 'rgba(255, 255, 255, 0.6)',
+                  margin: '1rem 2rem',
+                  padding: '0.4rem 1rem',
+                  fontSize: '0.75rem',
+                  color: 'rgba(255, 255, 255, 0.5)',
                   fontStyle: 'italic',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '4px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                  background: 'linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.1), transparent)',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
                 }}>
-                  <span style={{ color: '#4CAF50' }}>*</span> {message.text} <span style={{ color: '#4CAF50' }}>*</span>
+                  <span style={{ color: '#4CAF50', fontSize: '0.9rem' }}>→</span>
+                  <span>{message.text}</span>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    color: 'rgba(255, 255, 255, 0.3)',
+                    marginLeft: '0.5rem'
+                  }}>
+                    {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
               )
             }
             
             // Regular messages
+            const isOwnMessage = message.fromId === user.id
+            const messageTime = new Date(message.timestamp)
+            const timeString = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            
             return (
-              <div key={message.id} className="message-bubble" style={{ 
-                marginBottom: '0.5rem',
-                padding: '0.8rem',
-                background: message.fromId === user.id ? 'rgba(0, 102, 204, 0.8)' : 'rgba(255, 255, 255, 0.08)',
-                borderRadius: '12px',
-                maxWidth: '85%',
-                marginLeft: message.fromId === user.id ? 'auto' : '0',
-                marginRight: message.fromId === user.id ? '0' : 'auto',
-                fontSize: '0.9rem',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(5px)'
+              <div key={message.id} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: isOwnMessage ? 'flex-end' : 'flex-start',
+                marginBottom: '1rem',
+                padding: '0 0.5rem'
               }}>
-                <div className="message-header" style={{ 
-                  fontSize: '0.7rem', 
-                  color: 'rgba(255, 255, 255, 0.7)', 
-                  marginBottom: '0.4rem',
-                  fontWeight: '500'
+                {/* Sender name for other users' messages */}
+                {!isOwnMessage && (
+                  <div style={{
+                    fontSize: '0.7rem',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    marginBottom: '0.2rem',
+                    marginLeft: '0.5rem'
+                  }}>
+                    {message.from}
+                  </div>
+                )}
+                
+                {/* Message bubble */}
+                <div className="message-bubble" style={{ 
+                  padding: '0.7rem 1rem',
+                  background: isOwnMessage 
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                    : 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: isOwnMessage 
+                    ? '18px 18px 4px 18px' 
+                    : '18px 18px 18px 4px',
+                  maxWidth: '70%',
+                  fontSize: '0.9rem',
+                  boxShadow: isOwnMessage 
+                    ? '0 4px 6px rgba(102, 126, 234, 0.2)' 
+                    : '0 2px 4px rgba(0, 0, 0, 0.2)',
+                  backdropFilter: 'blur(10px)',
+                  border: isOwnMessage 
+                    ? 'none' 
+                    : '1px solid rgba(255, 255, 255, 0.05)',
+                  wordBreak: 'break-word'
                 }}>
-                  {message.from} • {new Date(message.timestamp).toLocaleTimeString()}
-                  {message.type === 'private' && <span style={{ color: '#ffc107' }}> 🔒 Private</span>}
-                  {message.fromId === user.id && (
-                    <span style={{ float: 'right', fontSize: '0.6rem' }}>
+                  {/* Private message indicator */}
+                  {message.type === 'private' && (
+                    <div style={{
+                      fontSize: '0.65rem',
+                      color: '#ffc107',
+                      marginBottom: '0.3rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.2rem'
+                    }}>
+                      🔒 Private Message
+                    </div>
+                  )}
+                  
+                  {/* Message text */}
+                  <div style={{ 
+                    color: '#ffffff', 
+                    lineHeight: '1.5'
+                  }}>
+                    {message.text}
+                  </div>
+                </div>
+                
+                {/* Time and status */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  marginTop: '0.2rem',
+                  fontSize: '0.65rem',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  paddingLeft: isOwnMessage ? '0' : '0.5rem',
+                  paddingRight: isOwnMessage ? '0.5rem' : '0'
+                }}>
+                  <span>{timeString}</span>
+                  {isOwnMessage && (
+                    <span>
                       {(() => {
                         const deliveryStatus = messageDeliveryStatus.get(message.id)
                         if (!deliveryStatus) return '⏳'
@@ -165,7 +234,6 @@ export default function ChatArea({
                     </span>
                   )}
                 </div>
-                <div style={{ color: '#ffffff', lineHeight: '1.4' }}>{message.text}</div>
               </div>
             )
           })
