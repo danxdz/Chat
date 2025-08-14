@@ -417,7 +417,19 @@ export default function TestingPanel({
           {user && user.id === 'bootstrap_admin' && (
             <>
               <div className="admin-panel-container">
-                <h4 style={{ color: '#9C27B0', marginBottom: '10px', fontSize: '16px' }}>👑 Admin Panel</h4>
+                <h4 style={{ color: '#9C27B0', marginBottom: '10px', fontSize: '16px' }}>
+                  👑 Admin Panel 
+                  <span style={{ 
+                    fontSize: '10px', 
+                    marginLeft: '10px', 
+                    background: 'rgba(76, 175, 80, 0.2)', 
+                    padding: '2px 6px', 
+                    borderRadius: '4px',
+                    color: '#4CAF50'
+                  }}>
+                    v2.1 Fixed
+                  </span>
+                </h4>
                 
                 {(() => {
                   // Use real Gun.js data from props
