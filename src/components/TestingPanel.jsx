@@ -389,161 +389,87 @@ export default function TestingPanel({
                   
                   return (
                     <>
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '20px', 
-                        marginBottom: '15px',
-                        flexWrap: 'wrap'
-                      }}>
-                        <div style={{ 
-                          background: 'rgba(255,255,255,0.05)', 
-                          padding: '10px 15px', 
-                          borderRadius: '6px',
-                          border: '1px solid rgba(255,255,255,0.1)'
-                        }}>
-                          <div style={{ fontSize: '11px', color: '#888' }}>Total Users</div>
-                          <div style={{ fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>{allUsersData.length}</div>
+                      {/* Stats Bar */}
+                      <div className="admin-stats-bar">
+                        <div className="stat-item">
+                          <span className="stat-value">{allUsersData.length}</span>
+                          <span className="stat-label">Users</span>
                         </div>
-                        <div style={{ 
-                          background: 'rgba(76,175,80,0.1)', 
-                          padding: '10px 15px', 
-                          borderRadius: '6px',
-                          border: '1px solid rgba(76,175,80,0.3)'
-                        }}>
-                          <div style={{ fontSize: '11px', color: '#4CAF50' }}>Online</div>
-                          <div style={{ fontSize: '20px', color: '#4CAF50', fontWeight: 'bold' }}>{onlineUsersSet.size}</div>
+                        <div className="stat-item online">
+                          <span className="stat-value">{onlineUsersSet.size}</span>
+                          <span className="stat-label">Online</span>
                         </div>
-                        <div style={{ 
-                          background: 'rgba(255,152,0,0.1)', 
-                          padding: '10px 15px', 
-                          borderRadius: '6px',
-                          border: '1px solid rgba(255,152,0,0.3)'
-                        }}>
-                          <div style={{ fontSize: '11px', color: '#FF9800' }}>Pending Invites</div>
-                          <div style={{ fontSize: '20px', color: '#FF9800', fontWeight: 'bold' }}>{pendingInvitesData.length}</div>
+                        <div className="stat-item pending">
+                          <span className="stat-value">{pendingInvitesData.length}</span>
+                          <span className="stat-label">Invites</span>
                         </div>
                       </div>
                       
-                      <div style={{ marginBottom: '15px' }}>
-                        <strong style={{ fontSize: '13px' }}>👥 Registered Users</strong>
+                      {/* Users List - Simple & Compact */}
+                      <div className="admin-users-section">
+                        <h5 className="section-title">Users</h5>
                         {allUsersData.length > 0 ? (
-                          <div className="users-table-container">
-                            <table className="users-table">
-                              <thead>
-                                <tr>
-                                  <th>Status</th>
-                                  <th>User</th>
-                                  <th>ID</th>
-                                  <th>Friends</th>
-                                  <th>Invited By</th>
-                                  <th>Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {allUsersData.map((userData, i) => {
-                                  const userFriendIds = allUsersFriends[userData.id] || []
-                                  const isAdmin = userData.id === 'bootstrap_admin'
-                                  const isCurrentUser = userData.id === user.id
-                                  const inviter = userData.invitedBy ? 
-                                    allUsersData.find(u => u.id === userData.invitedBy) : null
-                                  
-                                  return (
-                                    <tr key={i} className={isCurrentUser ? 'current-user' : ''}>
-                                      <td>
-                                        <span className={`status-dot ${onlineUsersSet.has(userData.id) ? 'online' : 'offline'}`}>
-                                          {onlineUsersSet.has(userData.id) ? '🟢' : '⚫'}
-                                        </span>
-                                      </td>
-                                      <td>
-                                        <div className="user-name">
-                                          {isAdmin ? '👑' : '👤'} 
-                                          <span>{userData.nickname || 'Unknown'}</span>
-                                          {isCurrentUser && <span className="you-badge">(You)</span>}
-                                          {isAdmin && <span className="admin-badge">ADMIN</span>}
-                                        </div>
-                                      </td>
-                                      <td>
-                                        <span className="user-id">{userData.id?.substring(0, 6)}...</span>
-                                      </td>
-                                      <td>
-                                        <span className="friends-count">
-                                          {userFriendIds.length > 0 ? (
-                                            <>🤝 {userFriendIds.length}</>
-                                          ) : (
-                                            <span style={{ color: '#666' }}>-</span>
-                                          )}
-                                        </span>
-                                      </td>
-                                      <td>
-                                        {inviter ? (
-                                          <span className="inviter">{inviter.nickname}</span>
-                                        ) : (
-                                          <span style={{ color: '#666' }}>-</span>
-                                        )}
-                                      </td>
-                                      <td>
-                                        {!isAdmin && !isCurrentUser ? (
-                                          <button
-                                            onClick={() => setUserToDelete({ id: userData.id, nickname: userData.nickname })}
-                                            className="delete-btn-compact"
-                                          >
-                                            🗑️
-                                          </button>
-                                        ) : (
-                                          <span style={{ color: '#444' }}>-</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
+                          <div className="simple-users-list">
+                            {allUsersData.map((userData, i) => {
+                              const userFriendIds = allUsersFriends[userData.id] || []
+                              const isAdmin = userData.id === 'bootstrap_admin'
+                              const isCurrentUser = userData.id === user.id
+                              const isOnline = onlineUsersSet.has(userData.id)
+                              const inviter = userData.invitedBy ? 
+                                allUsersData.find(u => u.id === userData.invitedBy) : null
+                              
+                              return (
+                                <div key={i} className={`user-row ${isCurrentUser ? 'current' : ''} ${isOnline ? 'online' : 'offline'}`}>
+                                  <div className="user-main">
+                                    <span className="user-status">{isOnline ? '🟢' : '⚫'}</span>
+                                    <span className="user-icon">{isAdmin ? '👑' : '👤'}</span>
+                                    <span className="user-nick">{userData.nickname || 'Unknown'}</span>
+                                    {isCurrentUser && <span className="badge you">YOU</span>}
+                                    {isAdmin && <span className="badge admin">ADMIN</span>}
+                                  </div>
+                                  <div className="user-details">
+                                    <span className="detail-item">
+                                      <span className="label">ID:</span> {userData.id?.substring(0, 6)}...
+                                    </span>
+                                    {userFriendIds.length > 0 && (
+                                      <span className="detail-item friends">
+                                        🤝 {userFriendIds.length}
+                                      </span>
+                                    )}
+                                    {inviter && (
+                                      <span className="detail-item">
+                                        <span className="label">by:</span> {inviter.nickname}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {!isAdmin && !isCurrentUser && (
+                                    <button
+                                      onClick={() => setUserToDelete({ id: userData.id, nickname: userData.nickname })}
+                                      className="user-delete-btn"
+                                      title="Delete user"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
-                          <div style={{ 
-                            padding: '20px', 
-                            textAlign: 'center', 
-                            color: '#666',
-                            background: 'rgba(255,255,255,0.02)',
-                            borderRadius: '6px',
-                            marginTop: '10px'
-                          }}>
-                            No users registered yet
-                          </div>
+                          <div className="no-data">No users registered yet</div>
                         )}
                       </div>
                       
+                      {/* Pending Invites - Compact */}
                       {pendingInvitesData.length > 0 && (
-                        <div style={{ marginTop: '15px' }}>
-                          <strong style={{ fontSize: '13px' }}>📨 Pending Invites</strong>
-                          <div style={{ 
-                            display: 'grid', 
-                            gap: '8px', 
-                            marginTop: '8px',
-                            maxHeight: '150px',
-                            overflowY: 'auto'
-                          }}>
+                        <div className="admin-invites-section">
+                          <h5 className="section-title">Pending Invites ({pendingInvitesData.length})</h5>
+                          <div className="invites-list">
                             {pendingInvitesData.map((invite, i) => (
-                              <div key={i} style={{ 
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '8px',
-                                background: 'rgba(255, 152, 0, 0.1)',
-                                borderRadius: '4px',
-                                border: '1px solid rgba(255, 152, 0, 0.2)',
-                                fontSize: '11px'
-                              }}>
-                                <div>
-                                  <span style={{ color: '#FF9800' }}>🎫 {invite.token?.substring(0, 8)}...</span>
-                                  <span style={{ color: '#888', marginLeft: '10px' }}>
-                                    Expires: {new Date(invite.expiresAt).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <span style={{ 
-                                  color: invite.status === 'used' ? '#4CAF50' : '#FF9800',
-                                  fontSize: '10px'
-                                }}>
+                              <div key={i} className="invite-item">
+                                <span className="invite-token">🎫 {invite.token?.substring(0, 8)}...</span>
+                                <span className="invite-expire">Exp: {new Date(invite.expiresAt).toLocaleDateString()}</span>
+                                <span className={`invite-status ${invite.status}`}>
                                   {invite.status || 'pending'}
                                 </span>
                               </div>
