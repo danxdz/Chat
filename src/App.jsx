@@ -314,12 +314,14 @@ function App() {
         
         // Load friends from Gun.js
         let friendsList = []
-        if (gun && user.friends && user.friends.length > 0) {
-          // Get all users from Gun.js to find friends
+        if (gun) {
+          // Always try to load friends from Gun.js, not from user.friends array
           try {
-            const gunUsers = await getAllGunUsers(gun)
-            friendsList = getFriendsList(user, gunUsers)
+            const { getFriendsFromGun, getFriendsWithDetails } = await import('./services/friendsService')
+            const friendIds = await getFriendsFromGun(gun, user.id)
+            friendsList = await getFriendsWithDetails(gun, friendIds)
 // [REMOVED CONSOLE LOG]
+            logger.log(`✅ Loaded ${friendsList.length} friends from Gun.js`)
           } catch (e) {
             console.error('Failed to load friends from Gun.js:', e)
           }
@@ -327,43 +329,38 @@ function App() {
         setFriends(friendsList)
 // [REMOVED CONSOLE LOG]
         // Load and monitor pending invites
-        const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
-        setPendingInvites(savedInvites)
-// [REMOVED CONSOLE LOG]
-        // Monitor invites in Gun.js for real-time updates
+        // Don't use localStorage for invites - load from Gun.js instead
         if (gun && user) {
-          gun.get('secure_invites').map().on((invite, key) => {
-            if (invite && invite.fromId === user.id && invite.status === 'pending') {
+          const { getPendingInvites } = await import('./services/inviteService')
+          const gunInvites = await getPendingInvites(gun, user.id)
+          setPendingInvites(gunInvites)
+// [REMOVED CONSOLE LOG]
+        
+        // Monitor invites in Gun.js for real-time updates
+          // Use the correct path: user_invites instead of secure_invites
+          gun.get('user_invites').get(user.id).map().on((invite, inviteId) => {
+            if (invite && inviteId && inviteId !== '_') {
               setPendingInvites(prev => {
-                const exists = prev.some(inv => inv.id === invite.id)
-                if (!exists) {
-                  const updated = [...prev, invite]
-                  localStorage.setItem('pendingInvites', JSON.stringify(updated))
-                  return updated
+                const exists = prev.some(inv => inv.id === inviteId)
+                if (!exists && invite.status === 'pending') {
+                  // Add new pending invite
+                  return [...prev, { ...invite, id: inviteId }]
+                } else if (exists && invite.status === 'used') {
+                  // Remove used invite
+                  return prev.filter(inv => inv.id !== inviteId)
                 }
                 return prev
               })
-            }
-          })
-          
-          // Also monitor for accepted invites to remove them from pending list
-          gun.get('secure_invites').map().on(async (invite, key) => {
-            if (invite && invite.fromId === user.id && invite.status === 'accepted') {
-              // Remove accepted invite from pending list
-              setPendingInvites(prev => {
-                const updated = prev.filter(inv => inv.id !== invite.id)
-                localStorage.setItem('pendingInvites', JSON.stringify(updated))
-                return updated
-              })
               
-              // Add friend if accepted - reload friends list
-              if (invite.acceptedBy) {
-                // Reload friends from Gun.js
-                const existingUsers = await getAllGunUsers(gun)
-                setAllUsers(existingUsers)
-                const userFriends = getFriendsList(user, existingUsers)
-                setFriends(userFriends)
-// [REMOVED CONSOLE LOG]
+              // If invite was just used, reload friends
+              if (invite.status === 'used' && invite.acceptedBy) {
+                // Reload friends from Gun.js using the proper service
+                import('./services/friendsService').then(async ({ getFriendsFromGun, getFriendsWithDetails }) => {
+                  const friendIds = await getFriendsFromGun(gun, user.id)
+                  const friendsWithDetails = await getFriendsWithDetails(gun, friendIds)
+                  setFriends(friendsWithDetails)
+                  logger.log('✅ Friends reloaded after invite acceptance')
+                })
               }
             }
           })
@@ -393,19 +390,18 @@ function App() {
 
     logger.log('🔧 Setting up Gun.js listeners for general and private chats...')
     
-    // Listen for friend updates
-          gun.get('friendships').get(user.id).map().on(async (data, key) => {
-        if (data && data.status === 'friends') {
+    // Listen for friend updates - monitor the user's friends node directly
+          gun.get('chat_users').get(user.id).get('friends').map().on(async (isFriend, friendId) => {
+        if (isFriend === true && friendId && friendId !== '_') {
 // [REMOVED CONSOLE LOG]
           // Reload friends list from Gun.js
           if (gun) {
             try {
-              const gunUsers = await getAllGunUsers(gun)
-              const currentUser = gunUsers.find(u => u.id === user.id)
-              if (currentUser) {
-                const friendsList = getFriendsList(currentUser, gunUsers)
-                setFriends(friendsList)
-              }
+              const { getFriendsFromGun, getFriendsWithDetails } = await import('./services/friendsService')
+              const friendIds = await getFriendsFromGun(gun, user.id)
+              const friendsWithDetails = await getFriendsWithDetails(gun, friendIds)
+              setFriends(friendsWithDetails)
+              logger.log('✅ Friends updated from Gun.js')
             } catch (e) {
               console.error('Failed to reload friends from Gun.js:', e)
             }
@@ -485,26 +481,7 @@ function App() {
       }
     })
     
-    // Listen for friendships updates
-    if (user) {
-      gun.get('friendships').get(user.id).map().on((friendData, friendId) => {
-        if (friendData && friendData.friendNick) {
-// [REMOVED CONSOLE LOG]
-          setFriends(prev => {
-            // Check if friend already exists
-            if (prev.find(f => f.id === friendId)) return prev
-            
-            const newFriend = {
-              id: friendId,
-              nickname: friendData.friendNick,
-              addedAt: friendData.addedAt
-            }
-// [REMOVED CONSOLE LOG]
-            return [...prev, newFriend]
-          })
-        }
-      })
-    }
+    // Friends updates are now monitored via chat_users path in the effect above
 
     logger.log('✅ Gun.js listeners ready for general, private chats, and presence')
   }, [gun, user?.id, contacts, friends])
@@ -970,20 +947,7 @@ function App() {
           localStorage.setItem('users', JSON.stringify(allUsers))
         }
         
-        // Update pending invites where this user accepted
-        const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
-        let invitesUpdated = false
-        pendingInvites.forEach(invite => {
-          if (invite.acceptedBy === user.id) {
-            invite.acceptedNickname = newNickname.trim()
-            invitesUpdated = true
-          }
-        })
-        if (invitesUpdated) {
-          localStorage.setItem('pendingInvites', JSON.stringify(pendingInvites))
-          setPendingInvites(pendingInvites)
-// [REMOVED CONSOLE LOG]
-        }
+        // Pending invites are now managed in Gun.js, no need to update localStorage
         
         alert(`✅ Nickname changed to "${newNickname.trim()}"`)
       } catch (error) {
@@ -1487,17 +1451,8 @@ function App() {
                 // Mark invite as used and remove from pending
                 await markInviteUsed(inviteData.id)
                 
-                // Update pending invite to show who accepted
-                const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
-                const inviteIndex = pendingInvites.findIndex(inv => inv.id === inviteData.id)
-                if (inviteIndex !== -1) {
-                  pendingInvites[inviteIndex].status = 'accepted'
-                  pendingInvites[inviteIndex].acceptedBy = newUser.id
-                  pendingInvites[inviteIndex].acceptedNickname = nickname
-                  pendingInvites[inviteIndex].acceptedAt = Date.now()
-                  localStorage.setItem('pendingInvites', JSON.stringify(pendingInvites))
-// [REMOVED CONSOLE LOG]
-                }
+                // The invite status is updated in Gun.js by the registration page
+                // No need to update localStorage
                 
                 // Auto-login
                 setUser(newUser)
@@ -1889,12 +1844,9 @@ function App() {
         onNicknameChange={handleNicknameChange}
         onLogout={logout}
         onInviteCreated={(newInvite) => {
-          setPendingInvites(prev => {
-            const updated = [...prev, newInvite]
-            // Save to localStorage
-            localStorage.setItem('pendingInvites', JSON.stringify(updated))
-            return updated
-          })
+          // The invite is already stored in Gun.js by SecureInviteModal
+          // Just update the local state
+          setPendingInvites(prev => [...prev, newInvite])
         }}
         onSendTestMessage={sendTestMessage}
         onClearCurrentClient={clearCurrentClientData}

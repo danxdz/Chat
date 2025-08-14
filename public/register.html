@@ -284,15 +284,26 @@
                     
                     console.log('✅ Friendship established!');
                     
-                    // Mark invite as used
+                    // Mark invite as used - get existing data first and update it
                     if (inviteData.inviteId) {
+                        const existingInvite = await new Promise((resolve) => {
+                            const timeout = setTimeout(() => resolve({}), 1000);
+                            gun.get('user_invites').get(inviteData.fromId).get(inviteData.inviteId).once((data) => {
+                                clearTimeout(timeout);
+                                resolve(data || {});
+                            });
+                        });
+                        
+                        // Update the invite with all fields
                         await gun.get('user_invites').get(inviteData.fromId).get(inviteData.inviteId).put({
+                            ...existingInvite,
                             status: 'used',
                             used: true,
                             usedAt: Date.now(),
                             acceptedBy: identity.pub,
                             acceptedNickname: nickname
                         });
+                        console.log('✅ Invite marked as used');
                     }
                 }
                 
