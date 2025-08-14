@@ -74,33 +74,28 @@ export const createAdminUser = async (gun) => {
 // Bootstrap function to create first admin user for demo
 export const createBootstrapUser = async () => {
   try {
-    console.log('🎯 Creating bootstrap admin user...')
-    
+// [REMOVED CONSOLE LOG]
     // First, check what users currently exist
     const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-    console.log('📊 Current users before creation:', existingUsers.length)
-    
+// [REMOVED CONSOLE LOG]
     // Check if Admin already exists
     const existingAdmin = existingUsers.find(u => u.nickname.toLowerCase() === 'admin')
     if (existingAdmin) {
-      console.log('👤 Admin user already exists')
+// [REMOVED CONSOLE LOG]
       return { success: true, user: existingAdmin, message: 'Admin user already exists!' }
     }
     
     const bootstrapUser = await createGunUser('Admin', 'admin123', null)
-    console.log('👤 Bootstrap user created:', bootstrapUser)
-    
+// [REMOVED CONSOLE LOG]
     const updatedUsers = [...existingUsers, bootstrapUser]
     localStorage.setItem('users', JSON.stringify(updatedUsers))
     
     // Verify it was saved
     const savedUsers = JSON.parse(localStorage.getItem('users') || '[]')
-    console.log('💾 Users after save:', savedUsers.length)
+// [REMOVED CONSOLE LOG]
     console.log('🔍 Saved users:', savedUsers.map(u => u.nickname))
-    
-    console.log('🎯 Bootstrap admin user created successfully')
-    console.log('📋 Login credentials: Admin / admin123')
-    
+// [REMOVED CONSOLE LOG]
+// [REMOVED CONSOLE LOG]
     return { 
       success: true, 
       user: bootstrapUser, 
@@ -186,7 +181,7 @@ export const clearAllClientsData = async (user, gun, announcePresence) => {
         await gun.get('online_users').put(null)
         await gun.get('user_presence').put(null)
       } catch (e) {
-        console.log('Could not clear Gun.js data:', e)
+// [REMOVED CONSOLE LOG]
       }
     }
     

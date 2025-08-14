@@ -82,13 +82,12 @@ export default function TestingPanel({
     } else if (type === 'messages') {
       // Clear ALL messages and notifications completely
       if (gun) {
-        console.log('🧹 Starting complete message and notification cleanup...')
-        
+// [REMOVED CONSOLE LOG]
         // Clear all messages from chat_messages
         await new Promise((resolve) => {
           let cleared = 0
           const timeout = setTimeout(() => {
-            console.log(`✅ Cleared ${cleared} messages`)
+// [REMOVED CONSOLE LOG]
             resolve()
           }, 2000)
           
@@ -126,8 +125,7 @@ export default function TestingPanel({
         // Clear any message-related data
         await gun.get('typing_indicators').put(null)
         await gun.get('message_reactions').put(null)
-        
-        console.log('✅ All messages and notifications cleared from Gun.js')
+// [REMOVED CONSOLE LOG]
       }
       
       // Clear ALL local notification storage
@@ -161,9 +159,7 @@ export default function TestingPanel({
       }
       
       sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key))
-      
-      console.log('✅ All local message data cleared')
-      
+// [REMOVED CONSOLE LOG]
       // Reload after a short delay
       setTimeout(() => {
         window.location.reload()
@@ -217,9 +213,7 @@ export default function TestingPanel({
         
         // Clear admin's friends list
         await gun.get('chat_users').get('bootstrap_admin').get('friends').put(null)
-        
-        console.log(`✅ Deleted ${usersToDelete.length} users`)
-        
+// [REMOVED CONSOLE LOG]
         // Reload to refresh the UI
         window.location.reload()
       }
@@ -261,9 +255,7 @@ export default function TestingPanel({
       
       // Remove user's invites
       await gun.get('user_invites').get(userId).put(null)
-      
-      console.log(`✅ Successfully deleted user: ${nickname}`)
-      
+// [REMOVED CONSOLE LOG]
       // Close modal and reload
       setUserToDelete(null)
       
@@ -304,9 +296,7 @@ export default function TestingPanel({
       
       // Clear admin's friends list
       await gun.get('chat_users').get('bootstrap_admin').get('friends').put(null)
-      
-      console.log(`✅ Deleted ${usersToDelete.length} users`)
-      
+// [REMOVED CONSOLE LOG]
       // Reload to refresh the UI
       window.location.reload()
     } catch (error) {
@@ -538,7 +528,7 @@ export default function TestingPanel({
                                   {!isAdmin && !isCurrentUser && (
                                     <button
                                       onClick={() => {
-                                        console.log('Delete button clicked for:', userData.nickname)
+// [REMOVED CONSOLE LOG]
                                         setUserToDelete({ id: userData.id, nickname: userData.nickname })
                                       }}
                                       className="user-delete-btn"

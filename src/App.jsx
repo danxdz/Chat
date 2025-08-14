@@ -62,7 +62,7 @@ function App() {
   
   // Make debug function available globally (only in dev)
   if (isDev) {
-    window.debugNotify = showDebugNotification
+    // window.debugNotify = showDebugNotification
   }
 
 
@@ -79,9 +79,9 @@ function App() {
       // Initialize Gun.js FIRST (needed for user auth)
       let gunInstance = null;
       try {
-        console.log('🔧 Starting Gun.js initialization...')
+// [REMOVED CONSOLE LOG]
         gunInstance = await initializeGunJS()
-        console.log('🔧 Gun instance returned:', gunInstance ? 'Valid' : 'Null')
+// [REMOVED CONSOLE LOG]
       } catch (gunError) {
         console.error('🔴 Gun.js initialization failed:', gunError)
         console.error('Stack:', gunError.stack)
@@ -93,10 +93,10 @@ function App() {
       // Load users from Gun.js instead of localStorage
       if (gunInstance) {
         try {
-          console.log('🔧 Attempting to load users from Gun.js...')
+// [REMOVED CONSOLE LOG]
           const gunUsers = await getAllGunUsers(gunInstance)
           setAllUsers(gunUsers)
-          console.log('📊 Loaded users from Gun.js:', gunUsers.length)
+// [REMOVED CONSOLE LOG]
         } catch (loadError) {
           console.error('🔴 Failed to load Gun.js users:', loadError)
           console.error('Stack:', loadError.stack)
@@ -108,7 +108,7 @@ function App() {
         // Fallback to localStorage if Gun.js failed
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
         setAllUsers(existingUsers)
-        console.log('⚠️ Gun.js not available, using localStorage:', existingUsers.length)
+// [REMOVED CONSOLE LOG]
       }
       
       // Check for saved session (Remember Me) - try sessionStorage first for private mode
@@ -138,15 +138,15 @@ function App() {
             // Restore private key from session if available
             if (session.privateKey) {
               savedUser.privateKey = session.privateKey
-              console.log('🔑 Restored private key from session')
+// [REMOVED CONSOLE LOG]
             } else {
               // Generate a new key for this session if missing
-              console.log('⚠️ No private key in session, generating one now...')
+// [REMOVED CONSOLE LOG]
               if (window.Gun && window.Gun.SEA) {
                 try {
                   const pair = await window.Gun.SEA.pair()
                   savedUser.privateKey = pair.priv
-                  console.log('✅ Generated new private key for session')
+// [REMOVED CONSOLE LOG]
                 } catch (e) {
                   console.error('❌ Failed to generate private key:', e)
                 }
@@ -155,7 +155,7 @@ function App() {
             
             setUser(savedUser)
             setCurrentView('chat')
-            console.log('✅ Auto-logged in as:', savedUser.nickname)
+// [REMOVED CONSOLE LOG]
             // Announce presence for auto-login
             setTimeout(() => {
               if (window.gun) {
@@ -176,12 +176,11 @@ function App() {
       
       // Check if user was auto-logged in from registration
       const currentUser = localStorage.getItem('currentUser')
-      console.log('🔍 Checking for currentUser in localStorage:', currentUser ? 'Found' : 'Not found')
+// [REMOVED CONSOLE LOG]
       if (currentUser) {
         try {
           const userData = JSON.parse(currentUser)
-          console.log('📋 Auto-login user data:', {
-            nickname: userData.nickname,
+// [REMOVED CONSOLE LOG]
             id: userData.id?.substring(0, 8),
             hasPrivateKey: !!userData.privateKey,
             hasFriends: !!userData.friends
@@ -189,7 +188,7 @@ function App() {
           setUser(userData)
           setCurrentView('chat')
           localStorage.removeItem('currentUser') // Clean up
-          console.log('✅ Auto-logged in user from registration:', userData.nickname)
+// [REMOVED CONSOLE LOG]
           return
         } catch (e) {
           localStorage.removeItem('currentUser')
@@ -201,7 +200,7 @@ function App() {
 
       // Always show login page - users can create admin from there
       setCurrentView('login')
-      console.log('📱 Starting at login page')
+// [REMOVED CONSOLE LOG]
     } catch (error) {
       logger.error('❌ App initialization failed:', error)
       setChatError('Failed to initialize app: ' + error.message)
@@ -217,7 +216,7 @@ function App() {
       // Wait for Gun.js to be available
       let attempts = 0
       while (!window.Gun && attempts < 10) {
-        console.log('Waiting for Gun.js to load...')
+// [REMOVED CONSOLE LOG]
         await new Promise(resolve => setTimeout(resolve, 500))
         attempts++
       }
@@ -278,9 +277,9 @@ function App() {
       try {
         const localUsers = JSON.parse(localStorage.getItem('users') || '[]')
         if (localUsers.length > 0 && gunInstance) {
-          console.log('🔄 Auto-migrating localStorage users to Gun.js...')
+// [REMOVED CONSOLE LOG]
           await migrateUsersToGun(gunInstance)
-          console.log('✅ Migration complete!')
+// [REMOVED CONSOLE LOG]
         }
       } catch (error) {
         console.error('Error migrating users:', error)
@@ -325,23 +324,17 @@ function App() {
           try {
             const gunUsers = await getAllGunUsers(gun)
             friendsList = getFriendsList(user, gunUsers)
-            console.log('👥 Friends loaded from Gun.js:', friendsList)
+// [REMOVED CONSOLE LOG]
           } catch (e) {
             console.error('Failed to load friends from Gun.js:', e)
           }
         }
         setFriends(friendsList)
-        console.log('📊 User data:', { 
-          userId: user.id, 
-          userFriends: user.friends,
-          friendsListCount: friendsList.length 
-        })
-        
+// [REMOVED CONSOLE LOG]
         // Load and monitor pending invites
         const savedInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
         setPendingInvites(savedInvites)
-        console.log('📋 Pending invites loaded:', savedInvites)
-        
+// [REMOVED CONSOLE LOG]
         // Monitor invites in Gun.js for real-time updates
         if (gun && user) {
           gun.get('secure_invites').map().on((invite, key) => {
@@ -375,7 +368,7 @@ function App() {
                 setAllUsers(existingUsers)
                 const userFriends = getFriendsList(user, existingUsers)
                 setFriends(userFriends)
-                console.log('🔄 Friends reloaded after invite accepted')
+// [REMOVED CONSOLE LOG]
               }
             }
           })
@@ -408,7 +401,7 @@ function App() {
     // Listen for friend updates
           gun.get('friendships').get(user.id).map().on(async (data, key) => {
         if (data && data.status === 'friends') {
-          console.log('🤝 New friend detected:', key)
+// [REMOVED CONSOLE LOG]
           // Reload friends list from Gun.js
           if (gun) {
             try {
@@ -476,13 +469,12 @@ function App() {
     
     // Also listen to online_users for better tracking
     gun.get('online_users').map().on((data, userId) => {
-      console.log('🔵 Online user update:', userId, data)
+// [REMOVED CONSOLE LOG]
       if (data && data.nickname && data.isOnline === true) {
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.set(userId, data)
-          console.log('✅ User online:', data.nickname, '- Total:', updated.size)
-          
+// [REMOVED CONSOLE LOG]
           // Debug: log all online users
           console.log('📋 All online users:', Array.from(updated.entries()).map(([id, u]) => u.nickname))
           return updated
@@ -492,7 +484,7 @@ function App() {
         setOnlineUsers(prev => {
           const updated = new Map(prev)
           updated.delete(userId)
-          console.log('❌ User went offline:', data.nickname, '- Total:', updated.size)
+// [REMOVED CONSOLE LOG]
           return updated
         })
       }
@@ -502,7 +494,7 @@ function App() {
     if (user) {
       gun.get('friendships').get(user.id).map().on((friendData, friendId) => {
         if (friendData && friendData.friendNick) {
-          console.log('👥 New friendship detected:', friendData)
+// [REMOVED CONSOLE LOG]
           setFriends(prev => {
             // Check if friend already exists
             if (prev.find(f => f.id === friendId)) return prev
@@ -512,7 +504,7 @@ function App() {
               nickname: friendData.friendNick,
               addedAt: friendData.addedAt
             }
-            console.log('➕ Adding friend:', newFriend)
+// [REMOVED CONSOLE LOG]
             return [...prev, newFriend]
           })
         }
@@ -575,8 +567,7 @@ function App() {
       
       // Decrypt message if it's encrypted
       let messageData = { ...data }
-      console.log('🔓 DECRYPTION DEBUG:', {
-        messageEncrypted: data.encrypted,
+// [REMOVED CONSOLE LOG]
         seaAvailable: !!(window.Gun && window.Gun.SEA),
         encryptedText: data.encrypted ? data.text : 'not encrypted'
       })
@@ -587,10 +578,10 @@ function App() {
           const sharedKey = 'p2p-chat-key-' + channelName
           const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
           messageData.text = decryptedText
-          console.log('🔓 Message decrypted successfully!')
+// [REMOVED CONSOLE LOG]
           logger.log('🔓 Message decrypted')
         } catch (e) {
-          console.log('⚠️ Decryption failed:', e.message)
+// [REMOVED CONSOLE LOG]
           logger.log('⚠️ Decryption failed:', e.message)
           messageData.text = '[Encrypted message - cannot decrypt]'
         }
@@ -674,9 +665,9 @@ function App() {
         try {
           const gunUsers = await getAllGunUsers(gun)
           adminExists = gunUsers.some(u => u.nickname.toLowerCase() === 'admin')
-          console.log('🔍 Checking Gun.js for admin:', adminExists ? 'Found' : 'Not found')
+// [REMOVED CONSOLE LOG]
         } catch (e) {
-          console.log('Could not check Gun.js for admin:', e)
+// [REMOVED CONSOLE LOG]
         }
       }
       
@@ -684,7 +675,7 @@ function App() {
       if (!adminExists) {
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
         adminExists = existingUsers.some(u => u.nickname.toLowerCase() === 'admin')
-        console.log('🔍 Checking localStorage for admin:', adminExists ? 'Found' : 'Not found')
+// [REMOVED CONSOLE LOG]
       }
       
       if (adminExists) {
@@ -694,8 +685,7 @@ function App() {
       
       // Create admin account in Gun.js
       const adminUser = await createGunUser(gun, 'Admin', 'admin123', null)
-      console.log('👤 Admin user created in Gun.js:', adminUser)
-      
+// [REMOVED CONSOLE LOG]
       // Update allUsers state
       setAllUsers(prev => [...prev, adminUser])
       
@@ -723,8 +713,7 @@ function App() {
     }
 
     try {
-      console.log('🎯 Trying to login as:', nickname)
-
+// [REMOVED CONSOLE LOG]
       // Try Gun.js first (works in private mode)
       let user = null;
       let loginSource = null;
@@ -733,15 +722,9 @@ function App() {
         try {
           user = await loginGunUser(gun, nickname, password)
           loginSource = 'Gun.js'
-          console.log('🔐 Logged in user from Gun.js:', { 
-            id: user.id, 
-            nickname: user.nickname, 
-            friends: user.friends,
-            friendsCount: user.friends ? user.friends.length : 0,
-            hasPrivateKey: !!user.privateKey
-          })
+// [REMOVED CONSOLE LOG]
         } catch (gunError) {
-          console.log('⚠️ Gun.js login failed:', gunError.message)
+// [REMOVED CONSOLE LOG]
         }
       }
       
@@ -753,19 +736,18 @@ function App() {
             const { ircLogin } = await import('./utils/secureAuth')
             user = await ircLogin(nickname, password)
             loginSource = 'localStorage'
-            console.log('🔐 Logged in user from localStorage')
-            
+// [REMOVED CONSOLE LOG]
             // Migrate this user to Gun.js for next time
             if (gun && user) {
               try {
                 await createGunUser(gun, user.nickname, password, null)
-                console.log('✅ User migrated to Gun.js')
+// [REMOVED CONSOLE LOG]
               } catch (e) {
-                console.log('Could not migrate user to Gun.js:', e.message)
+// [REMOVED CONSOLE LOG]
               }
             }
           } catch (localError) {
-            console.log('localStorage login also failed:', localError.message)
+// [REMOVED CONSOLE LOG]
           }
         }
       }
@@ -776,12 +758,12 @@ function App() {
       
       // ALWAYS ensure user has a private key for invites
       if (!user.privateKey) {
-        console.log('⚠️ User missing private key, generating one...')
+// [REMOVED CONSOLE LOG]
         if (window.Gun && window.Gun.SEA) {
           try {
             const pair = await window.Gun.SEA.pair()
             user.privateKey = pair.priv
-            console.log('✅ Generated private key for user')
+// [REMOVED CONSOLE LOG]
           } catch (e) {
             console.error('❌ Failed to generate private key:', e)
           }
@@ -789,13 +771,11 @@ function App() {
       }
       
       setUser(user)
-      console.log('📱 User state updated with privateKey:', !!user.privateKey)
-      
+// [REMOVED CONSOLE LOG]
       // Initialize WebRTC for P2P messaging
       if (gun && user.id && user.nickname) {
         const webrtc = initWebRTC(gun, user.id, user.nickname)
-        console.log('🎥 WebRTC initialized for P2P messaging')
-        
+// [REMOVED CONSOLE LOG]
         // Listen for WebRTC messages
         webrtc.onMessage((message, fromUserId) => {
           console.log('📨 Received WebRTC message from:', fromUserId.substring(0, 8))
@@ -847,8 +827,7 @@ function App() {
       logger.log('✅ IRC-style login successful:', user.nickname)
     
       // Test encryption availability immediately after login
-      console.log('🔐 ENCRYPTION TEST AT LOGIN:', {
-        gunAvailable: !!window.Gun,
+// [REMOVED CONSOLE LOG]
         seaAvailable: !!(window.Gun && window.Gun.SEA),
         seaObject: window.Gun ? window.Gun.SEA : 'Gun not available'
       })
@@ -856,10 +835,10 @@ function App() {
       // Quick encryption test
       if (window.Gun && window.Gun.SEA) {
         window.Gun.SEA.encrypt('test message', 'test key').then(encrypted => {
-          console.log('🔐 ENCRYPTION TEST SUCCESS:', encrypted)
+// [REMOVED CONSOLE LOG]
           return window.Gun.SEA.decrypt(encrypted, 'test key')
         }).then(decrypted => {
-          console.log('🔓 DECRYPTION TEST SUCCESS:', decrypted)
+// [REMOVED CONSOLE LOG]
         }).catch(err => {
           console.error('❌ ENCRYPTION TEST FAILED:', err)
         })
@@ -875,7 +854,7 @@ function App() {
           lastSeen: Date.now(),
           isOnline: true 
         })
-        console.log('👤 Added current user to online list:', user.nickname, '- Total users:', updated.size)
+// [REMOVED CONSOLE LOG]
         return updated
       })
       
@@ -950,13 +929,12 @@ function App() {
       const existingAdmin = existingUsers.find(u => u.nickname.toLowerCase() === 'admin')
       
       if (existingAdmin) {
-        console.log('👤 Admin user already exists, logging in...')
-        
+// [REMOVED CONSOLE LOG]
         // Ensure admin has private key
         if (!existingAdmin.privateKey && window.Gun && window.Gun.SEA) {
           const pair = await window.Gun.SEA.pair()
           existingAdmin.privateKey = pair.priv
-          console.log('✅ Generated private key for existing admin')
+// [REMOVED CONSOLE LOG]
         }
         
         setUser(existingAdmin)
@@ -1016,7 +994,7 @@ function App() {
         if (invitesUpdated) {
           localStorage.setItem('pendingInvites', JSON.stringify(pendingInvites))
           setPendingInvites(pendingInvites)
-          console.log('✅ Updated invites with new nickname')
+// [REMOVED CONSOLE LOG]
         }
         
         alert(`✅ Nickname changed to "${newNickname.trim()}"`)
@@ -1071,7 +1049,7 @@ function App() {
     }
     
     try {
-      console.log(`📡 Announcing presence: ${action} for ${currentUser.nickname}`, presenceData)
+// [REMOVED CONSOLE LOG]
       // Use put instead of set for proper updates
       await gun.get('user_presence').get(currentUser.id).put(presenceData)
       
@@ -1083,17 +1061,16 @@ function App() {
           isOnline: true
         }
         await gun.get('online_users').get(currentUser.id).put(onlineData)
-        console.log('✅ Updated online_users:', currentUser.nickname, onlineData)
+// [REMOVED CONSOLE LOG]
       } else if (action === 'leave') {
         await gun.get('online_users').get(currentUser.id).put({
           nickname: currentUser.nickname,
           lastSeen: Date.now(),
           isOnline: false
         })
-        console.log('👋 User marked offline:', currentUser.nickname)
+// [REMOVED CONSOLE LOG]
       }
-      
-      console.log(`✅ Presence announced successfully for ${currentUser.nickname}`)
+// [REMOVED CONSOLE LOG]
     } catch (error) {
       console.error('❌ Failed to announce presence:', error)
     }
@@ -1124,8 +1101,7 @@ function App() {
       
       // Encrypt message text if SEA is available
       const messageToSend = { ...message }
-      console.log('🔐 ENCRYPTION DEBUG:', {
-        gunAvailable: !!window.Gun,
+// [REMOVED CONSOLE LOG]
         seaAvailable: !!(window.Gun && window.Gun.SEA),
         messageText: message.text
       })
@@ -1137,16 +1113,16 @@ function App() {
           const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
           messageToSend.text = encryptedText
           messageToSend.encrypted = true
-          console.log('🔐 Message encrypted successfully!')
+// [REMOVED CONSOLE LOG]
           logger.log('🔐 Message encrypted')
         } catch (e) {
-          console.log('⚠️ Encryption failed:', e.message)
+// [REMOVED CONSOLE LOG]
           logger.log('⚠️ Encryption failed, sending plain text:', e.message)
           messageToSend.encrypted = false
         }
       } else {
         messageToSend.encrypted = false
-        console.log('⚠️ SEA not available, sending plain text')
+// [REMOVED CONSOLE LOG]
         logger.log('⚠️ SEA not available, sending plain text')
       }
 
@@ -1188,8 +1164,7 @@ function App() {
   const sendMessage = async (e) => {
     if (e) e.preventDefault() // Handle form submission
     if (!newMessage.trim()) return
-
-    console.log('📤 SEND MESSAGE CALLED:', {
+// [REMOVED CONSOLE LOG]
       messageText: newMessage.trim(),
       activeContact: activeContact?.nickname || 'General',
       userNickname: user.nickname
@@ -1343,7 +1318,7 @@ function App() {
   // Global debug functions (only in dev)
   useEffect(() => {
     if (isDev) {
-      window.debugApp = {
+      // window.debugApp = {
         user,
         gun,
         messages,
@@ -1378,13 +1353,13 @@ function App() {
       
       if (hash.startsWith('#invite=')) {
         token = hash.replace('#invite=', '')
-        console.log('📨 Got invite from URL')
+// [REMOVED CONSOLE LOG]
       } else {
         try {
           token = sessionStorage.getItem('pendingInvite')
-          console.log('📨 Got invite from session')
+// [REMOVED CONSOLE LOG]
         } catch (e) {
-          console.log('❌ SessionStorage error:', e)
+// [REMOVED CONSOLE LOG]
         }
       }
       
@@ -1398,7 +1373,7 @@ function App() {
           setCurrentView('needInvite')
         }
       } else {
-        console.log('❌ No invite found')
+// [REMOVED CONSOLE LOG]
         setCurrentView('needInvite')
       }
     }, [])
@@ -1415,30 +1390,28 @@ function App() {
           <p>Complete your registration to join {inviterName}&apos;s chat</p>
           <form onSubmit={async (e) => {
             e.preventDefault()
-            console.log('📝 FORM: Registration form submitted')
-            
+// [REMOVED CONSOLE LOG]
             const nickname = e.target.nickname.value.trim()
             const password = e.target.password.value.trim()
-            console.log('📝 FORM: Form data:', { nickname, passwordLength: password.length })
-            
+// [REMOVED CONSOLE LOG]
             if (nickname && password) {
-              console.log('📝 FORM: Calling register function...')
+// [REMOVED CONSOLE LOG]
               try {
                 // Store invite token in sessionStorage for register function
                 if (inviteToken) {
                   sessionStorage.setItem('pendingInvite', inviteToken)
                 }
                 const success = await register(nickname, password)
-                console.log('📝 FORM: Register result:', success)
+// [REMOVED CONSOLE LOG]
                 if (success) {
-                  console.log('📝 FORM: Registration successful, will automatically login')
+// [REMOVED CONSOLE LOG]
                 }
               } catch (error) {
                 console.error('📝 FORM: Registration form error:', error)
                 alert('Form submission error: ' + error.message)
               }
             } else {
-              console.log('📝 FORM: Missing nickname or password')
+// [REMOVED CONSOLE LOG]
               alert('Please fill in both nickname and password')
             }
           }}>
@@ -1481,7 +1454,7 @@ function App() {
         const inviteData = JSON.parse(atob(inviteToken))
         inviterName = inviteData.fromNick || inviteData.from || 'someone'
       } catch (e) {
-        console.log('Could not parse invite name')
+// [REMOVED CONSOLE LOG]
       }
     }
     
@@ -1522,7 +1495,7 @@ function App() {
                     if (!existingUsers[inviterIndex].friends.includes(newUser.id)) {
                       existingUsers[inviterIndex].friends.push(newUser.id)
                     }
-                    console.log('✅ Added mutual friendship:', inviteData.fromNick, '<->', nickname)
+// [REMOVED CONSOLE LOG]
                   }
                 }
                 
@@ -1542,7 +1515,7 @@ function App() {
                   pendingInvites[inviteIndex].acceptedNickname = nickname
                   pendingInvites[inviteIndex].acceptedAt = Date.now()
                   localStorage.setItem('pendingInvites', JSON.stringify(pendingInvites))
-                  console.log('✅ Invite updated with accepter info:', nickname)
+// [REMOVED CONSOLE LOG]
                 }
                 
                 // Auto-login

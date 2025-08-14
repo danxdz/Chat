@@ -33,16 +33,7 @@ export default function MobileLayout({
   }, [displayMessages])
   
   // Debug logging
-  console.log('🔍 MobileLayout Debug:', {
-    friendsCount: friends?.length || 0,
-    friends: friends,
-    pendingInvitesCount: pendingInvites?.length || 0,
-    pendingInvites: pendingInvites,
-    onlineUsersCount: onlineUsers?.size || 0,
-    messagesCount: messages?.length || 0,
-    displayMessagesCount: displayMessages?.length || 0,
-    activeContact: activeContact
-  })
+// [REMOVED CONSOLE LOG]
   const [touchEnd, setTouchEnd] = useState(null)
 
   const minSwipeDistance = 50
@@ -211,7 +202,7 @@ export default function MobileLayout({
               
               {/* Show all messages */}
               {displayMessages && displayMessages.length > 0 && displayMessages.map((msg, i) => {
-                console.log('Displaying message:', msg)
+// [REMOVED CONSOLE LOG]
                 return (
                   <div key={i} style={{
                     background: '#222',
@@ -259,7 +250,7 @@ export default function MobileLayout({
               <button
                 onClick={(e) => {
                   e.preventDefault()
-                  console.log('Send button clicked, message:', newMessage)
+// [REMOVED CONSOLE LOG]
                   if (newMessage && newMessage.trim()) {
                     onSendMessage(e)
                   }
@@ -403,7 +394,7 @@ export default function MobileLayout({
                           type: 'private'
                         })
                         setMobileView('chat')
-                        console.log('💬 Starting chat with:', friend.nickname)
+// [REMOVED CONSOLE LOG]
                       }}
                       style={{
                         background: '#1a1a1a',

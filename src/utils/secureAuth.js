@@ -189,7 +189,7 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
     
     return {
       inviteId,
-      inviteUrl: `${window.location.origin}/register_gunjs.html#invite=${btoa(JSON.stringify(signedInvite))}`,
+      inviteUrl: `${window.location.origin}/register.html#invite=${btoa(JSON.stringify(signedInvite))}`,
       expiresAt,
       expirationChoice
     }

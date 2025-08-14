@@ -79,8 +79,8 @@ export default function ChatArea({
           <span>📊 Total Messages: {messages.length} | From Gun.js</span>
           <button 
             onClick={() => {
-              console.log('🔍 ALL MESSAGES:', messages)
-              console.log('🔍 DISPLAY MESSAGES:', displayMessages)
+// [REMOVED CONSOLE LOG]
+// [REMOVED CONSOLE LOG]
               alert(`Total messages: ${messages.length}\nAll from Gun.js\nCheck console for details`)
             }}
             style={{

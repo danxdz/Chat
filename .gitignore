@@ -82,3 +82,12 @@ coverage.xml
 *.class
 target/
 out/
+
+# Backup files and archives
+backups/
+*.backup
+*.bak
+whisperz*
+
+# Cleanup scripts
+clean-console-logs.cjs
