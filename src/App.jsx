@@ -1,7 +1,9 @@
-import { useState, useEffect, Component } from 'react'
+import { useState, useEffect } from 'react'
 import LoginView from './components/LoginView'
 import NeedInviteView from './components/NeedInviteView'
 import ChatView from './components/ChatView'
+import ErrorBoundary from './components/ErrorBoundary'
+import DebugNotifications from './components/DebugNotifications'
 import { 
   verifySecureInvite, 
   markInviteUsed, 
@@ -20,95 +22,8 @@ import {
 
 import gunPeers from './config/gunPeers'
 import { initWebRTC, sendWebRTCMessage, connectToPeer } from './services/webrtcService'
-
-// Smart logging system - only logs in development
-const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
-
-const logger = {
-  log: (...args) => isDev && console.log(...args),
-  error: (...args) => console.error(...args), // Always show errors
-  warn: (...args) => isDev && console.warn(...args),
-  info: (...args) => isDev && console.info(...args),
-  debug: (...args) => isDev && console.debug(...args)
-}
-
-// Error Boundary Component
-class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props)
-    this.state = { hasError: false, error: null }
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error }
-  }
-
-  componentDidCatch(error, errorInfo) {
-    logger.error('🚨 React Error Boundary caught an error:', error, errorInfo)
-    logger.error('🔍 Error stack:', error.stack)
-    
-    // Clear sessionStorage if there's an initialization error  
-    if (error.message && error.message.includes('before initialization')) {
-      console.log('🔧 Clearing sessionStorage due to initialization error')
-      sessionStorage.clear()
-      // Don't clear localStorage to keep admin user
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="screen">
-          <div className="form">
-            <h1 style={{ color: '#dc3545' }}>⚠️ Something went wrong</h1>
-            <p>The application encountered an error:</p>
-            <pre style={{ 
-              background: '#333', 
-              padding: '1rem', 
-              borderRadius: '4px', 
-              fontSize: '0.8rem',
-              overflow: 'auto'
-            }}>
-              {this.state.error?.toString()}
-            </pre>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-              <button 
-                onClick={() => {
-                  sessionStorage.clear()
-                  window.location.href = window.location.origin
-                }} 
-                className="btn"
-                style={{ background: '#ffc107', color: '#000' }}
-              >
-                🔧 Clear Session & Retry
-              </button>
-              <button 
-                onClick={() => {
-                  sessionStorage.clear()
-                  localStorage.clear()
-                  window.location.href = window.location.origin
-                }} 
-                className="btn"
-                style={{ background: '#ff6b6b' }}
-              >
-                🗑️ Full Reset
-              </button>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="btn"
-                style={{ background: '#dc3545' }}
-              >
-                🔄 Reload App
-              </button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    return this.props.children
-  }
-}
+import { logger, isDev } from './utils/logger'
+import * as adminService from './services/adminService'
 
 function App() {
   const [currentView, setCurrentView] = useState('loading')
@@ -991,14 +906,10 @@ function App() {
   // Bootstrap function to create first admin user for demo
   const createBootstrapUser = async () => {
     try {
-      console.log('🎯 Creating bootstrap admin user...')
-      
-      // First, check what users currently exist
+      // Check if Admin already exists first
       const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('📊 Current users before creation:', existingUsers.length)
-      
-      // Check if Admin already exists
       const existingAdmin = existingUsers.find(u => u.nickname.toLowerCase() === 'admin')
+      
       if (existingAdmin) {
         console.log('👤 Admin user already exists, logging in...')
         
@@ -1015,30 +926,24 @@ function App() {
         return
       }
       
-      // Create admin in Gun.js
-      const bootstrapUser = await createGunUser(gun, 'Admin', 'admin123', null)
-      console.log('👤 Bootstrap admin created in Gun.js:', bootstrapUser)
+      // Create admin using service
+      const result = await adminService.createBootstrapUser()
       
-      // Update allUsers state
-      const gunUsers = await getAllGunUsers(gun)
-      setAllUsers(gunUsers)
-      
-      // Verify it was saved
-      const savedUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      console.log('💾 Users after save:', savedUsers.length)
-      console.log('🔍 Saved users:', savedUsers.map(u => u.nickname))
-      
-      // Auto-login the bootstrap user
-      setUser(bootstrapUser)
-      setCurrentView('chat')
-      
-      console.log('🎯 Bootstrap admin user created successfully')
-      console.log('📋 Login credentials: Admin / admin123')
-      alert('✅ Admin user created!\nLogin: Admin\nPassword: admin123\n\nYou are now logged in!')
+      if (result.success) {
+        // Update allUsers state
+        const gunUsers = await getAllGunUsers(gun)
+        setAllUsers(gunUsers)
+        
+        // Auto-login the bootstrap user
+        setUser(result.user)
+        setCurrentView('chat')
+        alert(result.message)
+      } else {
+        alert(result.message)
+      }
       
     } catch (error) {
       console.error('❌ Failed to create bootstrap user:', error)
-      console.error('❌ Error details:', error)
       alert('❌ Failed to create bootstrap user: ' + error.message)
     }
   }
@@ -1351,89 +1256,54 @@ function App() {
 
   // Simple test message function
   const sendTestMessage = (customMessage) => {
-    if (!user || !gun) {
-      alert('Please login first to send test messages')
+    const result = adminService.createTestMessage(user, gun)
+    if (!result.success) {
+      alert(result.message)
       return
     }
     
-    const testMsg = customMessage || `Test message from ${user.nickname} at ${new Date().toLocaleTimeString()}`
+    const testMsg = customMessage || result.message
     setNewMessage(testMsg)
     setTimeout(() => sendMessage(), 100)
   }
 
   // Clear current user data
   const clearCurrentClientData = async () => {
-    if (confirm('Clear all data for current user? This cannot be undone.')) {
-      try {
-        // Clear user-specific data
-        if (user) {
-          localStorage.removeItem(`contacts_${user.id}`)
-          localStorage.removeItem(`friends_${user.id}`)
-          
-          // Announce leaving
-          if (gun) {
-            await announcePresence('leave')
-          }
-        }
-        
-        // Clear session data
-        sessionStorage.clear()
-        
-        // Reset states
-        setUser(null)
-        setMessages([])
-        setContacts([])
-        setFriends([])
-        setActiveContact(null)
-        setOnlineUsers(new Map())
-        
-        alert('Current session cleared. Please login again.')
-        setCurrentView('login')
-      } catch (error) {
-        console.error('Failed to clear data:', error)
-        alert('Failed to clear some data. Try refreshing the page.')
-      }
+    const result = await adminService.clearCurrentClientData(user, gun, announcePresence)
+    
+    if (result.success) {
+      // Reset states
+      setUser(null)
+      setMessages([])
+      setContacts([])
+      setFriends([])
+      setActiveContact(null)
+      setOnlineUsers(new Map())
+      
+      alert(result.message)
+      setCurrentView('login')
+    } else if (!result.cancelled) {
+      alert(result.message)
     }
   }
 
   // Clear all data
   const clearAllClientsData = async () => {
-    if (confirm('Clear ALL application data? This will remove all users and require new registration.')) {
-      try {
-        // Announce leaving if logged in
-        if (user && gun) {
-          await announcePresence('leave')
-        }
-        
-        // Clear all storage
-        localStorage.clear()
-        sessionStorage.clear()
-        
-        // Clear Gun.js data if available
-        if (gun) {
-          try {
-            await gun.get('p2pchat').get('messages').put(null)
-            await gun.get('online_users').put(null)
-            await gun.get('user_presence').put(null)
-          } catch (e) {
-            console.log('Could not clear Gun.js data:', e)
-          }
-        }
-        
-        alert('All data cleared. Refreshing...')
+    const result = await adminService.clearAllClientsData(user, gun, announcePresence)
+    
+    if (result.success) {
+      alert(result.message)
+      if (result.shouldReload) {
         window.location.reload()
-      } catch (error) {
-        console.error('Failed to clear all data:', error)
-        alert('Failed to clear some data. Please manually clear browser data.')
       }
+    } else if (!result.cancelled) {
+      alert(result.message)
     }
   }
 
   // Force reload
   const forceReload = () => {
-    if (confirm('Reload the application?')) {
-      window.location.reload()
-    }
+    adminService.forceReload()
   }
 
   // Initialize app on mount
@@ -1525,7 +1395,7 @@ function App() {
 
     return (
       <div className="screen">
-        <DebugNotifications />
+        <DebugNotifications debugNotifications={debugNotifications} isDev={isDev} />
         <div className="form">
           <h1>📨 You're Invited!</h1>
           <p>Complete your registration to join {inviterName}'s chat</p>
@@ -1603,7 +1473,7 @@ function App() {
     
     return (
       <div className="screen">
-        <DebugNotifications />
+        <DebugNotifications debugNotifications={debugNotifications} isDev={isDev} />
         <div className="form">
           <h1>📨 You're Invited!</h1>
           <p>Complete your registration to join {inviterName}'s chat</p>
