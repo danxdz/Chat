@@ -229,106 +229,104 @@ export default function TestingPanel({
           <button onClick={onClose} className="close-btn">✕</button>
         </div>
         
-        <div className="testing-content-grid">
-          {/* Left Column - Status & Actions */}
-          <div className="testing-sidebar">
-            {/* Status Info */}
-            <div className="status-section">
-              <h3>📊 Status</h3>
-              <div className="status-item">
-                <span>User:</span> <span>{user?.nickname || 'Not logged in'}</span>
-              </div>
-              <div className="status-item">
-                <span>ID:</span> <span>{user?.id?.substring(0, 8) || 'N/A'}...</span>
-              </div>
-              <div className="status-item">
-                <span>Role:</span> <span>{user?.id === 'bootstrap_admin' ? '👑 Admin' : '👤 User'}</span>
-              </div>
-              <div className="status-item">
-                <span>Gun.js:</span> <span>{gun ? '✅ Connected' : '❌ Not connected'}</span>
-              </div>
-              <div className="status-item">
-                <span>Total Users:</span> <span>{allUsers?.length || 0}</span>
-              </div>
-              <div className="status-item">
-                <span>Online:</span> <span>{onlineUsers?.size || 0}</span>
-              </div>
+        <div className="testing-content">
+          {/* Status Info */}
+          <div className="status-section">
+            <h3>📊 Status</h3>
+            <div className="status-item">
+              <span>User:</span> <span>{user?.nickname || 'Not logged in'}</span>
             </div>
-
-            {/* Quick Actions */}
-            <div className="actions-section">
-              <h3>🚀 Quick Actions</h3>
-              
-              <button 
-                onClick={loadOnlineUsers}
-                className="test-btn info"
-              >
-                👥 View Online Users
-              </button>
-              
-              <button 
-                onClick={onSendTestMessage}
-                className="test-btn primary"
-              >
-                📤 Send Test Message
-              </button>
-              
-              <button 
-                onClick={() => {
-                  setClearType('messages')
-                  setShowClearConfirm(true)
-                }}
-                className="test-btn warning"
-              >
-                🗑️ Clear All Messages
-              </button>
-              
-              <button 
-                onClick={() => {
-                  setClearType('current')
-                  setShowClearConfirm(true)
-                }}
-                className="test-btn warning"
-              >
-                🧹 Clear My Data & Logout
-              </button>
-              
-              {user?.id === 'bootstrap_admin' && (
-                <>
-                  <button 
-                    onClick={() => {
-                      setClearType('all-users')
-                      setShowClearConfirm(true)
-                    }}
-                    className="test-btn danger"
-                  >
-                    👥💣 Delete All Users (Keep Admin)
-                  </button>
-                  
-                  <button 
-                    onClick={() => {
-                      setClearType('all')
-                      setShowClearConfirm(true)
-                    }}
-                    className="test-btn danger"
-                  >
-                    💣 Factory Reset (Delete Everything)
-                  </button>
-                </>
-              )}
+            <div className="status-item">
+              <span>ID:</span> <span>{user?.id?.substring(0, 8) || 'N/A'}...</span>
+            </div>
+            <div className="status-item">
+              <span>Role:</span> <span>{user?.id === 'bootstrap_admin' ? '👑 Admin' : '👤 User'}</span>
+            </div>
+            <div className="status-item">
+              <span>Gun.js:</span> <span>{gun ? '✅ Connected' : '❌ Not connected'}</span>
+            </div>
+            <div className="status-item">
+              <span>Total Users:</span> <span>{allUsers?.length || 0}</span>
+            </div>
+            <div className="status-item">
+              <span>Online:</span> <span>{onlineUsers?.size || 0}</span>
             </div>
           </div>
 
-          {/* Right Column - Admin Panel */}
+          {/* Quick Actions */}
+          <div className="actions-section">
+            <h3>🚀 Quick Actions</h3>
+            
+            <button 
+              onClick={loadOnlineUsers}
+              className="test-btn info"
+            >
+              👥 View Online Users
+            </button>
+            
+            <button 
+              onClick={onSendTestMessage}
+              className="test-btn primary"
+            >
+              📤 Send Test Message
+            </button>
+            
+            <button 
+              onClick={() => {
+                setClearType('messages')
+                setShowClearConfirm(true)
+              }}
+              className="test-btn warning"
+            >
+              🗑️ Clear All Messages
+            </button>
+            
+            <button 
+              onClick={() => {
+                setClearType('current')
+                setShowClearConfirm(true)
+              }}
+              className="test-btn warning"
+            >
+              🧹 Clear My Data & Logout
+            </button>
+            
+            {user?.id === 'bootstrap_admin' && (
+              <>
+                <button 
+                  onClick={() => {
+                    setClearType('all-users')
+                    setShowClearConfirm(true)
+                  }}
+                  className="test-btn danger"
+                >
+                  👥💣 Delete All Users (Keep Admin)
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    setClearType('all')
+                    setShowClearConfirm(true)
+                  }}
+                  className="test-btn danger"
+                >
+                  💣 Factory Reset (Delete Everything)
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Admin Panel - Only show for bootstrap user */}
           {user && user.id === 'bootstrap_admin' && (
-            <div className="admin-section-fullscreen">
-              <h3>👑 Admin Control Panel</h3>
-              
-              <div className="admin-panel-fullscreen">
+            <>
+              <div className="admin-panel-container">
+                <h4 style={{ color: '#9C27B0', marginBottom: '10px' }}>👑 Admin Panel</h4>
+                
                 {(() => {
                   // Use real Gun.js data from props
                   const allUsersData = allUsers || []
                   const pendingInvitesData = pendingInvites || []
+                  const friendsData = friends || []
                   const onlineUsersSet = onlineUsers || new Set()
                   
                   // Create a function to load friends for any user
@@ -376,127 +374,171 @@ export default function TestingPanel({
                   
                   return (
                     <>
-                      <div className="admin-stats">
-                        <div className="stat-item">
-                          <span className="stat-label">Total Users:</span>
-                          <span className="stat-value">{allUsersData.length}</span>
-                        </div>
-                        <div className="stat-item">
-                          <span className="stat-label">Online Now:</span>
-                          <span className="stat-value">{onlineUsersSet.size}</span>
-                        </div>
-                        <div className="stat-item">
-                          <span className="stat-label">Pending Invites:</span>
-                          <span className="stat-value">{pendingInvitesData.length}</span>
-                        </div>
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong>📊 Total Users:</strong> {allUsersData.length}
+                        <span style={{ marginLeft: '10px', color: '#4CAF50' }}>
+                          🟢 Online: {onlineUsersSet.size}
+                        </span>
                       </div>
                       
-                      <div className="users-tree">
-                        <h4>👥 All Registered Users</h4>
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong>🌳 Complete User Tree with Friends:</strong>
                         {allUsersData.length > 0 ? (
-                          allUsersData.map((userData, i) => {
-                            // Get this user's friends
-                            const userFriendIds = allUsersFriends[userData.id] || []
-                            const userFriends = userFriendIds.map(friendId => {
-                              const friendData = allUsersData.find(u => u.id === friendId)
-                              return friendData ? {
-                                id: friendId,
-                                nickname: friendData.nickname || 'Unknown',
-                                isOnline: onlineUsersSet.has(friendId)
-                              } : null
-                            }).filter(Boolean)
-                            
-                            const isAdmin = userData.id === 'bootstrap_admin'
-                            const isCurrentUser = userData.id === user.id
-                            
-                            return (
-                              <div key={i} className={`user-card ${isCurrentUser ? 'current' : ''} ${isAdmin ? 'admin' : ''}`}>
-                                <div className="user-header">
-                                  <div className="user-main">
-                                    <span className="user-icon">
-                                      {isAdmin ? '👑' : '👤'}
-                                    </span>
-                                    <span className="user-nickname">
-                                      {userData.nickname || 'Unknown'}
+                          <div className="users-list-container">
+                            {allUsersData.map((userData, i) => {
+                              // Get this user's friends
+                              const userFriendIds = allUsersFriends[userData.id] || []
+                              const userFriends = userFriendIds.map(friendId => {
+                                const friendData = allUsersData.find(u => u.id === friendId)
+                                return friendData ? {
+                                  id: friendId,
+                                  nickname: friendData.nickname || 'Unknown',
+                                  isOnline: onlineUsersSet.has(friendId)
+                                } : null
+                              }).filter(Boolean)
+                              
+                              const isAdmin = userData.id === 'bootstrap_admin'
+                              const isCurrentUser = userData.id === user.id
+                              
+                              return (
+                                <div key={i} style={{ 
+                                  marginLeft: '10px', 
+                                  marginTop: '8px',
+                                  padding: '8px',
+                                  background: isCurrentUser ? 'rgba(156, 39, 176, 0.1)' : 'transparent',
+                                  borderRadius: '4px',
+                                  border: isCurrentUser ? '1px solid #9C27B0' : '1px solid transparent',
+                                  position: 'relative'
+                                }}>
+                                  <div style={{ 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                  }}>
+                                    <div style={{ 
+                                      color: isAdmin ? '#FFD700' : '#4CAF50',
+                                      fontWeight: isCurrentUser ? 'bold' : 'normal'
+                                    }}>
+                                      {isAdmin ? '👑' : '👤'} {userData.nickname || 'Unknown'} 
                                       {isCurrentUser && ' (You)'}
-                                    </span>
-                                    <span className={`user-status ${onlineUsersSet.has(userData.id) ? 'online' : 'offline'}`}>
-                                      {onlineUsersSet.has(userData.id) ? '🟢' : '⚫'}
-                                    </span>
+                                      {onlineUsersSet.has(userData.id) ? ' 🟢' : ' ⚫'}
+                                      {isAdmin && ' [ADMIN]'}
+                                    </div>
+                                    
+                                    {!isAdmin && !isCurrentUser && (
+                                      <button
+                                        onClick={() => setUserToDelete({ id: userData.id, nickname: userData.nickname })}
+                                        style={{
+                                          background: 'rgba(244, 67, 54, 0.2)',
+                                          border: '1px solid #f44336',
+                                          color: '#f44336',
+                                          padding: '2px 8px',
+                                          borderRadius: '4px',
+                                          fontSize: '12px',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
                                   </div>
-                                  {!isAdmin && !isCurrentUser && (
-                                    <button
-                                      onClick={() => setUserToDelete({ id: userData.id, nickname: userData.nickname })}
-                                      className="delete-user-btn"
-                                      title="Delete this user"
-                                    >
-                                      🗑️
-                                    </button>
-                                  )}
-                                </div>
-                                
-                                <div className="user-details">
-                                  <div className="detail-item">
-                                    <span className="detail-label">ID:</span>
-                                    <span className="detail-value">{userData.id?.substring(0, 8)}...</span>
+                                  
+                                  {/* Show user details */}
+                                  <div style={{ marginLeft: '20px', fontSize: '10px', color: '#888', marginTop: '2px' }}>
+                                    ID: {userData.id?.substring(0, 8)}...
+                                    {userData.createdAt && ` | Joined: ${new Date(userData.createdAt).toLocaleDateString()}`}
                                   </div>
-                                  {userData.createdAt && (
-                                    <div className="detail-item">
-                                      <span className="detail-label">Joined:</span>
-                                      <span className="detail-value">{new Date(userData.createdAt).toLocaleDateString()}</span>
+                                  
+                                  {/* Show who invited this user */}
+                                  {userData.invitedBy && (
+                                    <div style={{ marginLeft: '20px', color: '#9C27B0', fontSize: '10px', marginTop: '2px' }}>
+                                      └─ 📨 Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
                                     </div>
                                   )}
-                                </div>
-                                
-                                {userData.invitedBy && (
-                                  <div className="user-invited-by">
-                                    📨 Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
-                                  </div>
-                                )}
-                                
-                                {userFriends.length > 0 && (
-                                  <div className="user-friends">
-                                    <span className="friends-label">Friends ({userFriends.length}):</span>
-                                    <div className="friends-list">
+                                  
+                                  {/* Show friends for ALL users */}
+                                  {userFriends.length > 0 && (
+                                    <div style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                      <span style={{ color: '#FFA726', fontSize: '11px' }}>Friends ({userFriends.length}):</span>
                                       {userFriends.map((friend, j) => (
-                                        <span key={j} className="friend-item">
-                                          🤝 {friend.nickname} {friend.isOnline ? '🟢' : '⚫'}
-                                        </span>
+                                        <div key={j} style={{ marginLeft: '10px', color: '#888', fontSize: '11px' }}>
+                                          └─ 🤝 {friend.nickname} {friend.isOnline ? '🟢' : '⚫'}
+                                        </div>
                                       ))}
                                     </div>
-                                  </div>
-                                )}
-                                
-                                {(() => {
-                                  const invitedUsers = allUsersData.filter(u => u.invitedBy === userData.id);
-                                  if (invitedUsers.length > 0) {
-                                    return (
-                                      <div className="user-invited">
-                                        <span className="invited-label">Invited ({invitedUsers.length}):</span>
-                                        <div className="invited-list">
+                                  )}
+                                  
+                                  {/* If no friends */}
+                                  {userFriends.length === 0 && (
+                                    <div style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                      <span style={{ color: '#666', fontSize: '11px' }}>No friends yet</span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Show users this person invited */}
+                                  {(() => {
+                                    const invitedUsers = allUsersData.filter(u => u.invitedBy === userData.id);
+                                    if (invitedUsers.length > 0) {
+                                      return (
+                                        <div style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                          <span style={{ color: '#4CAF50', fontSize: '11px' }}>Invited ({invitedUsers.length}):</span>
                                           {invitedUsers.map((invitedUser, k) => (
-                                            <span key={k} className="invited-item">
-                                              ✅ {invitedUser.nickname}
-                                            </span>
+                                            <div key={k} style={{ marginLeft: '10px', color: '#4CAF50', fontSize: '11px' }}>
+                                              └─ ✅ {invitedUser.nickname}
+                                            </div>
                                           ))}
                                         </div>
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                              </div>
-                            );
-                          })
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              );
+                            })}
+                          </div>
                         ) : (
-                          <div className="no-users">No users registered yet</div>
+                          <div style={{ marginLeft: '10px', marginTop: '5px', color: '#666' }}>
+                            No users registered yet
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                        <strong>📨 Pending Invites ({pendingInvitesData.length}):</strong>
+                        {pendingInvitesData.length > 0 ? (
+                          pendingInvitesData.map((invite, i) => (
+                            <div key={i} style={{ 
+                              marginLeft: '10px', 
+                              marginTop: '5px', 
+                              padding: '5px',
+                              background: 'rgba(255, 167, 38, 0.1)',
+                              borderRadius: '4px',
+                              fontSize: '11px', 
+                              color: '#FFA726' 
+                            }}>
+                              <div>🎫 Token: {invite.token?.substring(0, 12)}...</div>
+                              <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>
+                                Created: {new Date(invite.createdAt).toLocaleString()}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#888' }}>
+                                Expires: {new Date(invite.expiresAt).toLocaleString()}
+                              </div>
+                              <div style={{ fontSize: '10px', color: invite.status === 'used' ? '#4CAF50' : '#FFA726' }}>
+                                Status: {invite.status || 'pending'} {invite.status === 'used' && '✅'}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#666' }}>
+                            No pending invites
+                          </div>
                         )}
                       </div>
                     </>
                   )
                 })()}
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
