@@ -1632,130 +1632,149 @@ button, input, textarea, select, a {
 .simple-users-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 300px;
+  gap: 6px;
+  max-height: 350px;
   overflow-y: auto;
-  padding-right: 5px;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(156, 39, 176, 0.2);
 }
 
 .user-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 45px 8px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   transition: all 0.2s;
   position: relative;
+  min-height: 36px;
 }
 
 .user-row:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(2px);
 }
 
 .user-row.current {
-  background: rgba(156, 39, 176, 0.12);
-  border-color: rgba(156, 39, 176, 0.3);
+  background: rgba(156, 39, 176, 0.15);
+  border-color: rgba(156, 39, 176, 0.4);
+  box-shadow: 0 0 10px rgba(156, 39, 176, 0.2);
 }
 
 .user-row.online {
-  border-left: 3px solid #4CAF50;
+  border-left: 4px solid #4CAF50;
+  padding-left: 10px;
 }
 
 .user-main {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
 .user-status {
-  font-size: 10px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .user-icon {
-  font-size: 14px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
 .user-nick {
-  color: #e4f4e4;
-  font-size: 13px;
-  font-weight: 500;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .badge {
-  padding: 1px 4px;
+  padding: 2px 6px;
   border-radius: 3px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: bold;
-  margin-left: 6px;
+  margin-left: 8px;
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .badge.you {
-  background: rgba(156, 39, 176, 0.25);
-  color: #CE93D8;
+  background: rgba(156, 39, 176, 0.3);
+  color: #E1BEE7;
+  border: 1px solid rgba(156, 39, 176, 0.5);
 }
 
 .badge.admin {
-  background: rgba(255, 215, 0, 0.25);
+  background: rgba(255, 215, 0, 0.3);
   color: #FFD700;
+  border: 1px solid rgba(255, 215, 0, 0.5);
 }
 
 .user-details {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-right: 10px;
 }
 
 .detail-item {
-  font-size: 10px;
-  color: #888;
+  font-size: 11px;
+  color: #aaa;
   white-space: nowrap;
 }
 
 .detail-item.friends {
   color: #FFA726;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .detail-item .label {
-  color: #666;
+  color: #777;
+  font-weight: normal;
 }
 
 .user-delete-btn {
   position: absolute;
-  right: 5px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(244, 67, 54, 0.2);
-  border: 1px solid rgba(244, 67, 54, 0.4);
-  color: #f44336;
-  font-size: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: rgba(244, 67, 54, 0.9);
+  border: 2px solid #f44336;
+  color: #ffffff;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   padding: 0;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
 }
 
 .user-delete-btn:hover {
-  background: rgba(244, 67, 54, 0.3);
-  border-color: #f44336;
+  background: #f44336;
+  border-color: #d32f2f;
   transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.5);
+}
+
+.user-delete-btn:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
 /* Invites List */

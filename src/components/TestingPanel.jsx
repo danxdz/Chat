@@ -161,9 +161,15 @@ export default function TestingPanel({
     if (!gun || !userId) return
     
     try {
+      console.log(`🗑️ Starting deletion of user: ${nickname} (${userId})`)
+      
       // Remove user from Gun.js
       await gun.get('chat_users').get(userId).put(null)
-      await gun.get('chat_users_by_nick').get(nickname.toLowerCase()).put(null)
+      
+      // Remove nickname mapping
+      if (nickname) {
+        await gun.get('chat_users_by_nick').get(nickname.toLowerCase()).put(null)
+      }
       
       // Remove user's messages
       await gun.get('chat_messages').map().once((msg, id) => {
@@ -185,16 +191,20 @@ export default function TestingPanel({
       // Remove user's invites
       await gun.get('user_invites').get(userId).put(null)
       
-      console.log(`✅ Deleted user: ${nickname}`)
+      console.log(`✅ Successfully deleted user: ${nickname}`)
       
-      // Reload to refresh the UI
-      window.location.reload()
+      // Close modal and reload
+      setUserToDelete(null)
+      
+      // Small delay to ensure Gun.js operations complete
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+      
     } catch (error) {
-      console.error('Failed to delete user:', error)
-      alert('Failed to delete user: ' + error.message)
+      console.error('❌ Error deleting user:', error)
+      alert(`Failed to delete user: ${error.message}`)
     }
-    
-    setUserToDelete(null)
   }
 
   const handleDeleteAllUsers = async () => {
@@ -444,11 +454,14 @@ export default function TestingPanel({
                                   </div>
                                   {!isAdmin && !isCurrentUser && (
                                     <button
-                                      onClick={() => setUserToDelete({ id: userData.id, nickname: userData.nickname })}
+                                      onClick={() => {
+                                        console.log('Delete button clicked for:', userData.nickname)
+                                        setUserToDelete({ id: userData.id, nickname: userData.nickname })
+                                      }}
                                       className="user-delete-btn"
-                                      title="Delete user"
+                                      title={`Delete user ${userData.nickname}`}
                                     >
-                                      ✕
+                                      🗑️
                                     </button>
                                   )}
                                 </div>
