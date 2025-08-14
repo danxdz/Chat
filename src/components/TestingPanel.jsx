@@ -22,6 +22,7 @@ export default function TestingPanel({
   const [onlineUsersData, setOnlineUsersData] = React.useState([])
   const [showClearConfirm, setShowClearConfirm] = React.useState(false)
   const [clearType, setClearType] = React.useState(null)
+  const [userToDelete, setUserToDelete] = React.useState(null)
   
   if (!isVisible) return null
 
@@ -78,12 +79,23 @@ export default function TestingPanel({
         // Logout
         onLogout()
       }
+    } else if (type === 'messages') {
+      // Clear only messages
+      if (gun) {
+        await gun.get('chat_messages').put(null)
+        await gun.get('general_chat').put({ initialized: true })
+      }
+      window.location.reload()
     } else if (type === 'all') {
       // Clear all data
       if (gun) {
         // Clear all Gun.js data
         await gun.get('chat_messages').put(null)
         await gun.get('user_presence').put(null)
+        await gun.get('chat_users').put(null)
+        await gun.get('chat_users_by_nick').put(null)
+        await gun.get('user_invites').put(null)
+        await gun.get('secure_invites').put(null)
         await gun.get('general_chat').put({ initialized: true })
       }
       
@@ -99,6 +111,46 @@ export default function TestingPanel({
     setClearType(null)
   }
 
+  const handleDeleteUser = async (userId, nickname) => {
+    if (!gun || !userId) return
+    
+    try {
+      // Remove user from Gun.js
+      await gun.get('chat_users').get(userId).put(null)
+      await gun.get('chat_users_by_nick').get(nickname.toLowerCase()).put(null)
+      
+      // Remove user's messages
+      await gun.get('chat_messages').map().once((msg, id) => {
+        if (msg && (msg.fromId === userId || msg.toId === userId)) {
+          gun.get('chat_messages').get(id).put(null)
+        }
+      })
+      
+      // Remove user's presence
+      await gun.get('user_presence').get(userId).put(null)
+      
+      // Remove user from all friends lists
+      for (const otherUser of allUsers) {
+        if (otherUser.id !== userId) {
+          await gun.get('chat_users').get(otherUser.id).get('friends').get(userId).put(null)
+        }
+      }
+      
+      // Remove user's invites
+      await gun.get('user_invites').get(userId).put(null)
+      
+      console.log(`✅ Deleted user: ${nickname}`)
+      
+      // Reload to refresh the UI
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      alert('Failed to delete user: ' + error.message)
+    }
+    
+    setUserToDelete(null)
+  }
+
   return (
     <>
       <div className="testing-panel">
@@ -112,22 +164,35 @@ export default function TestingPanel({
           <div className="status-section">
             <h3>📊 Status</h3>
             <div className="status-item">
-              <span>User:</span> {user?.nickname || 'Not logged in'}
+              <span>User:</span> <span>{user?.nickname || 'Not logged in'}</span>
             </div>
             <div className="status-item">
-              <span>ID:</span> {user?.id?.substring(0, 8) || 'N/A'}...
+              <span>ID:</span> <span>{user?.id?.substring(0, 8) || 'N/A'}...</span>
             </div>
             <div className="status-item">
-              <span>Init Status:</span> {initStatus}
+              <span>Role:</span> <span>{user?.id === 'bootstrap_admin' ? '👑 Admin' : '👤 User'}</span>
             </div>
             <div className="status-item">
-              <span>Gun.js:</span> {gun ? '✅ Connected' : '❌ Not connected'}
+              <span>Gun.js:</span> <span>{gun ? '✅ Connected' : '❌ Not connected'}</span>
+            </div>
+            <div className="status-item">
+              <span>Total Users:</span> <span>{allUsers?.length || 0}</span>
+            </div>
+            <div className="status-item">
+              <span>Online:</span> <span>{onlineUsers?.size || 0}</span>
             </div>
           </div>
 
-          {/* Test Actions */}
+          {/* Quick Actions */}
           <div className="actions-section">
-            <h3>🧪 Test Actions</h3>
+            <h3>🚀 Quick Actions</h3>
+            
+            <button 
+              onClick={loadOnlineUsers}
+              className="test-btn info"
+            >
+              👥 View Online Users
+            </button>
             
             <button 
               onClick={onSendTestMessage}
@@ -137,10 +202,13 @@ export default function TestingPanel({
             </button>
             
             <button 
-              onClick={loadOnlineUsers}
-              className="test-btn info"
+              onClick={() => {
+                setClearType('messages')
+                setShowClearConfirm(true)
+              }}
+              className="test-btn warning"
             >
-              👥 Show Online Users
+              🗑️ Clear All Messages
             </button>
             
             <button 
@@ -150,521 +218,201 @@ export default function TestingPanel({
               }}
               className="test-btn warning"
             >
-              🧹 Clear Current User Data
+              🧹 Clear My Data & Logout
             </button>
             
-            <button 
-              onClick={() => {
-                setClearType('all')
-                setShowClearConfirm(true)
-              }}
-              className="test-btn danger"
-            >
-              💣 Clear All Data
-            </button>
-            
-            <button 
-              onClick={onForceReload}
-              className="test-btn secondary"
-            >
-              🔄 Force Reload
-            </button>
-          </div>
-
-          {/* Simple Dev Tools */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            
-            {/* Clear Data Button */}
-            <button 
-              onClick={() => {
-                if (confirm('Clear all data and restart? This will delete everything!')) {
-                  // Clear all localStorage
-                  localStorage.clear()
-                  sessionStorage.clear()
-                  // Reload the page
-                  window.location.reload()
-                }
-              }}
-              style={{
-                padding: '15px',
-                background: '#ff4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%'
-              }}
-            >
-              🗑️ Clear LocalStorage & Restart
-            </button>
-            
-            {/* Clear Messages Only */}
-            <button 
-              onClick={async () => {
-                if (confirm('⚠️ Clear all messages?\n\nThis will delete all chat messages but keep users and friendships.')) {
-                  try {
-                    const { clearMessagesOnly } = await import('../services/gunAuthService.js')
-                    await clearMessagesOnly(gun)
-                    alert('✅ Messages cleared! Reloading...')
-                    setTimeout(() => window.location.reload(), 500)
-                  } catch (error) {
-                    alert(`❌ Failed to clear messages: ${error.message}`)
-                  }
-                }
-              }}
-              style={{
-                padding: '15px',
-                background: '#ff9800',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%',
-                marginTop: '10px'
-              }}
-            >
-              🗑️ Clear Messages Only
-            </button>
-            
-            {/* Clear Gun.js Database */}
-            <button 
-              onClick={async () => {
-                if (confirm('⚠️ COMPLETE RESET - ARE YOU SURE?\n\nThis will delete EVERYTHING:\n• All Gun.js P2P data\n• All localStorage data\n• All users & passwords\n• All messages & chats\n• All friendships\n\nThe app will restart completely fresh!')) {
-                  try {
-                    const { clearGunDatabase } = await import('../services/gunAuthService.js')
-                    await clearGunDatabase(gun)
-                    alert('✅ Complete reset successful! Restarting...')
-                    setTimeout(() => window.location.reload(), 1000)
-                  } catch (error) {
-                    alert(`❌ Failed to reset: ${error.message}`)
-                  }
-                }
-              }}
-              style={{
-                padding: '15px',
-                background: '#9c27b0',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%',
-                marginTop: '10px'
-              }}
-            >
-              💥 Complete Reset (Clear Everything)
-            </button>
-            
-            {/* Restart App Button */}
-            <button 
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '15px',
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%'
-              }}
-            >
-              🔄 Restart App
-            </button>
-            
-
-            
-            {/* Fix Private Key Issue */}
-            {!user?.privateKey && (
+            {user?.id === 'bootstrap_admin' && (
               <button 
                 onClick={() => {
-                  alert('⚠️ Private key missing!\n\nTo fix this:\n1. Click OK\n2. Logout\n3. Login again\n\nThis will generate a new private key for creating invites.')
-                  setTimeout(() => {
-                    if (onLogout) onLogout()
-                  }, 1000)
+                  setClearType('all')
+                  setShowClearConfirm(true)
                 }}
-                style={{
-                  padding: '15px',
-                  background: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  width: '100%',
-                  marginTop: '10px',
-                  animation: 'pulse 2s infinite'
-                }}
+                className="test-btn danger"
               >
-                🔧 FIX: Missing Private Key - Click to Logout
+                💣 Factory Reset (Delete Everything)
               </button>
             )}
-            
-            {/* Test Message Sending */}
-            <button 
-              onClick={async () => {
-                if (!onSendTestMessage) {
-                  alert('Test message function not available')
-                  return
-                }
-                const testMessages = [
-                  'Test message ' + Date.now(),
-                  '🚀 Testing Gun.js P2P messaging',
-                  'Hello from ' + user.nickname,
-                  '✅ Message test successful!'
-                ]
-                const randomMsg = testMessages[Math.floor(Math.random() * testMessages.length)]
-                await onSendTestMessage(randomMsg)
-                alert('Test message sent: ' + randomMsg)
-              }}
-              style={{
-                padding: '15px',
-                background: '#2196F3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%',
-                marginTop: '10px'
-              }}
-            >
-              📤 Send Test Message
-            </button>
-            
+          </div>
 
-            
-            {/* Test Connection */}
-            <button 
-              onClick={async () => {
-                if (!gun) {
-                  alert('❌ Gun.js NOT connected!')
-                  return
-                }
-                
-                const testKey = 'test_' + Date.now()
-                const testData = { test: true, timestamp: Date.now(), user: user.nickname }
-                
-                try {
-                  // Write test data
-                  await gun.get('connection_test').get(testKey).put(testData)
+          {/* Admin Panel - Only show for bootstrap user */}
+          {user && user.id === 'bootstrap_admin' && (
+            <div className="admin-section">
+              <h3>👑 Admin Control Panel</h3>
+              
+              <div className="admin-panel">
+                {(() => {
+                  // Use real Gun.js data from props
+                  const allUsersData = allUsers || []
+                  const pendingInvitesData = pendingInvites || []
+                  const onlineUsersSet = onlineUsers || new Set()
                   
-                  // Read it back
-                  const result = await new Promise((resolve) => {
-                    let timeout = setTimeout(() => resolve(null), 3000)
-                    gun.get('connection_test').get(testKey).once((data) => {
-                      clearTimeout(timeout)
-                      resolve(data)
-                    })
-                  })
+                  // Create a function to load friends for any user
+                  const [allUsersFriends, setAllUsersFriends] = React.useState({})
                   
-                  if (result) {
-                    alert('✅ Gun.js connection WORKING!\n\nTest data written and read successfully.')
-                  } else {
-                    alert('⚠️ Gun.js connection SLOW\n\nData write succeeded but read timed out.')
-                  }
-                  
-                  // Clean up test data
-                  gun.get('connection_test').get(testKey).put(null)
-                } catch (error) {
-                  alert('❌ Connection test FAILED: ' + error.message)
-                }
-              }}
-              style={{
-                padding: '15px',
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%',
-                marginTop: '10px'
-              }}
-            >
-              🔌 Test Gun.js Connection
-            </button>
-            
-            {/* Show Online Users */}
-            <button 
-              onClick={async () => {
-                if (!gun) {
-                  alert('Gun.js not connected')
-                  return
-                }
-                
-                const onlineUsers = new Map()
-                await new Promise((resolve) => {
-                  let timeout = setTimeout(resolve, 2000)
-                  // Use user_presence instead of presence
-                  gun.get('user_presence').map().once((data, key) => {
-                    if (data && data.nickname && data.timestamp) {
-                      const isOnline = Date.now() - data.timestamp < 60000 // 60 seconds
-                      onlineUsers.set(key, {
-                        userId: key,
-                        nickname: data.nickname,
-                        status: isOnline ? '🟢 Online' : '🔴 Offline',
-                        lastSeen: new Date(data.timestamp).toLocaleTimeString()
-                      })
-                    }
-                    clearTimeout(timeout)
-                    timeout = setTimeout(resolve, 500)
-                  })
-                })
-                
-                if (onlineUsers.size > 0) {
-                  alert('Online Users:\n\n' + Array.from(onlineUsers.entries()).map(([key, user]) => 
-                    `${user.status} ${user.nickname}\nID: ${user.userId.substring(0, 8)}...\nLast seen: ${user.lastSeen}`
-                  ).join('\n\n'))
-                } else {
-                  alert('No users online data found in Gun.js.\nMake sure users are announcing their presence.')
-                }
-              }}
-              style={{
-                padding: '15px',
-                background: '#00BCD4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                width: '100%',
-                marginTop: '10px'
-              }}
-            >
-              👥 Show Online Users
-            </button>
-            
-            {/* Admin Panel - Only show for bootstrap user */}
-            {user && user.id === 'bootstrap_admin' && (
-              <>
-                <div style={{
-                  padding: '10px',
-                  background: 'linear-gradient(135deg, #2a0845 0%, #1a0530 100%)',
-                  borderRadius: '8px',
-                  marginBottom: '10px',
-                  fontSize: '12px',
-                  color: '#ddd',
-                  maxHeight: '500px',
-                  overflowY: 'auto'
-                }}>
-                  <h4 style={{ color: '#9C27B0', marginBottom: '10px' }}>👑 Admin Panel</h4>
-                  
-                  {(() => {
-                    // Use real Gun.js data from props
-                    const allUsersData = allUsers || []
-                    const pendingInvitesData = pendingInvites || []
-                    const friendsData = friends || []
-                    const onlineUsersSet = onlineUsers || new Set()
-                    
-                    // Create a function to load friends for any user
-                    const [allUsersFriends, setAllUsersFriends] = React.useState({})
-                    
-                    React.useEffect(() => {
-                      const loadAllFriends = async () => {
-                        if (!gun || allUsersData.length === 0) return
-                        
-                        const friendsMap = {}
-                        for (const userData of allUsersData) {
-                          try {
-                            const friendIds = await new Promise((resolve) => {
-                              const timeout = setTimeout(() => resolve([]), 1000)
-                              const friends = []
-                              
-                              gun.get('chat_users').get(userData.id).get('friends').map().once((value, key) => {
-                                if (value === true && key !== '_') {
-                                  friends.push(key)
-                                }
-                              })
-                              
-                              gun.get('chat_users').get(userData.id).get('friends').once((data) => {
-                                clearTimeout(timeout)
-                                if (data && typeof data === 'object') {
-                                  const ids = Object.keys(data).filter(k => k !== '_' && data[k] === true)
-                                  resolve(ids.length > 0 ? ids : friends)
-                                } else {
-                                  resolve(friends)
-                                }
-                              })
+                  React.useEffect(() => {
+                    const loadAllFriends = async () => {
+                      if (!gun || allUsersData.length === 0) return
+                      
+                      const friendsMap = {}
+                      for (const userData of allUsersData) {
+                        try {
+                          const friendIds = await new Promise((resolve) => {
+                            const timeout = setTimeout(() => resolve([]), 1000)
+                            const friends = []
+                            
+                            gun.get('chat_users').get(userData.id).get('friends').map().once((value, key) => {
+                              if (value === true && key !== '_') {
+                                friends.push(key)
+                              }
                             })
                             
-                            friendsMap[userData.id] = friendIds
-                          } catch (error) {
-                            console.error(`Failed to load friends for ${userData.nickname}:`, error)
-                            friendsMap[userData.id] = []
-                          }
+                            gun.get('chat_users').get(userData.id).get('friends').once((data) => {
+                              clearTimeout(timeout)
+                              if (data && typeof data === 'object') {
+                                const ids = Object.keys(data).filter(k => k !== '_' && data[k] === true)
+                                resolve(ids.length > 0 ? ids : friends)
+                              } else {
+                                resolve(friends)
+                              }
+                            })
+                          })
+                          
+                          friendsMap[userData.id] = friendIds
+                        } catch (error) {
+                          console.error(`Failed to load friends for ${userData.nickname}:`, error)
+                          friendsMap[userData.id] = []
                         }
-                        setAllUsersFriends(friendsMap)
                       }
-                      
-                      loadAllFriends()
-                    }, [allUsersData, gun])
+                      setAllUsersFriends(friendsMap)
+                    }
                     
-                    return (
-                      <>
-                        <div style={{ marginBottom: '10px' }}>
-                          <strong>📊 Total Users:</strong> {allUsersData.length}
-                          <span style={{ marginLeft: '10px', color: '#4CAF50' }}>
-                            🟢 Online: {onlineUsersSet.size}
-                          </span>
+                    loadAllFriends()
+                  }, [allUsersData, gun])
+                  
+                  return (
+                    <>
+                      <div className="admin-stats">
+                        <div className="stat-item">
+                          <span className="stat-label">Total Users:</span>
+                          <span className="stat-value">{allUsersData.length}</span>
                         </div>
-                        
-                        <div style={{ marginBottom: '10px' }}>
-                          <strong>🌳 Complete User Tree with Friends:</strong>
-                          {allUsersData.length > 0 ? (
-                            allUsersData.map((userData, i) => {
-                              // Get this user's friends
-                              const userFriendIds = allUsersFriends[userData.id] || []
-                              const userFriends = userFriendIds.map(friendId => {
-                                const friendData = allUsersData.find(u => u.id === friendId)
-                                return friendData ? {
-                                  id: friendId,
-                                  nickname: friendData.nickname || 'Unknown',
-                                  isOnline: onlineUsersSet.has(friendId)
-                                } : null
-                              }).filter(Boolean)
-                              
-                              return (
-                                <div key={i} style={{ 
-                                  marginLeft: '10px', 
-                                  marginTop: '8px',
-                                  padding: '8px',
-                                  background: userData.id === user.id ? 'rgba(156, 39, 176, 0.1)' : 'transparent',
-                                  borderRadius: '4px',
-                                  border: userData.id === user.id ? '1px solid #9C27B0' : 'none'
-                                }}>
-                                  <div style={{ 
-                                    color: userData.id === 'bootstrap_admin' ? '#FFD700' : '#4CAF50',
-                                    fontWeight: userData.id === user.id ? 'bold' : 'normal'
-                                  }}>
-                                    {userData.id === 'bootstrap_admin' ? '👑' : '👤'} {userData.nickname || 'Unknown'} 
-                                    {userData.id === user.id && ' (You)'}
-                                    {onlineUsersSet.has(userData.id) ? ' 🟢' : ' ⚫'}
-                                    {userData.id === 'bootstrap_admin' && ' [ADMIN]'}
+                        <div className="stat-item">
+                          <span className="stat-label">Online Now:</span>
+                          <span className="stat-value">{onlineUsersSet.size}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="stat-label">Pending Invites:</span>
+                          <span className="stat-value">{pendingInvitesData.length}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="users-tree">
+                        <h4>👥 All Registered Users</h4>
+                        {allUsersData.length > 0 ? (
+                          allUsersData.map((userData, i) => {
+                            // Get this user's friends
+                            const userFriendIds = allUsersFriends[userData.id] || []
+                            const userFriends = userFriendIds.map(friendId => {
+                              const friendData = allUsersData.find(u => u.id === friendId)
+                              return friendData ? {
+                                id: friendId,
+                                nickname: friendData.nickname || 'Unknown',
+                                isOnline: onlineUsersSet.has(friendId)
+                              } : null
+                            }).filter(Boolean)
+                            
+                            const isAdmin = userData.id === 'bootstrap_admin'
+                            const isCurrentUser = userData.id === user.id
+                            
+                            return (
+                              <div key={i} className={`user-card ${isCurrentUser ? 'current' : ''} ${isAdmin ? 'admin' : ''}`}>
+                                <div className="user-header">
+                                  <div className="user-main">
+                                    <span className="user-icon">
+                                      {isAdmin ? '👑' : '👤'}
+                                    </span>
+                                    <span className="user-nickname">
+                                      {userData.nickname || 'Unknown'}
+                                      {isCurrentUser && ' (You)'}
+                                    </span>
+                                    <span className={`user-status ${onlineUsersSet.has(userData.id) ? 'online' : 'offline'}`}>
+                                      {onlineUsersSet.has(userData.id) ? '🟢' : '⚫'}
+                                    </span>
                                   </div>
-                                  
-                                  {/* Show user details */}
-                                  <div style={{ marginLeft: '20px', fontSize: '10px', color: '#888', marginTop: '2px' }}>
-                                    ID: {userData.id?.substring(0, 8)}...
-                                    {userData.createdAt && ` | Joined: ${new Date(userData.createdAt).toLocaleDateString()}`}
+                                  {!isAdmin && !isCurrentUser && (
+                                    <button
+                                      onClick={() => setUserToDelete({ id: userData.id, nickname: userData.nickname })}
+                                      className="delete-user-btn"
+                                      title="Delete this user"
+                                    >
+                                      🗑️
+                                    </button>
+                                  )}
+                                </div>
+                                
+                                <div className="user-details">
+                                  <div className="detail-item">
+                                    <span className="detail-label">ID:</span>
+                                    <span className="detail-value">{userData.id?.substring(0, 8)}...</span>
                                   </div>
-                                  
-                                  {/* Show who invited this user */}
-                                  {userData.invitedBy && (
-                                    <div style={{ marginLeft: '20px', color: '#9C27B0', fontSize: '10px', marginTop: '2px' }}>
-                                      └─ 📨 Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
+                                  {userData.createdAt && (
+                                    <div className="detail-item">
+                                      <span className="detail-label">Joined:</span>
+                                      <span className="detail-value">{new Date(userData.createdAt).toLocaleDateString()}</span>
                                     </div>
                                   )}
-                                  
-                                  {/* Show friends for ALL users */}
-                                  {userFriends.length > 0 && (
-                                    <div style={{ marginLeft: '20px', marginTop: '4px' }}>
-                                      <span style={{ color: '#FFA726', fontSize: '11px' }}>Friends ({userFriends.length}):</span>
+                                </div>
+                                
+                                {userData.invitedBy && (
+                                  <div className="user-invited-by">
+                                    📨 Invited by: {allUsersData.find(u => u.id === userData.invitedBy)?.nickname || userData.invitedBy.substring(0, 8)}
+                                  </div>
+                                )}
+                                
+                                {userFriends.length > 0 && (
+                                  <div className="user-friends">
+                                    <span className="friends-label">Friends ({userFriends.length}):</span>
+                                    <div className="friends-list">
                                       {userFriends.map((friend, j) => (
-                                        <div key={j} style={{ marginLeft: '10px', color: '#888', fontSize: '11px' }}>
-                                          └─ 🤝 {friend.nickname} {friend.isOnline ? '🟢' : '⚫'}
-                                        </div>
+                                        <span key={j} className="friend-item">
+                                          🤝 {friend.nickname} {friend.isOnline ? '🟢' : '⚫'}
+                                        </span>
                                       ))}
                                     </div>
-                                  )}
-                                  
-                                  {/* If no friends */}
-                                  {userFriends.length === 0 && (
-                                    <div style={{ marginLeft: '20px', marginTop: '4px' }}>
-                                      <span style={{ color: '#666', fontSize: '11px' }}>No friends yet</span>
-                                    </div>
-                                  )}
-                                  
-                                  {/* Show users this person invited */}
-                                  {(() => {
-                                    const invitedUsers = allUsersData.filter(u => u.invitedBy === userData.id);
-                                    if (invitedUsers.length > 0) {
-                                      return (
-                                        <div style={{ marginLeft: '20px', marginTop: '4px' }}>
-                                          <span style={{ color: '#4CAF50', fontSize: '11px' }}>Invited ({invitedUsers.length}):</span>
+                                  </div>
+                                )}
+                                
+                                {(() => {
+                                  const invitedUsers = allUsersData.filter(u => u.invitedBy === userData.id);
+                                  if (invitedUsers.length > 0) {
+                                    return (
+                                      <div className="user-invited">
+                                        <span className="invited-label">Invited ({invitedUsers.length}):</span>
+                                        <div className="invited-list">
                                           {invitedUsers.map((invitedUser, k) => (
-                                            <div key={k} style={{ marginLeft: '10px', color: '#4CAF50', fontSize: '11px' }}>
-                                              └─ ✅ {invitedUser.nickname}
-                                            </div>
+                                            <span key={k} className="invited-item">
+                                              ✅ {invitedUser.nickname}
+                                            </span>
                                           ))}
                                         </div>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <div style={{ marginLeft: '10px', marginTop: '5px', color: '#666' }}>
-                              No users registered yet
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                          <strong>📨 Pending Invites ({pendingInvitesData.length}):</strong>
-                          {pendingInvitesData.length > 0 ? (
-                            pendingInvitesData.map((invite, i) => (
-                              <div key={i} style={{ 
-                                marginLeft: '10px', 
-                                marginTop: '5px', 
-                                padding: '5px',
-                                background: 'rgba(255, 167, 38, 0.1)',
-                                borderRadius: '4px',
-                                fontSize: '11px', 
-                                color: '#FFA726' 
-                              }}>
-                                <div>🎫 Token: {invite.token?.substring(0, 12)}...</div>
-                                <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>
-                                  Created: {new Date(invite.createdAt).toLocaleString()}
-                                </div>
-                                <div style={{ fontSize: '10px', color: '#888' }}>
-                                  Expires: {new Date(invite.expiresAt).toLocaleString()}
-                                </div>
-                                <div style={{ fontSize: '10px', color: invite.status === 'used' ? '#4CAF50' : '#FFA726' }}>
-                                  Status: {invite.status || 'pending'} {invite.status === 'used' && '✅'}
-                                </div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
-                            ))
-                          ) : (
-                            <div style={{ marginLeft: '10px', marginTop: '5px', fontSize: '11px', color: '#666' }}>
-                              No pending invites
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Debug: Show online users data */}
-                        {isDev && (
-                          <div style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                            <strong>🔍 Debug - Online Users:</strong>
-                            <div style={{ fontSize: '10px', color: '#888', marginTop: '5px' }}>
-                              Set size: {onlineUsersSet.size}
-                              {onlineUsersSet.size > 0 && (
-                                <div>
-                                  IDs: {Array.from(onlineUsersSet).map(id => id.substring(0, 8)).join(', ')}
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                            );
+                          })
+                        ) : (
+                          <div className="no-users">No users registered yet</div>
                         )}
-                      </>
-                    )
-                  })()}
-                </div>
-              </>
-            )}
-          </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -730,6 +478,37 @@ export default function TestingPanel({
                   setShowClearConfirm(false)
                   setClearType(null)
                 }}
+                className="btn-cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {userToDelete && (
+        <Modal
+          isOpen={!!userToDelete}
+          onClose={() => setUserToDelete(null)}
+          title={`Delete User: ${userToDelete.nickname}`}
+          size="small"
+        >
+          <div className="confirm-modal">
+            <p className="warning-text">
+              ⚠️ Are you absolutely sure you want to delete user <strong>{userToDelete.nickname}</strong>?
+            </p>
+            <p>This action cannot be undone. All data related to this user will be permanently removed.</p>
+            <div className="modal-buttons">
+              <button 
+                onClick={() => handleDeleteUser(userToDelete.id, userToDelete.nickname)}
+                className="btn-danger"
+              >
+                Yes, Delete User
+              </button>
+              <button 
+                onClick={() => setUserToDelete(null)}
                 className="btn-cancel"
               >
                 Cancel
