@@ -1,9 +1,9 @@
 export default function FriendsPanel({ 
-  friends, 
-  pendingInvites, 
-  onlineUsers,
-  onSelectFriend,
-  onSendInvite 
+  friends = [], 
+  pendingInvites = [], 
+  onlineUsers = new Set(),
+  onSelectFriend = () => {},
+  onSendInvite = () => {}
 }) {
   return (
     <div className="friends-panel" style={{
@@ -17,7 +17,7 @@ export default function FriendsPanel({
       <h2 style={{ color: '#4CAF50', marginBottom: '1rem' }}>👥 Friends & Invites</h2>
       
       {/* Pending Invites Section */}
-      {pendingInvites.length > 0 && (
+      {pendingInvites && pendingInvites.length > 0 && (
         <div className="pending-invites-section">
           <h4>📨 Pending Invites ({pendingInvites.length})</h4>
           {pendingInvites.map(invite => (
@@ -36,8 +36,8 @@ export default function FriendsPanel({
       
       {/* Friends List */}
       <div className="friends-list-section">
-        <h4>👨‍👩‍👧‍👦 My Friends ({friends.length})</h4>
-        {friends.length === 0 ? (
+        <h4>👨‍👩‍👧‍👦 My Friends ({friends ? friends.length : 0})</h4>
+        {!friends || friends.length === 0 ? (
           <div className="no-friends">
             <p>No friends added yet</p>
             <p style={{ fontSize: '0.85rem', color: '#999' }}>
@@ -49,11 +49,12 @@ export default function FriendsPanel({
             <div 
               key={friend.id} 
               className="friend-item"
-              onClick={() => onSelectFriend(friend.nickname)}
+              onClick={() => onSelectFriend && onSelectFriend(friend.nickname)}
+              style={{ cursor: 'pointer' }}
             >
               <span className="friend-avatar">👤</span>
-              <span className="friend-name">{friend.nickname}</span>
-              {onlineUsers.has(friend.id) && (
+              <span className="friend-name">{friend.nickname || 'Unknown'}</span>
+              {onlineUsers && onlineUsers.has && onlineUsers.has(friend.id) && (
                 <span className="online-indicator">🟢</span>
               )}
             </div>

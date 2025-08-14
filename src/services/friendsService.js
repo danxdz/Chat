@@ -25,6 +25,22 @@ export const getFriendsFromGun = async (gun, userId) => {
       
       const friends = [];
       let hasData = false;
+      let mapComplete = false;
+      let onceComplete = false;
+      
+      // Function to check if we should resolve
+      const checkComplete = () => {
+        if (mapComplete && onceComplete) {
+          clearTimeout(timeout);
+          if (hasData) {
+            logger.log('✅ Friends loaded from Gun.js (map):', friends);
+            resolve(friends);
+          } else {
+            logger.log('No friends found for user:', userId);
+            resolve([]);
+          }
+        }
+      };
       
       // Use .map().once() to get all friends
       gun.get('chat_users').get(userId).get('friends').map().once((friendData, friendId) => {
@@ -35,11 +51,16 @@ export const getFriendsFromGun = async (gun, userId) => {
         }
       });
       
+      // Set a small delay to ensure map() completes
+      setTimeout(() => {
+        mapComplete = true;
+        checkComplete();
+      }, 100);
+      
       // Also check with a direct .once() in case the data structure is different
       gun.get('chat_users').get(userId).get('friends').once((friendsData) => {
-        clearTimeout(timeout);
-        
         if (!hasData && friendsData) {
+          clearTimeout(timeout);
           // Handle if friends is stored as an object
           if (typeof friendsData === 'object' && !Array.isArray(friendsData)) {
             const friendIds = Object.keys(friendsData).filter(key => 
@@ -47,22 +68,17 @@ export const getFriendsFromGun = async (gun, userId) => {
             );
             logger.log('✅ Friends loaded from Gun.js (object):', friendIds);
             resolve(friendIds);
+            return;
           } 
           // Handle if friends is stored as an array (legacy)
           else if (Array.isArray(friendsData)) {
             logger.log('✅ Friends loaded from Gun.js (array):', friendsData);
             resolve(friendsData);
-          } else {
-            logger.log('No friends found for user:', userId);
-            resolve([]);
+            return;
           }
-        } else if (hasData) {
-          logger.log('✅ Friends loaded from Gun.js (map):', friends);
-          resolve(friends);
-        } else {
-          logger.log('No friends found for user:', userId);
-          resolve([]);
         }
+        onceComplete = true;
+        checkComplete();
       });
     });
   } catch (error) {
@@ -80,6 +96,12 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
     return false;
   }
   
+  // Prevent self-friendship
+  if (userId1 === userId2) {
+    logger.error('Cannot create friendship with self:', userId1);
+    return false;
+  }
+  
   logger.log(`🤝 Starting mutual friendship between ${userId1.substring(0, 8)} and ${userId2.substring(0, 8)}`);
   
   try {
@@ -94,13 +116,25 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
     await gun.get('chat_users').get(userId2).get('friends').get(userId1).put(true);
     logger.log(`✅ Added ${userId1.substring(0, 8)} to ${userId2.substring(0, 8)}'s friends`);
     
-    // Verify the friendship was created
-    const verifyFriendship = async (uid1, uid2) => {
-      return new Promise((resolve) => {
-        gun.get('chat_users').get(uid1).get('friends').get(uid2).once((data) => {
-          resolve(data === true);
+    // Verify the friendship was created with retry
+    const verifyFriendship = async (uid1, uid2, retries = 3) => {
+      for (let i = 0; i < retries; i++) {
+        const result = await new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve(false), 1000);
+          gun.get('chat_users').get(uid1).get('friends').get(uid2).once((data) => {
+            clearTimeout(timeout);
+            resolve(data === true);
+          });
         });
-      });
+        
+        if (result) return true;
+        
+        // Wait before retry
+        if (i < retries - 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      return false;
     };
     
     const [check1, check2] = await Promise.all([
@@ -110,11 +144,12 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
     
     if (check1 && check2) {
       logger.log('✅ Mutual friendship established and verified');
+      return true;
     } else {
       logger.warn('⚠️ Friendship created but verification failed:', { check1, check2 });
+      // Still return true as the write operations succeeded
+      return true;
     }
-    
-    return true;
   } catch (error) {
     logger.error('Failed to add mutual friendship:', error);
     return false;
@@ -150,49 +185,68 @@ export const getFriendsWithDetails = async (gun, userId, allUsers) => {
     const friendIds = await getFriendsFromGun(gun, userId);
     
     if (!friendIds || friendIds.length === 0) {
+      logger.log('No friends to get details for');
+      return [];
+    }
+    
+    // Ensure friendIds is an array and filter out invalid entries
+    const validFriendIds = Array.isArray(friendIds) 
+      ? friendIds.filter(id => id && typeof id === 'string' && id !== '_')
+      : [];
+    
+    if (validFriendIds.length === 0) {
+      logger.warn('No valid friend IDs found');
       return [];
     }
     
     // Map friend IDs to user details
     const friendsWithDetails = await Promise.all(
-      friendIds.map(async (friendId) => {
-        // Try to get from allUsers first (faster)
-        let friendData = allUsers?.find(u => u.id === friendId);
-        
-        // If not in allUsers, fetch from Gun.js
-        if (!friendData) {
-          friendData = await new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(null), 1000);
-            
-            gun.get('chat_users').get(friendId).once((data) => {
-              clearTimeout(timeout);
-              if (data) {
-                resolve({
-                  id: friendId,
-                  nickname: data.nickname || 'Unknown',
-                  publicKey: data.publicKey || friendId,
-                  createdAt: data.createdAt
-                });
-              } else {
+      validFriendIds.map(async (friendId) => {
+        try {
+          // Try to get from allUsers first (faster)
+          let friendData = allUsers?.find(u => u && u.id === friendId);
+          
+          // If not in allUsers, fetch from Gun.js
+          if (!friendData) {
+            friendData = await new Promise((resolve) => {
+              const timeout = setTimeout(() => {
+                logger.warn(`Timeout getting details for friend: ${friendId}`);
                 resolve(null);
-              }
+              }, 1000);
+              
+              gun.get('chat_users').get(friendId).once((data) => {
+                clearTimeout(timeout);
+                if (data && typeof data === 'object') {
+                  resolve({
+                    id: friendId,
+                    nickname: data.nickname || 'Unknown',
+                    publicKey: data.publicKey || friendId,
+                    createdAt: data.createdAt
+                  });
+                } else {
+                  resolve(null);
+                }
+              });
             });
-          });
+          }
+          
+          return friendData ? {
+            id: friendId,
+            nickname: friendData.nickname || 'Unknown',
+            publicKey: friendData.publicKey || friendId,
+            status: 'offline', // Will be updated by presence system
+            addedAt: friendData.createdAt || Date.now()
+          } : null;
+        } catch (err) {
+          logger.error(`Error getting details for friend ${friendId}:`, err);
+          return null;
         }
-        
-        return friendData ? {
-          id: friendId,
-          nickname: friendData.nickname || 'Unknown',
-          publicKey: friendData.publicKey || friendId,
-          status: 'offline', // Will be updated by presence system
-          addedAt: friendData.createdAt
-        } : null;
       })
     );
     
     // Filter out nulls and return
     const validFriends = friendsWithDetails.filter(Boolean);
-    logger.log(`✅ Loaded ${validFriends.length} friends with details`);
+    logger.log(`✅ Loaded ${validFriends.length} friends with details out of ${validFriendIds.length} IDs`);
     return validFriends;
   } catch (error) {
     logger.error('Failed to get friends with details:', error);
