@@ -1563,3 +1563,132 @@ button, input, textarea, select, a {
     max-height: 40vh;
   }
 }
+
+/* Users Table - Compact Design */
+.users-table-container {
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.users-table thead {
+  background: rgba(156, 39, 176, 0.15);
+}
+
+.users-table th {
+  padding: 8px 10px;
+  text-align: left;
+  color: #9C27B0;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(156, 39, 176, 0.2);
+}
+
+.users-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s;
+}
+
+.users-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.users-table tbody tr.current-user {
+  background: rgba(156, 39, 176, 0.08);
+}
+
+.users-table td {
+  padding: 10px;
+  color: #c4d4c4;
+}
+
+.status-dot {
+  font-size: 14px;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-name span {
+  color: #c4d4c4;
+}
+
+.you-badge {
+  background: rgba(156, 39, 176, 0.3);
+  color: #9C27B0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  margin-left: 4px;
+}
+
+.admin-badge {
+  background: rgba(255, 215, 0, 0.2);
+  color: #FFD700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  margin-left: 4px;
+}
+
+.user-id {
+  font-family: 'JetBrains Mono', monospace;
+  color: #5a6a5a;
+  font-size: 11px;
+}
+
+.friends-count {
+  color: #FFA726;
+  font-size: 12px;
+}
+
+.inviter {
+  color: #8fa58f;
+  font-size: 11px;
+}
+
+.delete-btn-compact {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: #f44336;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.delete-btn-compact:hover {
+  background: rgba(244, 67, 54, 0.25);
+  border-color: #f44336;
+  transform: scale(1.1);
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  .users-table {
+    font-size: 11px;
+  }
+  
+  .users-table th,
+  .users-table td {
+    padding: 6px 8px;
+  }
+  
+  .user-id {
+    font-size: 10px;
+  }
+}
