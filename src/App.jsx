@@ -446,15 +446,12 @@ function App() {
             }
           })
           
-          // Also monitor for accepted invites to update status
+          // Also monitor for accepted invites to remove them from pending list
           gun.get('secure_invites').map().on(async (invite, key) => {
             if (invite && invite.fromId === user.id && invite.status === 'accepted') {
+              // Remove accepted invite from pending list
               setPendingInvites(prev => {
-                const updated = prev.map(inv => 
-                  inv.id === invite.id 
-                    ? { ...inv, status: 'accepted', acceptedBy: invite.acceptedBy, acceptedAt: invite.acceptedAt }
-                    : inv
-                )
+                const updated = prev.filter(inv => inv.id !== invite.id)
                 localStorage.setItem('pendingInvites', JSON.stringify(updated))
                 return updated
               })
