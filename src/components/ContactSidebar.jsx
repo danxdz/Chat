@@ -1,3 +1,5 @@
+import React from 'react'
+
 export default function ContactSidebar({ 
   contacts, 
   activeContact, 
@@ -5,6 +7,7 @@ export default function ContactSidebar({
   lastSeen,
   onlineUsers,
   pendingInvites = [],
+  acceptedInvites = [],
   onContactSelect
 }) {
   const formatLastSeen = (timestamp) => {
@@ -38,6 +41,12 @@ export default function ContactSidebar({
     return a.nickname.localeCompare(b.nickname)
   })
 
+  // Combine accepted invites with friends for display
+  const acceptedInviteIds = new Set(acceptedInvites.map(inv => inv.friendId))
+  const friendsFromInvites = acceptedInvites.filter(inv => 
+    !sortedContacts.some(c => c.id === inv.friendId)
+  )
+
   return (
     <div className="sidebar">
       {/* Header */}
@@ -62,35 +71,72 @@ export default function ContactSidebar({
 
       {/* Divider */}
       <div className="sidebar-divider">
-        <span>Direct Messages ({sortedContacts.length})</span>
+        <span>Direct Messages ({sortedContacts.length + friendsFromInvites.length})</span>
       </div>
 
       {/* Friends/Contacts List */}
       <div className="contacts-list">
-        {sortedContacts.length > 0 ? (
-          sortedContacts.map(contact => (
-            <button
-              key={contact.id}
-              onClick={() => onContactSelect(contact)}
-              className={`chat-item ${activeContact?.id === contact.id ? 'active' : ''}`}
-            >
-              <div className="chat-item-avatar">
-                {contact.isOnline ? '🟢' : '⚫'}
-              </div>
-              <div className="chat-item-info">
-                <div className="chat-item-name">
-                  {contact.nickname}
+        {sortedContacts.length > 0 || friendsFromInvites.length > 0 ? (
+          <>
+            {/* Show regular friends */}
+            {sortedContacts.map(contact => (
+              <button
+                key={contact.id}
+                onClick={() => onContactSelect(contact)}
+                className={`chat-item ${activeContact?.id === contact.id ? 'active' : ''}`}
+              >
+                <div className="chat-item-avatar">
+                  {contact.isOnline ? '🟢' : '⚫'}
                 </div>
-                <div className="chat-item-status">
-                  {contact.isOnline ? 'Online' : `Last seen ${formatLastSeen(contact.lastSeen)}`}
+                <div className="chat-item-info">
+                  <div className="chat-item-name">
+                    {contact.nickname}
+                    {acceptedInviteIds.has(contact.id) && (
+                      <span className="new-friend-badge">NEW</span>
+                    )}
+                  </div>
+                  <div className="chat-item-status">
+                    {contact.isOnline ? 'Online' : `Last seen ${formatLastSeen(contact.lastSeen)}`}
+                  </div>
                 </div>
-              </div>
-              {/* Unread indicator (for future use) */}
-              {contact.unreadCount > 0 && (
-                <div className="unread-badge">{contact.unreadCount}</div>
-              )}
-            </button>
-          ))
+                {/* Unread indicator (for future use) */}
+                {contact.unreadCount > 0 && (
+                  <div className="unread-badge">{contact.unreadCount}</div>
+                )}
+              </button>
+            ))}
+            
+            {/* Show friends from accepted invites not in contacts yet */}
+            {friendsFromInvites.map(invite => {
+              const isOnline = onlineUsers && onlineUsers.has(invite.friendId)
+              const friendLastSeen = lastSeen && lastSeen.get(invite.friendId)
+              
+              return (
+                <button
+                  key={invite.friendId}
+                  onClick={() => onContactSelect({
+                    id: invite.friendId,
+                    nickname: invite.friendNickname || 'Friend',
+                    isOnline: isOnline
+                  })}
+                  className={`chat-item ${activeContact?.id === invite.friendId ? 'active' : ''}`}
+                >
+                  <div className="chat-item-avatar">
+                    {isOnline ? '🟢' : '⚫'}
+                  </div>
+                  <div className="chat-item-info">
+                    <div className="chat-item-name">
+                      {invite.friendNickname || 'Friend'}
+                      <span className="new-friend-badge">NEW</span>
+                    </div>
+                    <div className="chat-item-status">
+                      {isOnline ? 'Just joined!' : `Joined ${formatLastSeen(invite.usedAt)}`}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </>
         ) : (
           <div className="no-contacts">
             <p>No friends yet</p>
@@ -107,14 +153,14 @@ export default function ContactSidebar({
           </div>
           <div className="pending-invites-list">
             {pendingInvites.map((invite, i) => (
-              <div key={i} className="pending-invite-item">
+              <div key={invite.id || i} className="pending-invite-item">
                 <div className="invite-icon">📨</div>
                 <div className="invite-info">
                   <div className="invite-token">
                     {invite.token?.substring(0, 8)}...
                   </div>
                   <div className="invite-status">
-                    {invite.status || 'Waiting'}
+                    Waiting • Expires {new Date(invite.expiresAt).toLocaleDateString()}
                   </div>
                 </div>
               </div>

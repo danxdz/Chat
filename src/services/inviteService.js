@@ -17,13 +17,20 @@ export const storePendingInvite = async (gun, userId, inviteData) => {
   if (!gun || !userId || !inviteData) return false;
   
   try {
-    // Store in user's pending invites list
+    // Store in user's pending invites list with more details
     await gun.get('user_invites').get(userId).get(inviteData.inviteId).put({
       id: inviteData.inviteId,
+      token: inviteData.inviteUrl?.split('#invite=')[1] || inviteData.inviteId,
       createdAt: Date.now(),
       expiresAt: inviteData.expiresAt,
+      status: 'pending',
       used: false,
-      inviteUrl: inviteData.inviteUrl
+      inviteUrl: inviteData.inviteUrl,
+      fromId: userId,
+      fromNickname: null, // Will be filled when fetching
+      acceptedBy: null,
+      acceptedNickname: null,
+      usedAt: null
     });
     
     logger.log('✅ Pending invite stored for user:', userId);
@@ -35,24 +42,35 @@ export const storePendingInvite = async (gun, userId, inviteData) => {
 };
 
 /**
- * Get all pending invites for a user
+ * Get all pending invites for a user with full details
  */
 export const getPendingInvites = async (gun, userId) => {
   if (!gun || !userId) return [];
   
   try {
+    // Get user's nickname first
+    const userData = await new Promise((resolve) => {
+      gun.get('chat_users').get(userId).once((data) => resolve(data));
+    });
+    
+    const userNickname = userData?.nickname || 'Unknown';
+    
     return new Promise((resolve) => {
       const invites = [];
       const timeout = setTimeout(() => {
-        logger.log(`Found ${invites.length} pending invites`);
+        logger.log(`Found ${invites.length} pending invites for ${userNickname}`);
         resolve(invites);
       }, 2000);
       
       gun.get('user_invites').get(userId).map().once((invite, id) => {
-        if (invite && !invite.used && invite.expiresAt > Date.now()) {
+        if (invite && invite.expiresAt > Date.now()) {
           invites.push({
             id: id,
-            ...invite
+            ...invite,
+            fromNickname: userNickname,
+            isPending: invite.status === 'pending',
+            isUsed: invite.status === 'used' || invite.used === true,
+            isExpired: invite.expiresAt <= Date.now()
           });
         }
       });
@@ -66,7 +84,7 @@ export const getPendingInvites = async (gun, userId) => {
 /**
  * Mark an invite as used when someone accepts it
  */
-export const markInviteAsUsed = async (gun, inviterId, inviteId, acceptedBy) => {
+export const markInviteAsUsed = async (gun, inviterId, inviteId, acceptedBy, acceptedNickname) => {
   if (!gun || !inviterId || !inviteId) return false;
   
   try {
@@ -86,18 +104,30 @@ export const markInviteAsUsed = async (gun, inviterId, inviteId, acceptedBy) => 
         status: 'used',
         used: true,
         usedAt: Date.now(),
-        acceptedBy: acceptedBy
+        acceptedBy: acceptedBy,
+        acceptedNickname: acceptedNickname || 'New User'
       };
       
       await gun.get('user_invites').get(inviterId).get(inviteId).put(updatedInvite);
-      logger.log('✅ Invite marked as used:', inviteId, 'by', acceptedBy);
+      
+      // Also update in a global accepted invites list for easy lookup
+      await gun.get('accepted_invites').get(inviteId).put({
+        inviteId: inviteId,
+        inviterId: inviterId,
+        acceptedBy: acceptedBy,
+        acceptedNickname: acceptedNickname,
+        usedAt: Date.now()
+      });
+      
+      logger.log('✅ Invite marked as used:', inviteId, 'by', acceptedNickname);
     } else {
       // If invite doesn't exist in the new structure, just mark it as used
       await gun.get('user_invites').get(inviterId).get(inviteId).put({
         status: 'used',
         used: true,
         usedAt: Date.now(),
-        acceptedBy: acceptedBy
+        acceptedBy: acceptedBy,
+        acceptedNickname: acceptedNickname
       });
       logger.log('✅ Invite marked as used (minimal data):', inviteId);
     }
@@ -119,14 +149,17 @@ export const getAcceptedInvites = async (gun, userId) => {
     return new Promise((resolve) => {
       const invites = [];
       const timeout = setTimeout(() => {
+        logger.log(`Found ${invites.length} accepted invites`);
         resolve(invites);
       }, 2000);
       
       gun.get('user_invites').get(userId).map().once((invite, id) => {
-        if (invite && invite.used && invite.acceptedBy) {
+        if (invite && (invite.status === 'used' || invite.used) && invite.acceptedBy) {
           invites.push({
             id: id,
-            ...invite
+            ...invite,
+            friendNickname: invite.acceptedNickname || 'Friend',
+            friendId: invite.acceptedBy
           });
         }
       });
@@ -137,9 +170,53 @@ export const getAcceptedInvites = async (gun, userId) => {
   }
 };
 
+/**
+ * Get all invites (pending and accepted) with friend status
+ */
+export const getAllInvitesWithStatus = async (gun, userId) => {
+  if (!gun || !userId) return { pending: [], accepted: [] };
+  
+  try {
+    const allInvites = await new Promise((resolve) => {
+      const pending = [];
+      const accepted = [];
+      const timeout = setTimeout(() => {
+        resolve({ pending, accepted });
+      }, 2000);
+      
+      gun.get('user_invites').get(userId).map().once((invite, id) => {
+        if (!invite) return;
+        
+        const inviteData = {
+          id: id,
+          ...invite,
+          token: invite.token || invite.inviteUrl?.split('#invite=')[1] || id.substring(0, 8)
+        };
+        
+        if (invite.status === 'used' || invite.used) {
+          accepted.push({
+            ...inviteData,
+            friendNickname: invite.acceptedNickname || 'Friend',
+            friendId: invite.acceptedBy
+          });
+        } else if (invite.expiresAt > Date.now()) {
+          pending.push(inviteData);
+        }
+      });
+    });
+    
+    logger.log(`📋 Invites for user: ${allInvites.pending.length} pending, ${allInvites.accepted.length} accepted`);
+    return allInvites;
+  } catch (error) {
+    logger.error('Failed to get all invites:', error);
+    return { pending: [], accepted: [] };
+  }
+};
+
 export default {
   storePendingInvite,
   getPendingInvites,
   markInviteAsUsed,
-  getAcceptedInvites
+  getAcceptedInvites,
+  getAllInvitesWithStatus
 };
