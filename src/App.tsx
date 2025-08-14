@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [friends, setFriends] = useState<Contact[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [acceptedInvites, setAcceptedInvites] = useState<any[]>([]);
   const [debugNotifications, setDebugNotifications] = useState<DebugNotification[]>([]);
   const [initStatus, setInitStatus] = useState('Initializing...');
   const [chatError, setChatError] = useState<string | null>(null);
@@ -175,20 +176,27 @@ const App: React.FC = () => {
     if (!user || !gun) return;
     
     try {
-      const { getPendingInvites } = await import('./services/inviteService');
-      const invites = await getPendingInvites(gun, user.id);
+      const { getAllInvitesWithStatus } = await import('./services/inviteService');
+      const inviteStatus = await getAllInvitesWithStatus(gun, user.id);
       
-      const pendingInvitesList: PendingInvite[] = invites.map(invite => ({
-        token: invite.inviteUrl?.split('#invite=')[1] || '',
+      // Set pending invites
+      const pendingInvitesList: PendingInvite[] = inviteStatus.pending.map(invite => ({
+        id: invite.id,
+        token: invite.token || '',
         createdAt: invite.createdAt,
         expiresAt: invite.expiresAt,
-        fromNick: user.nickname
+        fromNick: user.nickname,
+        status: 'pending'
       }));
       
       setPendingInvites(pendingInvitesList);
-      logger.log(`Loaded ${pendingInvitesList.length} pending invites`);
+      
+      // Set accepted invites (these are friends created from invites)
+      setAcceptedInvites(inviteStatus.accepted);
+      
+      logger.log(`📋 Loaded invites: ${pendingInvitesList.length} pending, ${inviteStatus.accepted.length} accepted`);
     } catch (error) {
-      logger.error('Failed to load pending invites:', error);
+      logger.error('Failed to load invites:', error);
     }
   };
 
@@ -400,6 +408,7 @@ const App: React.FC = () => {
         messages={messages}
         displayMessages={displayMessages}
         friends={friends}
+        acceptedInvites={acceptedInvites}
         onlineUsers={onlineUsers}
         allUsers={allUsers}
         pendingInvites={pendingInvites}

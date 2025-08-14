@@ -126,7 +126,7 @@ export default function ChatArea({
                   gap: '0.5rem'
                 }}>
                   <span style={{ color: '#4CAF50', fontSize: '0.9rem' }}>→</span>
-                  <span>{message.text}</span>
+                  <span>{message.content || message.text}</span>
                   <span style={{ 
                     fontSize: '0.65rem', 
                     color: 'rgba(255, 255, 255, 0.3)',
@@ -234,7 +234,7 @@ export default function ChatArea({
                     color: '#ffffff', 
                     lineHeight: '1.5'
                   }}>
-                    {message.text}
+                    {message.content || message.text}
                   </div>
                 </div>
                 

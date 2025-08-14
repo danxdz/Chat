@@ -127,15 +127,24 @@ export const useMessages = (
 
       // Try to encrypt message if SEA is available
       let messageToSend = { ...message };
+      let isEncrypted = false;
+      let isWebRTC = false;
       
-      if ((window as any).Gun?.SEA) {
+      if ((window as any).Gun?.SEA && to) {
         try {
           const messageKey = `p2p-chat-key-${channelName}`;
           const encrypted = await (window as any).Gun.SEA.encrypt(
             message.content,
             messageKey
           );
-          messageToSend = { ...message, content: encrypted, encrypted: true };
+          messageToSend = { 
+            ...message, 
+            content: encrypted, 
+            encrypted: true,
+            originalContent: message.content // Keep original for local display
+          };
+          isEncrypted = true;
+          logger.log('🔐 Message encrypted with Gun.SEA');
         } catch (error) {
           logger.warn('Encryption failed, sending unencrypted:', error);
         }
@@ -147,11 +156,25 @@ export const useMessages = (
       // Also try WebRTC for private messages
       if (to) {
         try {
-          await sendWebRTCMessage(to.id, messageToSend);
+          const webrtcSent = await sendWebRTCMessage(to.id, {
+            ...messageToSend,
+            webrtc: true
+          });
+          if (webrtcSent) {
+            isWebRTC = true;
+            logger.log('📡 Message sent via WebRTC');
+          }
         } catch (error) {
           logger.warn('WebRTC send failed, relying on Gun.js:', error);
         }
       }
+
+      // Update local message with flags
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, encrypted: isEncrypted, webrtc: isWebRTC }
+          : msg
+      ));
 
       // Update delivery status to sent
       setMessageDeliveryStatus(prev => {
@@ -160,7 +183,8 @@ export const useMessages = (
         return newMap;
       });
 
-      logger.log('📤 Message sent:', channelName);
+      logger.log(`📤 Message sent: ${channelName} (encrypted: ${isEncrypted}, webrtc: ${isWebRTC})`);
+
     } catch (error) {
       logger.error('Failed to send message:', error);
       

@@ -13,6 +13,7 @@ function ChatView({
   messages,
   displayMessages,
   friends,
+  acceptedInvites = [],
   onlineUsers,
   allUsers,
   pendingInvites,
@@ -84,6 +85,7 @@ function ChatView({
         <div className="main-layout">
           <ContactSidebar
             contacts={friends}
+            acceptedInvites={acceptedInvites}
             activeContact={activeContact}
             connectionStatus={connectionStatus}
             lastSeen={lastSeen}
