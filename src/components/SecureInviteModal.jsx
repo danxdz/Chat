@@ -25,6 +25,12 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
       const invite = await createSecureInvite(user, expirationChoice)
       setCreatedInvite(invite)
       
+      // Store pending invite in Gun.js for the inviter
+      if (gun && user) {
+        const { storePendingInvite } = await import('../services/inviteService')
+        await storePendingInvite(gun, user.id, invite)
+      }
+      
       if (onInviteCreated) {
         onInviteCreated(invite)
       }

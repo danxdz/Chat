@@ -281,34 +281,42 @@ export const getAllGunUsers = async (gun) => {
   return new Promise((resolve) => {
     const users = []
     const seenUsers = new Set()
-    let timeout
+    let subscription = null
     
-    // Use .map().on() to get all users - this syncs from peers
-    gun.get('chat_users').map().on((userData, userId) => {
+    // Set a maximum wait time
+    const maxTimeout = setTimeout(() => {
+      if (subscription) subscription.off()
+      logger.log(`✅ Loaded ${users.length} users from Gun.js (final)`)
+      resolve(users)
+    }, 3000)
+    
+    // Use .map().on() to get all users - keep subscription for real-time updates
+    subscription = gun.get('chat_users').map().on((userData, userId) => {
       if (userData && userData.nickname && userId !== 'initialized' && !seenUsers.has(userId)) {
         seenUsers.add(userId)
         users.push({
           id: userId,
           nickname: userData.nickname,
+          publicKey: userData.publicKey || userId,
           createdAt: userData.createdAt,
           friends: userData.friends || [],
-          passwordHash: userData.passwordHash  // Include for login
+          passwordHash: userData.passwordHash,
+          invitedBy: userData.invitedBy,
+          privateKey: userData.privateKey // Include if available for session
         })
-        
-        // Reset timeout on each user found
-        clearTimeout(timeout)
-        timeout = setTimeout(() => {
-          logger.log(`📊 Found ${users.length} users in Gun.js`)
-          resolve(users)
-        }, 500)
+        logger.debug(`Found user: ${userData.nickname}`)
       }
     })
     
-    // Initial timeout if no users found
-    timeout = setTimeout(() => {
-      logger.log('📊 No users found in Gun.js')
-      resolve(users) // Return empty array or whatever we found
-    }, 2000)
+    // Give it a moment to collect initial batch, then resolve
+    setTimeout(() => {
+      if (users.length > 0) {
+        clearTimeout(maxTimeout)
+        if (subscription) subscription.off()
+        logger.log(`✅ Loaded ${users.length} users from Gun.js`)
+        resolve(users)
+      }
+    }, 1500)
   })
 }
 

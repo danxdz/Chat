@@ -105,13 +105,21 @@ const App: React.FC = () => {
     init();
   }, [gunReady, gunError]);
 
-  // Load friends when user changes
+  // Load friends and invites when user changes
   useEffect(() => {
     if (user && gun) {
       loadFriends();
+      loadPendingInvites();
       announcePresence();
     }
   }, [user, gun]);
+
+  // Reload friends when online status changes or allUsers updates
+  useEffect(() => {
+    if (user && gun && allUsers.length > 0) {
+      loadFriends();
+    }
+  }, [onlineUsers, allUsers]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -138,6 +146,27 @@ const App: React.FC = () => {
       logger.log(`Loaded ${friendContacts.length} friends`);
     } catch (error) {
       logger.error('Failed to load friends:', error);
+    }
+  };
+
+  const loadPendingInvites = async () => {
+    if (!user || !gun) return;
+    
+    try {
+      const { getPendingInvites } = await import('./services/inviteService');
+      const invites = await getPendingInvites(gun, user.id);
+      
+      const pendingInvitesList: PendingInvite[] = invites.map(invite => ({
+        token: invite.inviteUrl?.split('#invite=')[1] || '',
+        createdAt: invite.createdAt,
+        expiresAt: invite.expiresAt,
+        fromNick: user.nickname
+      }));
+      
+      setPendingInvites(pendingInvitesList);
+      logger.log(`Loaded ${pendingInvitesList.length} pending invites`);
+    } catch (error) {
+      logger.error('Failed to load pending invites:', error);
     }
   };
 

@@ -110,6 +110,12 @@ export const useAuth = (gun: GunInstance | null): UseAuthReturn => {
         // Mark invite as used if applicable
         if (inviteToken && inviteData) {
           await markInviteUsed(inviteToken);
+          
+          // Also mark in inviter's pending invites
+          if (inviteData.fromId && inviteData.id) {
+            const { markInviteAsUsed } = await import('@/services/inviteService');
+            await markInviteAsUsed(gun, inviteData.fromId, inviteData.id, newUser.id);
+          }
         }
         
         // Auto-login the new user
