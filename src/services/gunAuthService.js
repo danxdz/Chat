@@ -89,7 +89,12 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     
     // If invited, add mutual friendship
     if (inviteData?.fromId) {
-      await addMutualFriendsGun(gun, inviteData.fromId, identity.pub)
+      const friendshipAdded = await addMutualFriendsGun(gun, inviteData.fromId, identity.pub)
+      if (friendshipAdded) {
+        logger.log('✅ Mutual friendship established with inviter')
+      } else {
+        logger.warn('⚠️ Failed to establish mutual friendship with inviter')
+      }
     }
     
     logger.log('✅ User created in Gun.js:', nickname)

@@ -4,7 +4,8 @@ import { useGun } from './hooks/useGun';
 import { useAuth } from './hooks/useAuth';
 import { useMessages } from './hooks/useMessages';
 import { usePresence } from './hooks/usePresence';
-import { getFriendsList, changeNickname } from './utils/secureAuth';
+import { changeNickname } from './utils/secureAuth';
+import { getFriendsWithDetails } from './services/friendsService';
 import { initWebRTC } from './services/webrtcService';
 import { logger, isDev } from './utils/logger';
 import gunPeers from './config/gunPeers';
@@ -125,17 +126,16 @@ const App: React.FC = () => {
     if (!user || !gun) return;
     
     try {
-      const friendsList = await getFriendsList(user.id);
-      const friendContacts: Contact[] = friendsList.map(friendId => {
-        const friendUser = allUsers.find(u => u.id === friendId);
-        return {
-          id: friendId,
-          nickname: friendUser?.nickname || 'Unknown',
-          status: onlineUsers.has(friendId) ? 'online' : 'offline',
-          publicKey: friendUser?.publicKey
-        };
-      });
+      const friendsWithDetails = await getFriendsWithDetails(gun, user.id, allUsers);
+      
+      // Update status based on online users
+      const friendContacts: Contact[] = friendsWithDetails.map(friend => ({
+        ...friend,
+        status: onlineUsers.has(friend.id) ? 'online' : 'offline'
+      }));
+      
       setFriends(friendContacts);
+      logger.log(`Loaded ${friendContacts.length} friends`);
     } catch (error) {
       logger.error('Failed to load friends:', error);
     }

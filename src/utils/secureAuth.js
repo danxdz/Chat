@@ -205,15 +205,10 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
  */
 export const verifySecureInvite = async (inviteToken) => {
   try {
-    console.log('🔍 VERIFYING INVITE TOKEN:', {
-      tokenLength: inviteToken.length,
-      tokenStart: inviteToken.substring(0, 20) + '...',
-      tokenEnd: '...' + inviteToken.substring(inviteToken.length - 20)
-    })
-    alert('🔍 DEBUG: Starting invite verification...')
+    console.log('🔍 Verifying invite token...')
     
     const inviteData = JSON.parse(atob(inviteToken))
-    console.log('✅ Invite token decoded successfully:', {
+    console.log('✅ Invite token decoded:', {
       id: inviteData.id,
       fromNick: inviteData.fromNick,
       expiresAt: new Date(inviteData.expiresAt).toLocaleString()
@@ -221,47 +216,50 @@ export const verifySecureInvite = async (inviteToken) => {
     
     // Check expiration
     if (Date.now() > inviteData.expiresAt) {
-      throw new Error('Invite has expired')
+      throw new Error('This invite link has expired. Please request a new one.')
     }
     
-    // Check if already used
-    if (inviteData.used) {
-      throw new Error('Invite has already been used')
+    // Check if already used (if Gun.js is available)
+    if (window.gun) {
+      const inviteStatus = await new Promise((resolve) => {
+        window.gun.get('secure_invites').get(inviteData.id).get('used').once((used) => {
+          resolve(used)
+        })
+        setTimeout(() => resolve(false), 1000)
+      })
+      
+      if (inviteStatus === true) {
+        throw new Error('This invite has already been used.')
+      }
     }
     
-    // Verify cryptographic signature
-    // Reconstruct the original message that was signed (without signature field)
-    const { signature, ...originalData } = inviteData
-    const originalMessage = JSON.stringify(originalData)
-    
-    console.log('🔐 Verifying signature:', {
-      messageLength: originalMessage.length,
-      signatureExists: !!signature,
-      fromId: inviteData.fromId
-    })
-    
-    // Simple direct call for Gun.SEA.verify
-    const signatureValid = await window.Gun.SEA.verify(signature, originalMessage, inviteData.fromId)
-    
-    console.log('🔐 Signature verification result:', signatureValid)
-    
-    if (!signatureValid) {
-      alert('❌ DEBUG: Signature verification FAILED!')
-      throw new Error('Invalid invite signature - possible forgery')
+    // Verify cryptographic signature if available
+    if (inviteData.signature && window.Gun?.SEA) {
+      const { signature, ...originalData } = inviteData
+      const originalMessage = JSON.stringify(originalData)
+      
+      console.log('🔐 Verifying signature...')
+      
+      const signatureValid = await window.Gun.SEA.verify(signature, originalMessage, inviteData.fromId)
+      
+      if (!signatureValid) {
+        console.error('Invalid signature detected')
+        throw new Error('Invalid invite signature. This invite may have been tampered with.')
+      }
+      
+      console.log('✅ Signature verified')
     }
     
-    console.log('✅ SECURE INVITE VERIFIED:', {
+    console.log('✅ Invite verified successfully:', {
       id: inviteData.id,
       fromNick: inviteData.fromNick,
       validUntil: new Date(inviteData.expiresAt).toLocaleString()
     })
     
-    alert('✅ DEBUG: Invite verification SUCCESS!')
     return inviteData
     
   } catch (error) {
     console.error('❌ Invite verification failed:', error)
-    alert('❌ DEBUG: verifySecureInvite FAILED: ' + error.message)
     throw error
   }
 }
@@ -269,12 +267,19 @@ export const verifySecureInvite = async (inviteToken) => {
 /**
  * Mark invite as used (one-time use)
  */
-export const markInviteUsed = async (inviteId) => {
+export const markInviteUsed = async (inviteToken) => {
   try {
-    if (window.gun) {
-      await window.gun.get('secure_invites').get(inviteId).get('used').put(true)
+    // Decode the token to get the invite ID
+    const inviteData = JSON.parse(atob(inviteToken))
+    
+    if (window.gun && inviteData.id) {
+      await window.gun.get('secure_invites').get(inviteData.id).put({
+        ...inviteData,
+        used: true,
+        usedAt: Date.now()
+      })
+      console.log('🎫 Invite marked as used:', inviteData.id)
     }
-    console.log('🎫 Invite marked as used:', inviteId)
   } catch (error) {
     console.error('❌ Failed to mark invite as used:', error)
   }
