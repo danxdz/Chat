@@ -294,6 +294,40 @@ export const changeNickname = async (user, newNickname, gun) => {
   const oldNickname = user.nickname
   
   try {
+    // Validate new nickname
+    if (!newNickname || newNickname.trim().length < 2) {
+      throw new Error('Nickname must be at least 2 characters')
+    }
+    
+    if (newNickname.trim().length > 20) {
+      throw new Error('Nickname must be less than 20 characters')
+    }
+    
+    // Check if nickname is already taken (if gun is available)
+    if (gun) {
+      const existingUser = await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 2000)
+        gun.get('chat_users_by_nick').get(newNickname.toLowerCase()).once((data) => {
+          clearTimeout(timeout)
+          resolve(data)
+        })
+      })
+      
+      if (existingUser && existingUser.userId !== user.id) {
+        throw new Error(`Nickname "${newNickname}" is already taken`)
+      }
+      
+      // Update in Gun.js
+      await gun.get('chat_users').get(user.id).get('nickname').put(newNickname)
+      
+      // Remove old nickname mapping and add new one
+      await gun.get('chat_users_by_nick').get(oldNickname.toLowerCase()).put(null)
+      await gun.get('chat_users_by_nick').get(newNickname.toLowerCase()).put({
+        userId: user.id,
+        nickname: newNickname
+      })
+    }
+    
     // Update user's nickname
     user.nickname = newNickname.trim()
     

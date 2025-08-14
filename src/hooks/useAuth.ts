@@ -86,17 +86,30 @@ export const useAuth = (gun: GunInstance | null): UseAuthReturn => {
     }
   }, [gun]);
 
-  const register = useCallback(async (
-    nickname: string, 
-    password: string
-  ): Promise<boolean> => {
+  const register = useCallback(async (nickname: string, password: string, inviteToken?: string) => {
     if (!gun) {
       throw new Error('Gun.js not initialized');
     }
 
     try {
-      // Get invite token from sessionStorage if exists
-      const inviteToken = sessionStorage.getItem('pendingInvite');
+      // Validate nickname
+      if (!nickname || nickname.trim().length < 2) {
+        throw new Error('Nickname must be at least 2 characters');
+      }
+      
+      if (nickname.trim().length > 20) {
+        throw new Error('Nickname must be less than 20 characters');
+      }
+      
+      // Check if nickname already exists
+      const { checkUserExists } = await import('@/services/gunAuthService');
+      const existingUser = await checkUserExists(gun, nickname);
+      
+      if (existingUser) {
+        throw new Error(`Nickname "${nickname}" is already taken. Please choose another.`);
+      }
+      
+      // Verify invite if provided
       let inviteData: InviteData | null = null;
       
       if (inviteToken) {

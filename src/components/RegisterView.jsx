@@ -63,18 +63,15 @@ function RegisterView({
           if (nickname && password) {
             console.log('📝 FORM: Calling register function...')
             try {
-              // Store invite token in sessionStorage for register function
-              if (inviteToken) {
-                sessionStorage.setItem('pendingInvite', inviteToken)
-              }
-              const success = await onRegister(nickname, password)
+              // Pass invite token directly to register function
+              const success = await onRegister(nickname, password, inviteToken)
               console.log('📝 FORM: Register result:', success)
               if (success) {
                 console.log('📝 FORM: Registration successful, will automatically login')
               }
             } catch (error) {
               console.error('📝 FORM: Registration form error:', error)
-              alert('Form submission error: ' + error.message)
+              alert('Registration error: ' + error.message)
             }
           } else {
             console.log('📝 FORM: Missing nickname or password')
