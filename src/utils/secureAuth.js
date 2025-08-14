@@ -167,8 +167,14 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
       createdAt: Date.now()
     }
     
-    // Simple direct call for Gun.SEA.sign
-    const signature = await window.Gun.SEA.sign(JSON.stringify(inviteData), user.privateKey)
+      // Sign the invite data for verification
+  const messageToSign = JSON.stringify({
+    inviteId: inviteData.inviteId,
+    fromId: inviteData.fromId,
+    fromNick: inviteData.fromNick,
+    expiresAt: inviteData.expiresAt
+  })
+  const signature = await window.Gun.SEA.sign(messageToSign, user.privateKey)
     
     const signedInvite = {
       ...inviteData,
