@@ -141,7 +141,11 @@ export default function ChatArea({
             // Regular messages
             const isOwnMessage = message.fromId === user.id
             const messageTime = new Date(message.timestamp)
-            const timeString = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            const now = new Date()
+            const isToday = messageTime.toDateString() === now.toDateString()
+            const timeString = isToday 
+              ? messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : `${messageTime.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             
             return (
               <div key={message.id} style={{
@@ -206,20 +210,28 @@ export default function ChatArea({
                   </div>
                 </div>
                 
-                {/* Time and status */}
+                {/* Time and status - More visible */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
-                  marginTop: '0.2rem',
-                  fontSize: '0.65rem',
-                  color: 'rgba(255, 255, 255, 0.4)',
+                  gap: '0.5rem',
+                  marginTop: '0.3rem',
+                  fontSize: '0.7rem',
+                  color: 'rgba(255, 255, 255, 0.6)',
                   paddingLeft: isOwnMessage ? '0' : '0.5rem',
-                  paddingRight: isOwnMessage ? '0.5rem' : '0'
+                  paddingRight: isOwnMessage ? '0.5rem' : '0',
+                  fontWeight: '500'
                 }}>
-                  <span>{timeString}</span>
+                  <span style={{ 
+                    background: 'rgba(0, 0, 0, 0.2)', 
+                    padding: '2px 6px', 
+                    borderRadius: '10px',
+                    fontSize: '0.65rem'
+                  }}>
+                    {timeString}
+                  </span>
                   {isOwnMessage && (
-                    <span>
+                    <span style={{ fontSize: '0.8rem' }}>
                       {(() => {
                         const deliveryStatus = messageDeliveryStatus.get(message.id)
                         if (!deliveryStatus) return '⏳'

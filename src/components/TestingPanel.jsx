@@ -80,24 +80,95 @@ export default function TestingPanel({
         onLogout()
       }
     } else if (type === 'messages') {
-      // Clear only messages and notifications
+      // Clear ALL messages and notifications completely
       if (gun) {
-        await gun.get('chat_messages').put(null)
-        await gun.get('general_chat').put({ initialized: true })
+        console.log('🧹 Starting complete message and notification cleanup...')
         
-        // Clear all message notifications
+        // Clear all messages from chat_messages
+        await new Promise((resolve) => {
+          let cleared = 0
+          const timeout = setTimeout(() => {
+            console.log(`✅ Cleared ${cleared} messages`)
+            resolve()
+          }, 2000)
+          
+          gun.get('chat_messages').map().once((msg, id) => {
+            if (msg) {
+              gun.get('chat_messages').get(id).put(null)
+              cleared++
+            }
+          })
+        })
+        
+        // Clear general chat
+        await gun.get('general_chat').put(null)
+        await gun.get('general_chat').put({ initialized: true, cleared: Date.now() })
+        
+        // Clear all private message channels
+        await new Promise((resolve) => {
+          const timeout = setTimeout(resolve, 1000)
+          gun.get('private_messages').map().once((channel, id) => {
+            if (channel) {
+              gun.get('private_messages').get(id).put(null)
+            }
+          })
+        })
+        
+        // Clear all notifications
         await gun.get('notifications').put(null)
+        await gun.get('message_notifications').put(null)
+        await gun.get('unread_messages').put(null)
         
         // Clear message delivery status
         await gun.get('message_delivery').put(null)
+        await gun.get('message_status').put(null)
+        
+        // Clear any message-related data
+        await gun.get('typing_indicators').put(null)
+        await gun.get('message_reactions').put(null)
+        
+        console.log('✅ All messages and notifications cleared from Gun.js')
       }
       
-      // Clear local notification storage
-      localStorage.removeItem('unreadMessages')
-      localStorage.removeItem('messageNotifications')
-      sessionStorage.removeItem('messageDeliveryStatus')
+      // Clear ALL local notification storage
+      const keysToRemove = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (
+          key.includes('message') || 
+          key.includes('notification') || 
+          key.includes('unread') ||
+          key.includes('delivery') ||
+          key.includes('chat')
+        )) {
+          keysToRemove.push(key)
+        }
+      }
       
-      window.location.reload()
+      keysToRemove.forEach(key => localStorage.removeItem(key))
+      
+      // Clear session storage too
+      const sessionKeysToRemove = []
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i)
+        if (key && (
+          key.includes('message') || 
+          key.includes('notification') || 
+          key.includes('delivery')
+        )) {
+          sessionKeysToRemove.push(key)
+        }
+      }
+      
+      sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key))
+      
+      console.log('✅ All local message data cleared')
+      
+      // Reload after a short delay
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+      
     } else if (type === 'all') {
       // Clear all data
       if (gun) {
