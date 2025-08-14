@@ -89,11 +89,6 @@ const App: React.FC = () => {
           }
         }
 
-        // Initialize WebRTC
-        if (restoredUser) {
-          initWebRTC(restoredUser.id);
-        }
-
         setInitStatus('Ready');
       } catch (error) {
         logger.error('App initialization error:', error);
@@ -104,6 +99,23 @@ const App: React.FC = () => {
 
     init();
   }, [gunReady, gunError]);
+
+  // Initialize WebRTC when user logs in or changes
+  useEffect(() => {
+    if (user && gun) {
+      // Initialize WebRTC with Gun.js for signaling
+      const webrtc = initWebRTC(gun, user.id, user.nickname);
+      logger.log('🔗 WebRTC initialized for user:', user.nickname);
+      
+      // Set up WebRTC message handler
+      if (webrtc) {
+        webrtc.onMessage((message, fromId) => {
+          logger.log('📨 Received WebRTC message from:', fromId);
+          // Handle WebRTC messages (already handled in useMessages hook)
+        });
+      }
+    }
+  }, [user, gun]);
 
   // Load friends and invites when user changes
   useEffect(() => {

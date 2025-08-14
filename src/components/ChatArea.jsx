@@ -201,6 +201,34 @@ export default function ChatArea({
                     </div>
                   )}
                   
+                  {/* Encryption indicator */}
+                  {message.encrypted && (
+                    <div style={{
+                      fontSize: '0.6rem',
+                      color: '#4CAF50',
+                      marginBottom: '0.3rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}>
+                      🔐 Military-Grade Encrypted (Gun.SEA)
+                    </div>
+                  )}
+                  
+                  {/* P2P indicator */}
+                  {message.webrtc && (
+                    <div style={{
+                      fontSize: '0.6rem',
+                      color: '#2196F3',
+                      marginBottom: '0.3rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}>
+                      📡 Direct P2P (WebRTC)
+                    </div>
+                  )}
+                  
                   {/* Message text */}
                   <div style={{ 
                     color: '#ffffff', 
