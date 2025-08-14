@@ -5,6 +5,26 @@ import { addMutualFriendship } from './friendsService'
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
 
 /**
+ * Decrypt private key when needed for operations
+ * @param {object} user - User object with encrypted private key
+ * @returns {Promise<string|null>} - Decrypted private key or null
+ */
+export const decryptPrivateKey = async (user) => {
+  if (!user?.encryptedPrivateKey || !user?._sessionPassword) {
+    logger.warn('Cannot decrypt private key - missing encrypted key or session password')
+    return null
+  }
+  
+  try {
+    const privateKey = await window.Gun.SEA.decrypt(user.encryptedPrivateKey, user._sessionPassword)
+    return privateKey
+  } catch (error) {
+    logger.error('Failed to decrypt private key:', error)
+    return null
+  }
+}
+
+/**
  * Initialize Gun.js user system
  */
 export const initGunUsers = (gun) => {
@@ -33,8 +53,14 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
   }
   
   try {
+    // Import security utilities
+    const { generateSalt, hashPasswordWithSalt, sanitizeNickname } = await import('../utils/security')
+    
+    // Sanitize nickname
+    const cleanNickname = sanitizeNickname(nickname)
+    
     // Check if nickname already exists
-    const existingUser = await checkUserExists(gun, nickname)
+    const existingUser = await checkUserExists(gun, cleanNickname)
     if (existingUser) {
       throw new Error('Nickname already taken')
     }
@@ -42,31 +68,32 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     // Create user identity
     const identity = await window.Gun.SEA.pair()
     
-    // Generate unique salt for this user (based on nickname + timestamp)
-    const salt = nickname + '_' + Date.now() + '_' + Math.random()
+    // Generate cryptographically secure salt
+    const salt = generateSalt()
     
-    // Use PBKDF2 with salt for better security (Gun.SEA.work uses PBKDF2 internally)
-    const hashedPassword = await window.Gun.SEA.work(password, salt)
+    // Use PBKDF2 with salt for better security
+    const hashedPassword = await hashPasswordWithSalt(password, salt)
     
-      // Encrypt the private key for storage
-  const encryptedPrivateKey = await window.Gun.SEA.encrypt(identity.priv, password)
+    // Encrypt the private key for storage
+    const encryptedPrivateKey = await window.Gun.SEA.encrypt(identity.priv, password)
   
-  const newUser = {
-    id: identity.pub,
-    nickname: nickname,
-    passwordHash: hashedPassword,
-    passwordSalt: salt,  // Store salt for login verification
-    privateKey: identity.priv,  // Include plain private key in returned object for session
-    publicKey: identity.pub,
-    createdAt: Date.now(),
-    invitedBy: inviteData?.fromId || null,
-    inviterNickname: inviteData?.fromNick || null,
-    friends: inviteData?.fromId ? [inviteData.fromId] : []
-  }
+    const newUser = {
+      id: identity.pub,
+      nickname: cleanNickname,
+      passwordHash: hashedPassword,
+      passwordSalt: salt,  // Store salt for login verification
+      // SECURITY FIX: Never include plain private key in returned object
+      // privateKey will be decrypted only when needed
+      publicKey: identity.pub,
+      createdAt: Date.now(),
+      invitedBy: inviteData?.fromId || null,
+      inviterNickname: inviteData?.fromNick || null,
+      friends: inviteData?.fromId ? [inviteData.fromId] : []
+    }
   
   // Store user in Gun.js (with encrypted private key)
   await gun.get('chat_users').get(identity.pub).put({
-    nickname: nickname,
+    nickname: cleanNickname,
     passwordHash: hashedPassword,
     passwordSalt: salt,
     publicKey: identity.pub,
@@ -77,9 +104,9 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
   })
     
     // Also store by nickname for easy lookup
-    await gun.get('chat_users_by_nick').get(nickname.toLowerCase()).put({
+    await gun.get('chat_users_by_nick').get(cleanNickname.toLowerCase()).put({
       userId: identity.pub,
-      nickname: nickname
+      nickname: cleanNickname
     })
     
     // If invited, add mutual friendship
@@ -92,10 +119,11 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
       }
     }
     
-    logger.log('✅ User created in Gun.js:', nickname)
+    logger.log('✅ User created in Gun.js:', cleanNickname)
     
-    // Keep private key in memory for this session only (needed for invites)
-    // It will be lost on page refresh - user must login again
+    // SECURITY: Return user with encrypted private key for session storage
+    // Private key will be decrypted only when needed for operations
+    newUser.encryptedPrivateKey = encryptedPrivateKey
     
     return newUser
     
@@ -160,8 +188,14 @@ export const loginGunUser = async (gun, nickname, password) => {
   }
   
   try {
+    // Import security utilities
+    const { hashPasswordWithSalt, sanitizeNickname } = await import('../utils/security')
+    
+    // Sanitize nickname
+    const cleanNickname = sanitizeNickname(nickname)
+    
     // Find user by nickname
-    const userRef = await checkUserExists(gun, nickname)
+    const userRef = await checkUserExists(gun, cleanNickname)
     if (!userRef) {
       throw new Error('User not found')
     }
@@ -201,13 +235,13 @@ export const loginGunUser = async (gun, nickname, password) => {
       throw new Error('User data not found')
     }
     
-    // Verify password with salt (backward compatible)
+    // Verify password with salt
     let hashedPassword
     if (userData.passwordSalt) {
-      // New method with salt
-      hashedPassword = await window.Gun.SEA.work(password, userData.passwordSalt)
+      // Use proper PBKDF2 with salt
+      hashedPassword = await hashPasswordWithSalt(password, userData.passwordSalt)
     } else {
-      // Old method for backward compatibility
+      // Old method for backward compatibility (will be phased out)
       hashedPassword = await window.Gun.SEA.work(password, null, null, {name: 'SHA-256'})
     }
     
@@ -215,47 +249,29 @@ export const loginGunUser = async (gun, nickname, password) => {
       throw new Error('Invalid password')
     }
     
-    // Reconstruct user object
+    // Reconstruct user object (without exposing sensitive data)
     const user = {
       id: userRef.userId,
       nickname: userData.nickname,
-      passwordHash: userData.passwordHash,
-      passwordSalt: userData.passwordSalt,
+      // SECURITY: Don't include password hash in user object
       publicKey: userData.publicKey || userRef.userId,
       createdAt: userData.createdAt,
       invitedBy: userData.invitedBy,
       friends: userData.friends || []
     }
     
-    // Decrypt the private key using the password
-    try {
-      if (userData.encryptedPrivateKey) {
-        // Decrypt the stored private key
-        const decryptedKey = await window.Gun.SEA.decrypt(userData.encryptedPrivateKey, password)
-        if (decryptedKey) {
-          user.privateKey = decryptedKey
-          logger.log('✅ Decrypted original private key for invites')
-        }
-      } else {
-        // Fallback: generate new key for old users
-        const pair = await window.Gun.SEA.pair()
-        user.privateKey = pair.priv
-        logger.log('✅ Generated new private key for old user')
-      }
-      logger.log('🔑 User object now has privateKey:', !!user.privateKey)
-    } catch (e) {
-      logger.error('❌ Could not decrypt/generate private key:', e)
-      // Try to generate a new one as last resort
-      try {
-        const pair = await window.Gun.SEA.pair()
-        user.privateKey = pair.priv
-        logger.log('✅ Generated fallback private key')
-      } catch (e2) {
-        logger.error('❌ Failed to generate fallback key:', e2)
-      }
+    // Store encrypted private key for session (will decrypt when needed)
+    if (userData.encryptedPrivateKey) {
+      user.encryptedPrivateKey = userData.encryptedPrivateKey
+      // Store password temporarily in memory for this session only
+      // This allows decryption when needed for operations
+      user._sessionPassword = password // Prefixed with _ to indicate internal use
+      logger.log('✅ Encrypted private key stored for session')
+    } else {
+      logger.warn('⚠️ No encrypted private key found for user')
     }
     
-    logger.log('✅ User logged in from Gun.js:', nickname)
+    logger.log('✅ User logged in from Gun.js:', cleanNickname)
     return user
     
   } catch (error) {

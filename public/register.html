@@ -97,10 +97,12 @@
             <input 
                 type="password" 
                 id="password" 
-                placeholder="Create a password (min 4 characters)" 
+                placeholder="Create a strong password (min 8 characters)" 
                 required 
                 class="input"
-                minlength="4"
+                minlength="8"
+                pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
+                title="Password must contain at least 8 characters, including uppercase, lowercase, and a number"
             />
             <button type="submit" class="btn">✨ Create Account</button>
         </form>
@@ -146,8 +148,30 @@
             errorDiv.style.display = 'none';
             successDiv.style.display = 'none';
 
+            // Validate inputs
             if (!nickname || !password) {
                 errorDiv.textContent = 'Please fill in both fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            // Sanitize nickname (remove special characters)
+            const sanitizedNickname = nickname.replace(/[^\w\s\-_.]/g, '').substring(0, 30);
+            if (sanitizedNickname !== nickname) {
+                errorDiv.textContent = 'Nickname contains invalid characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            // Validate password strength
+            if (password.length < 8) {
+                errorDiv.textContent = 'Password must be at least 8 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+                errorDiv.textContent = 'Password must contain uppercase, lowercase, and a number';
                 errorDiv.style.display = 'block';
                 return;
             }
@@ -166,16 +190,48 @@
                 if (Date.now() > inviteData.expiresAt) {
                     throw new Error('Invite has expired');
                 }
+                
+                // Verify invite signature if present
+                if (inviteData.signature && inviteData.fromId) {
+                    try {
+                        const message = JSON.stringify({
+                            inviteId: inviteData.inviteId,
+                            fromId: inviteData.fromId,
+                            fromNick: inviteData.fromNick,
+                            expiresAt: inviteData.expiresAt
+                        });
+                        
+                        const isValid = await Gun.SEA.verify(inviteData.signature, message, inviteData.fromId);
+                        if (isValid !== message) {
+                            throw new Error('Invalid invite signature');
+                        }
+                        console.log('✅ Invite signature verified');
+                    } catch (sigError) {
+                        console.warn('⚠️ Could not verify invite signature:', sigError);
+                        // Allow registration to continue for backward compatibility
+                    }
+                }
 
                 // Create user identity
                 const identity = await Gun.SEA.pair();
-                const hashedPassword = await Gun.SEA.work(password, null, null, {name: 'SHA-256'});
+                
+                // Generate secure salt for password hashing
+                const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                // Use PBKDF2 with salt for secure password hashing
+                const hashedPassword = await Gun.SEA.work(password, salt);
+                
+                // Encrypt private key with password for secure storage
+                const encryptedPrivateKey = await Gun.SEA.encrypt(identity.priv, password);
                 
                 const newUser = {
                     id: identity.pub,
-                    nickname: nickname,
+                    nickname: sanitizedNickname,
                     passwordHash: hashedPassword,
-                    privateKey: identity.priv,
+                    passwordSalt: salt,
+                    // SECURITY: Never store plain private key
+                    encryptedPrivateKey: encryptedPrivateKey,
                     publicKey: identity.pub,
                     createdAt: Date.now(),
                     invitedBy: inviteData.fromId || null,

@@ -584,8 +584,16 @@ function App() {
       if (data.encrypted && window.Gun && window.Gun.SEA) {
         try {
           const channelName = channelType === 'private' ? `private_${[user.id, data.fromId].sort().join('_')}` : 'general_chat'
-          const sharedKey = 'p2p-chat-key-' + channelName
-          const decryptedText = await window.Gun.SEA.decrypt(data.text, sharedKey)
+          
+          // Use improved key derivation for decryption
+          let channelKey
+          if (channelName === 'general_chat') {
+            channelKey = await window.Gun.SEA.work(channelName, 'p2p-chat-2024')
+          } else {
+            channelKey = await window.Gun.SEA.work(channelName, 'p2p-chat-private-2024')
+          }
+          
+          const decryptedText = await window.Gun.SEA.decrypt(data.text, channelKey)
           messageData.text = decryptedText
           console.log('🔓 Message decrypted successfully!')
           logger.log('🔓 Message decrypted')
@@ -1132,9 +1140,22 @@ function App() {
       
       if (window.Gun && window.Gun.SEA) {
         try {
-          // Use a simple shared key for now (in production, use proper key exchange)
-          const sharedKey = 'p2p-chat-key-' + channelName
-          const encryptedText = await window.Gun.SEA.encrypt(message.text, sharedKey)
+          // For general chat, use a channel-specific encryption
+          // For private messages, we'll use E2E encryption with shared secrets
+          let encryptedText
+          
+          if (channelName === 'general_chat') {
+            // For general chat, use a better key derivation
+            // In production, this should be a key derived from the channel's creation parameters
+            const channelKey = await window.Gun.SEA.work(channelName, 'p2p-chat-2024')
+            encryptedText = await window.Gun.SEA.encrypt(message.text, channelKey)
+          } else {
+            // For private messages, use E2E encryption (will be implemented with shared secrets)
+            // For now, use improved channel-based encryption
+            const channelKey = await window.Gun.SEA.work(channelName, 'p2p-chat-private-2024')
+            encryptedText = await window.Gun.SEA.encrypt(message.text, channelKey)
+          }
+          
           messageToSend.text = encryptedText
           messageToSend.encrypted = true
           console.log('🔐 Message encrypted successfully!')
