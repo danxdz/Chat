@@ -1150,10 +1150,6 @@ function App() {
     if (e) e.preventDefault() // Handle form submission
     if (!newMessage.trim()) return
 // [REMOVED CONSOLE LOG]
-      messageText: newMessage.trim(),
-      activeContact: activeContact?.nickname || 'General',
-      userNickname: user.nickname
-    })
 
     const messageToSend = {
       id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -1304,13 +1300,13 @@ function App() {
   useEffect(() => {
     if (isDev) {
       // window.debugApp = {
-        user,
-        gun,
-        messages,
-        onlineUsers: Array.from(onlineUsers.entries()),
-        friends,
-        contacts
-      }
+      //   user,
+      //   gun,
+      //   messages,
+      //   onlineUsers: Array.from(onlineUsers.entries()),
+      //   friends,
+      //   contacts
+      // }
     }
   }, [user, gun, messages, onlineUsers, friends, contacts])
 
