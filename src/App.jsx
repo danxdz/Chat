@@ -1257,13 +1257,16 @@ function App() {
 
   // Removed unused functions addContact and switchToUser
 
-  // Filter messages for display
-  const displayMessages = activeContact 
-    ? messages.filter(msg => 
-        (msg.fromId === user.id && msg.toId === activeContact.id) ||
-        (msg.fromId === activeContact.id && msg.toId === user.id)
-      )
-    : messages.filter(msg => msg.type === 'general' || msg.toId === 'general')
+  // Filter messages for display - update the state instead of creating new const
+  useEffect(() => {
+    const filtered = activeContact 
+      ? messages.filter(msg => 
+          (msg.fromId === user?.id && msg.toId === activeContact.id) ||
+          (msg.fromId === activeContact.id && msg.toId === user?.id)
+        )
+      : messages.filter(msg => msg.type === 'general' || msg.toId === 'general')
+    setDisplayMessages(filtered)
+  }, [messages, activeContact, user])
 
   // Simple test message function
   const sendTestMessage = (customMessage) => {
