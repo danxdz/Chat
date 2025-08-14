@@ -8,7 +8,8 @@ import {
   verifySecureInvite, 
   markInviteUsed, 
   changeNickname, 
-  getFriendsList 
+  getFriendsList,
+  createUserAccount 
 } from './utils/secureAuth'
 
 import {
@@ -16,18 +17,16 @@ import {
   createGunUser,
   loginGunUser,
   getAllGunUsers,
-  updateGunUser,
   migrateUsersToGun
 } from './services/gunAuthService'
 
 import gunPeers from './config/gunPeers'
-import { initWebRTC, sendWebRTCMessage, connectToPeer } from './services/webrtcService'
+import { initWebRTC, sendWebRTCMessage } from './services/webrtcService'
 import { logger, isDev } from './utils/logger'
 import * as adminService from './services/adminService'
 
 function App() {
   const [currentView, setCurrentView] = useState('loading')
-  const [sodium, setSodium] = useState(null)
   const [user, setUser] = useState(null)
   const [allUsers, setAllUsers] = useState([])
   const [messages, setMessages] = useState([])
@@ -36,18 +35,16 @@ function App() {
   const [newMessage, setNewMessage] = useState('')
   const [initStatus, setInitStatus] = useState('Initializing...')
   const [gun, setGun] = useState(null)
-  const [showSecureInviteModal, setShowSecureInviteModal] = useState(false)
   const [friends, setFriends] = useState([])
   const [debugNotifications, setDebugNotifications] = useState([])
-  const [showTests, setShowTests] = useState(false)
   const [chatError, setChatError] = useState(null)
-  const [connectedPeers, setConnectedPeers] = useState(0)
   const [connectionStatus, setConnectionStatus] = useState(new Map())
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState(new Map())
   const [lastSeen, setLastSeen] = useState(new Map())
   const [onlineUsers, setOnlineUsers] = useState(new Map())
   const [heartbeatInterval, setHeartbeatInterval] = useState(null)
   const [pendingInvites, setPendingInvites] = useState([])
+  const [displayMessages, setDisplayMessages] = useState([])
 
   // Debug notification system (only in development)
   const showDebugNotification = (message, type = 'info') => {
@@ -75,7 +72,7 @@ function App() {
     try {
       if (window.sodium) {
         await window.sodium.ready
-        setSodium(window.sodium)
+        // setSodium(window.sodium) // Removed as per new_code
         logger.log('✅ Sodium ready for cryptography')
       }
 
@@ -115,7 +112,7 @@ function App() {
       }
       
       // Check for saved session (Remember Me) - try sessionStorage first for private mode
-      let savedSession = sessionStorage.getItem('savedSession') || localStorage.getItem('savedSession')
+      const savedSession = sessionStorage.getItem('savedSession') || localStorage.getItem('savedSession')
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession)
@@ -296,7 +293,7 @@ function App() {
       const peerMonitorInterval = setInterval(() => {
         if (gunInstance && gunInstance._.opt && gunInstance._.opt.peers) {
           const peerCount = Object.keys(gunInstance._.opt.peers).length
-          setConnectedPeers(peerCount)
+          // setConnectedPeers(peerCount) // Removed as per new_code
         }
       }, 5000)
 
@@ -903,6 +900,48 @@ function App() {
     }
   }
 
+  // Add register function implementation
+  const register = async (nickname, password) => {
+    try {
+      if (!gun) {
+        throw new Error('Gun.js not initialized')
+      }
+      
+      // Get invite token from sessionStorage if exists
+      const inviteToken = sessionStorage.getItem('pendingInvite')
+      let inviteData = null
+      
+      if (inviteToken) {
+        inviteData = await verifySecureInvite(inviteToken)
+      }
+      
+      // Create user account using gunAuthService
+      const newUser = await createGunUser(gun, nickname, password, inviteData)
+      
+      if (newUser) {
+        // Mark invite as used if applicable
+        if (inviteToken && inviteData) {
+          await markInviteUsed(inviteToken)
+        }
+        
+        // Auto-login the new user
+        setUser(newUser)
+        setCurrentView('chat')
+        
+        // Clear pending invite
+        sessionStorage.removeItem('pendingInvite')
+        
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('Registration error:', error)
+      alert('Registration failed: ' + error.message)
+      return false
+    }
+  }
+
   // Bootstrap function to create first admin user for demo
   const createBootstrapUser = async () => {
     try {
@@ -1084,7 +1123,7 @@ function App() {
       logger.log('📡 Sending to Gun.js channel:', channelName, 'with key:', messageKey)
       
       // Encrypt message text if SEA is available
-      let messageToSend = { ...message }
+      const messageToSend = { ...message }
       console.log('🔐 ENCRYPTION DEBUG:', {
         gunAvailable: !!window.Gun,
         seaAvailable: !!(window.Gun && window.Gun.SEA),
@@ -1216,35 +1255,7 @@ function App() {
     }
   }
 
-  const addContact = (contactInfo) => {
-    if (!contactInfo.nickname || !contactInfo.id) {
-      alert('Invalid contact information')
-      return
-    }
-
-    const newContact = {
-      id: contactInfo.id || Date.now(),
-      nickname: contactInfo.nickname,
-      status: contactInfo.status || 'pending',
-      addedAt: Date.now()
-    }
-
-    const updatedContacts = [...contacts, newContact]
-    setContacts(updatedContacts)
-    localStorage.setItem(`contacts_${user.id}`, JSON.stringify(updatedContacts))
-    
-    logger.log('✅ Contact added:', newContact)
-  }
-
-
-
-
-
-
-  const switchToUser = (targetUser) => {
-    setUser(targetUser)
-    logger.log('✅ Switched to user:', targetUser.nickname)
-  }
+  // Removed unused functions addContact and switchToUser
 
   // Filter messages for display
   const displayMessages = activeContact 
@@ -1397,8 +1408,8 @@ function App() {
       <div className="screen">
         <DebugNotifications debugNotifications={debugNotifications} isDev={isDev} />
         <div className="form">
-          <h1>📨 You're Invited!</h1>
-          <p>Complete your registration to join {inviterName}'s chat</p>
+          <h1>📨 You&apos;re Invited!</h1>
+          <p>Complete your registration to join {inviterName}&apos;s chat</p>
           <form onSubmit={async (e) => {
             e.preventDefault()
             console.log('📝 FORM: Registration form submitted')
@@ -1475,8 +1486,8 @@ function App() {
       <div className="screen">
         <DebugNotifications debugNotifications={debugNotifications} isDev={isDev} />
         <div className="form">
-          <h1>📨 You're Invited!</h1>
-          <p>Complete your registration to join {inviterName}'s chat</p>
+          <h1>📨 You&apos;re Invited!</h1>
+          <p>Complete your registration to join {inviterName}&apos;s chat</p>
           <form onSubmit={async (e) => {
             e.preventDefault()
             const nickname = e.target.nickname.value.trim()
@@ -1732,7 +1743,7 @@ function App() {
               margin: '0 0 0.5rem 0',
               fontWeight: '300'
             }}>
-              Don't have an account?
+              Don&apos;t have an account?
             </p>
             <p style={{ 
               color: 'rgba(255, 255, 255, 0.4)', 
