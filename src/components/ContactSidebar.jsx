@@ -21,62 +21,114 @@ export default function ContactSidebar({
     return `${days}d ago`
   }
 
-  // Convert online users Map to array for display
-  console.log('ContactSidebar - onlineUsers Map:', onlineUsers)
-  const onlineUsersList = Array.from(onlineUsers.entries()).map(([id, userData]) => ({
-    id,
-    nickname: userData.nickname,
-    lastSeen: userData.lastSeen,
-    isOnline: true
+  // Get online users count
+  const onlineCount = onlineUsers ? onlineUsers.size : 0
+
+  // Update contacts with real-time online status
+  const contactsWithStatus = contacts.map(contact => ({
+    ...contact,
+    isOnline: onlineUsers && onlineUsers.has(contact.id),
+    lastSeen: lastSeen && lastSeen.get(contact.id)
   }))
-  console.log('ContactSidebar - onlineUsersList:', onlineUsersList)
 
-
+  // Sort contacts: online first, then alphabetically
+  const sortedContacts = [...contactsWithStatus].sort((a, b) => {
+    if (a.isOnline && !b.isOnline) return -1
+    if (!a.isOnline && b.isOnline) return 1
+    return a.nickname.localeCompare(b.nickname)
+  })
 
   return (
     <div className="sidebar">
-      {/* IRC-style online users list */}
-      <div className="online-users-header">
-        <div className="online-indicator"></div>
-        <h3>Online Users ({onlineUsersList.length})</h3>
+      {/* Header */}
+      <div className="sidebar-header">
+        <h3>Chats</h3>
+        <div className="online-indicator-text">
+          {onlineCount} online
+        </div>
       </div>
       
       {/* General Chat Button */}
       <button
         onClick={() => onContactSelect(null)}
-        className={`general-chat-button ${!activeContact ? 'active' : ''}`}
+        className={`chat-item ${!activeContact ? 'active' : ''}`}
       >
-        <span>🌐</span>
-        <span>General Chat</span>
-        <span className="online-count">
-          {onlineUsersList.length} online
-        </span>
+        <div className="chat-item-avatar">🌐</div>
+        <div className="chat-item-info">
+          <div className="chat-item-name">General Chat</div>
+          <div className="chat-item-status">Public room • {onlineCount} online</div>
+        </div>
       </button>
 
-      {/* IRC-style Online Users List */}
-      <div className="online-users-list">
-        {onlineUsersList.map(user => (
-          <div
-            key={user.id}
-            className="online-user-item"
-          >
-            <div className="online-indicator"></div>
-            <div className="user-info">
-              <div className="nickname">{user.nickname}</div>
-              <div className="status">online • {formatLastSeen(user.lastSeen)}</div>
-            </div>
-          </div>
-        ))}
-        
-        {onlineUsersList.length === 0 && (
-          <div className="no-users-online">
-            <div>👥</div>
-            <div>No users online</div>
-            <div>
-              Users will appear here when they join
-            </div>
+      {/* Divider */}
+      <div className="sidebar-divider">
+        <span>Direct Messages ({sortedContacts.length})</span>
+      </div>
+
+      {/* Friends/Contacts List */}
+      <div className="contacts-list">
+        {sortedContacts.length > 0 ? (
+          sortedContacts.map(contact => (
+            <button
+              key={contact.id}
+              onClick={() => onContactSelect(contact)}
+              className={`chat-item ${activeContact?.id === contact.id ? 'active' : ''}`}
+            >
+              <div className="chat-item-avatar">
+                {contact.isOnline ? '🟢' : '⚫'}
+              </div>
+              <div className="chat-item-info">
+                <div className="chat-item-name">
+                  {contact.nickname}
+                </div>
+                <div className="chat-item-status">
+                  {contact.isOnline ? 'Online' : `Last seen ${formatLastSeen(contact.lastSeen)}`}
+                </div>
+              </div>
+              {/* Unread indicator (for future use) */}
+              {contact.unreadCount > 0 && (
+                <div className="unread-badge">{contact.unreadCount}</div>
+              )}
+            </button>
+          ))
+        ) : (
+          <div className="no-contacts">
+            <p>No friends yet</p>
+            <p className="hint">Ask admin for an invite link to add friends</p>
           </div>
         )}
+      </div>
+
+      {/* Pending Invites Section */}
+      {pendingInvites && pendingInvites.length > 0 && (
+        <>
+          <div className="sidebar-divider">
+            <span>Pending Invites ({pendingInvites.length})</span>
+          </div>
+          <div className="pending-invites-list">
+            {pendingInvites.map((invite, i) => (
+              <div key={i} className="pending-invite-item">
+                <div className="invite-icon">📨</div>
+                <div className="invite-info">
+                  <div className="invite-token">
+                    {invite.token?.substring(0, 8)}...
+                  </div>
+                  <div className="invite-status">
+                    {invite.status || 'Waiting'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Connection Status */}
+      <div className="sidebar-footer">
+        <div className={`connection-status ${connectionStatus}`}>
+          <div className="status-dot"></div>
+          <span>{connectionStatus === 'connected' ? 'Connected' : 'Connecting...'}</span>
+        </div>
       </div>
     </div>
   )
