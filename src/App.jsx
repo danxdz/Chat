@@ -636,7 +636,7 @@ function App() {
       const systemMessage = {
         id: `system_${timestamp}_${userId}_${action}`,
         text: `${nickname} has ${action === 'join' ? 'joined' : 'left'} the channel`,
-        from: nickname,
+        from: '',  // Empty so it doesn't show any prefix
         fromId: 'system',
         to: 'General',
         toId: 'general',
