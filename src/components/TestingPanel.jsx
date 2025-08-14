@@ -1,13 +1,21 @@
+import React from 'react'
+
 export default function TestingPanel({ 
   isVisible, 
   user,
   gun,
+  allUsers,
+  friends,
+  onlineUsers,
+  pendingInvites,
   initStatus,
   onClose,
   onSendTestMessage,
   onClearCurrentClient, 
   onClearAllClients, 
-  onForceReload
+  onForceReload,
+  onLogout,
+  isDev
 }) {
   if (!isVisible) return null
 
@@ -285,10 +293,12 @@ export default function TestingPanel({
               const onlineUsers = new Map()
               await new Promise((resolve) => {
                 let timeout = setTimeout(resolve, 2000)
-                gun.get('presence').map().once((data, key) => {
+                // Use user_presence instead of presence
+                gun.get('user_presence').map().once((data, key) => {
                   if (data && data.nickname && data.timestamp) {
-                    const isOnline = Date.now() - data.timestamp < 30000 // 30 seconds
+                    const isOnline = Date.now() - data.timestamp < 60000 // 60 seconds
                     onlineUsers.set(key, {
+                      userId: key,
                       nickname: data.nickname,
                       status: isOnline ? '🟢 Online' : '🔴 Offline',
                       lastSeen: new Date(data.timestamp).toLocaleTimeString()
@@ -301,10 +311,10 @@ export default function TestingPanel({
               
               if (onlineUsers.size > 0) {
                 alert('Online Users:\n\n' + Array.from(onlineUsers.entries()).map(([key, user]) => 
-                  `${user.status} ${user.nickname} (last: ${user.lastSeen})`
-                ).join('\n'))
+                  `${user.status} ${user.nickname}\nID: ${user.userId.substring(0, 8)}...\nLast seen: ${user.lastSeen}`
+                ).join('\n\n'))
               } else {
-                alert('No users online data found')
+                alert('No users online data found in Gun.js.\nMake sure users are announcing their presence.')
               }
             }}
             style={{
@@ -332,7 +342,9 @@ export default function TestingPanel({
                 borderRadius: '8px',
                 marginBottom: '10px',
                 fontSize: '12px',
-                color: '#ddd'
+                color: '#ddd',
+                maxHeight: '500px',
+                overflowY: 'auto'
               }}>
                 <h4 style={{ color: '#9C27B0', marginBottom: '10px' }}>👑 Admin Panel</h4>
                 
@@ -342,6 +354,49 @@ export default function TestingPanel({
                   const pendingInvitesData = pendingInvites || []
                   const friendsData = friends || []
                   const onlineUsersSet = onlineUsers || new Set()
+                  
+                  // Create a function to load friends for any user
+                  const [allUsersFriends, setAllUsersFriends] = React.useState({})
+                  
+                  React.useEffect(() => {
+                    const loadAllFriends = async () => {
+                      if (!gun || allUsersData.length === 0) return
+                      
+                      const friendsMap = {}
+                      for (const userData of allUsersData) {
+                        try {
+                          const friendIds = await new Promise((resolve) => {
+                            const timeout = setTimeout(() => resolve([]), 1000)
+                            const friends = []
+                            
+                            gun.get('chat_users').get(userData.id).get('friends').map().once((value, key) => {
+                              if (value === true && key !== '_') {
+                                friends.push(key)
+                              }
+                            })
+                            
+                            gun.get('chat_users').get(userData.id).get('friends').once((data) => {
+                              clearTimeout(timeout)
+                              if (data && typeof data === 'object') {
+                                const ids = Object.keys(data).filter(k => k !== '_' && data[k] === true)
+                                resolve(ids.length > 0 ? ids : friends)
+                              } else {
+                                resolve(friends)
+                              }
+                            })
+                          })
+                          
+                          friendsMap[userData.id] = friendIds
+                        } catch (error) {
+                          console.error(`Failed to load friends for ${userData.nickname}:`, error)
+                          friendsMap[userData.id] = []
+                        }
+                      }
+                      setAllUsersFriends(friendsMap)
+                    }
+                    
+                    loadAllFriends()
+                  }, [allUsersData, gun])
                   
                   return (
                     <>
@@ -353,13 +408,19 @@ export default function TestingPanel({
                       </div>
                       
                       <div style={{ marginBottom: '10px' }}>
-                        <strong>🌳 Complete User Tree:</strong>
+                        <strong>🌳 Complete User Tree with Friends:</strong>
                         {allUsersData.length > 0 ? (
                           allUsersData.map((userData, i) => {
-                            // Get this user's friends from Gun.js data
-                            const userFriends = userData.id === user.id 
-                              ? friendsData 
-                              : [];
+                            // Get this user's friends
+                            const userFriendIds = allUsersFriends[userData.id] || []
+                            const userFriends = userFriendIds.map(friendId => {
+                              const friendData = allUsersData.find(u => u.id === friendId)
+                              return friendData ? {
+                                id: friendId,
+                                nickname: friendData.nickname || 'Unknown',
+                                isOnline: onlineUsersSet.has(friendId)
+                              } : null
+                            }).filter(Boolean)
                             
                             return (
                               <div key={i} style={{ 
@@ -393,15 +454,22 @@ export default function TestingPanel({
                                   </div>
                                 )}
                                 
-                                {/* Show friends for this user (only if it's the current user or we have the data) */}
-                                {userData.id === user.id && userFriends.length > 0 && (
+                                {/* Show friends for ALL users */}
+                                {userFriends.length > 0 && (
                                   <div style={{ marginLeft: '20px', marginTop: '4px' }}>
                                     <span style={{ color: '#FFA726', fontSize: '11px' }}>Friends ({userFriends.length}):</span>
                                     {userFriends.map((friend, j) => (
                                       <div key={j} style={{ marginLeft: '10px', color: '#888', fontSize: '11px' }}>
-                                        └─ 🤝 {friend.nickname} {friend.status === 'online' ? '🟢' : '⚫'}
+                                        └─ 🤝 {friend.nickname} {friend.isOnline ? '🟢' : '⚫'}
                                       </div>
                                     ))}
+                                  </div>
+                                )}
+                                
+                                {/* If no friends */}
+                                {userFriends.length === 0 && (
+                                  <div style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                    <span style={{ color: '#666', fontSize: '11px' }}>No friends yet</span>
                                   </div>
                                 )}
                                 
