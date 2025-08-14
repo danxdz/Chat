@@ -429,6 +429,19 @@ export default function TestingPanel({
                   
                   // Create a function to load friends for any user
                   const [allUsersFriends, setAllUsersFriends] = React.useState({})
+                  const [expandedUsers, setExpandedUsers] = React.useState(new Set())
+                  
+                  const toggleUserExpanded = (userId) => {
+                    setExpandedUsers(prev => {
+                      const newSet = new Set(prev)
+                      if (newSet.has(userId)) {
+                        newSet.delete(userId)
+                      } else {
+                        newSet.add(userId)
+                      }
+                      return newSet
+                    })
+                  }
                   
                   React.useEffect(() => {
                     const loadAllFriends = async () => {
@@ -500,9 +513,14 @@ export default function TestingPanel({
                               const isOnline = onlineUsersSet.has(userData.id)
                               const inviter = userData.invitedBy ? 
                                 allUsersData.find(u => u.id === userData.invitedBy) : null
+                              const isExpanded = expandedUsers.has(userData.id)
+                              const hasFriends = userFriendIds.length > 0
                               
                               return (
-                                <div key={i} className={`user-row ${isCurrentUser ? 'current' : ''} ${isOnline ? 'online' : 'offline'}`}>
+                                <div key={i}>
+                                <div className={`user-row ${isCurrentUser ? 'current' : ''} ${isOnline ? 'online' : 'offline'} ${isExpanded ? 'expanded' : ''}`}
+                                     onClick={() => hasFriends && window.innerWidth <= 380 && toggleUserExpanded(userData.id)}
+                                     style={{ cursor: hasFriends && window.innerWidth <= 380 ? 'pointer' : 'default' }}>
                                   <div className="user-main">
                                     <span className="user-status">{isOnline ? '🟢' : '⚫'}</span>
                                     <span className="user-icon">{isAdmin ? '👑' : '👤'}</span>
@@ -515,11 +533,14 @@ export default function TestingPanel({
                                       <span className="label">ID:</span> {userData.id?.substring(0, 6)}...
                                     </span>
                                     {userFriendIds.length > 0 && (
-                                      <span className="detail-item friends">
-                                        🤝 {userFriendIds.length}
+                                      <span className="detail-item friends" title={`Friends: ${userFriendIds.map(fId => {
+                                        const friend = allUsersData.find(u => u.id === fId);
+                                        return friend?.nickname || fId.substring(0, 6);
+                                      }).join(', ')}`}>
+                                        🤝 {userFriendIds.length} {window.innerWidth > 380 && userFriendIds.length === 1 ? 'friend' : window.innerWidth > 380 ? 'friends' : ''}
                                       </span>
                                     )}
-                                    {inviter && (
+                                    {inviter && window.innerWidth > 380 && (
                                       <span className="detail-item">
                                         <span className="label">by:</span> {inviter.nickname}
                                       </span>
@@ -537,6 +558,24 @@ export default function TestingPanel({
                                       🗑️
                                     </button>
                                   )}
+                                </div>
+                                {isExpanded && hasFriends && window.innerWidth <= 380 && (
+                                  <div className="user-friends-expanded">
+                                    <div className="friends-title">Friends ({userFriendIds.length}):</div>
+                                    <div className="friends-list-compact">
+                                      {userFriendIds.map(friendId => {
+                                        const friend = allUsersData.find(u => u.id === friendId)
+                                        const friendOnline = onlineUsersSet.has(friendId)
+                                        return friend ? (
+                                          <div key={friendId} className="friend-item-compact">
+                                            <span className="friend-status">{friendOnline ? '🟢' : '⚫'}</span>
+                                            <span className="friend-name">{friend.nickname}</span>
+                                          </div>
+                                        ) : null
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                                 </div>
                               )
                             })}

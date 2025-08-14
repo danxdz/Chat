@@ -1878,3 +1878,350 @@ button, input, textarea, select, a {
     font-size: 10px;
   }
 }
+
+/* ============================================
+   MOBILE OPTIMIZATIONS FOR 4-INCH SCREENS
+   ============================================ */
+
+/* iPhone SE, iPhone 5/5S/5C - 320px width */
+@media (max-width: 380px) {
+  /* Testing Panel Mobile Optimizations */
+  .testing-panel-content {
+    padding: 10px !important;
+    max-width: 100% !important;
+  }
+
+  /* Admin Stats Bar - Stack vertically on small screens */
+  .admin-stats-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stat-item {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 60px;
+    padding: 8px 4px;
+  }
+
+  .stat-value {
+    font-size: 16px !important;
+  }
+
+  .stat-label {
+    font-size: 9px !important;
+  }
+
+  /* Users Section - Compact for mobile */
+  .admin-users-section {
+    margin-bottom: 15px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  .simple-users-list {
+    gap: 4px;
+    padding: 6px;
+    max-height: 250px; /* Smaller height for mobile */
+    border-width: 1px;
+  }
+
+  /* User Row - Ultra compact for mobile */
+  .user-row {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 35px 8px 10px; /* Less padding, keep space for delete btn */
+    min-height: auto;
+    gap: 4px;
+  }
+
+  .user-row.online {
+    border-left-width: 3px;
+    padding-left: 8px;
+  }
+
+  /* User Main Section */
+  .user-main {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .user-status {
+    font-size: 10px;
+  }
+
+  .user-icon {
+    font-size: 14px;
+  }
+
+  .user-nick {
+    font-size: 12px;
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Badges - Smaller on mobile */
+  .badge {
+    font-size: 8px !important;
+    padding: 2px 4px !important;
+    margin-left: 4px;
+  }
+
+  /* User Details - Compact single line */
+  .user-details {
+    width: 100%;
+    gap: 8px;
+    margin: 0;
+    padding-left: 20px; /* Align with icon */
+    flex-wrap: wrap;
+  }
+
+  .detail-item {
+    font-size: 10px;
+    color: #999;
+  }
+
+  .detail-item .label {
+    color: #777;
+    font-size: 9px;
+  }
+
+  .detail-item.friends {
+    background: rgba(76, 175, 80, 0.15);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* Delete Button - Smaller and repositioned */
+  .user-delete-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(244, 67, 54, 0.15);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 4px;
+  }
+
+  .user-delete-btn:hover {
+    background: rgba(244, 67, 54, 0.25);
+  }
+
+  /* Invites Section */
+  .invites-list {
+    gap: 4px;
+    padding: 6px;
+    max-height: 200px;
+  }
+
+  .invite-row {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .invite-status,
+  .invite-expires {
+    font-size: 10px;
+  }
+
+  /* Test Buttons */
+  .test-actions {
+    gap: 8px;
+  }
+
+  .test-btn {
+    font-size: 11px !important;
+    padding: 8px 12px !important;
+    min-height: 36px;
+  }
+
+  /* Modal adjustments */
+  .modal-content {
+    padding: 15px !important;
+    margin: 10px !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  /* Scrollbar - Thinner on mobile */
+  .simple-users-list::-webkit-scrollbar,
+  .invites-list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  /* Expandable Friends View for Mobile */
+  .user-row.expanded {
+    background: linear-gradient(90deg, rgba(156, 39, 176, 0.2) 0%, rgba(156, 39, 176, 0.1) 100%);
+    border-color: #9C27B0;
+  }
+
+  .user-friends-expanded {
+    padding: 8px 10px 8px 25px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(156, 39, 176, 0.3);
+    margin-top: -1px;
+  }
+
+  .friends-title {
+    font-size: 10px;
+    color: #9C27B0;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .friends-list-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .friend-item-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 11px;
+  }
+
+  .friend-status {
+    font-size: 8px;
+  }
+
+  .friend-name {
+    color: #fff;
+    font-weight: 500;
+  }
+
+  /* Add expand indicator for rows with friends */
+  .user-row {
+    position: relative;
+  }
+
+  .user-details .detail-item.friends::after {
+    content: ' ▼';
+    font-size: 8px;
+    opacity: 0.6;
+    margin-left: 2px;
+  }
+
+  .user-row.expanded .detail-item.friends::after {
+    content: ' ▲';
+  }
+}
+
+/* Extra small screens (width < 360px) */
+@media (max-width: 359px) {
+  /* Even more compact for very small screens */
+  .user-row {
+    padding: 6px 30px 6px 8px;
+  }
+
+  .user-main {
+    gap: 4px;
+  }
+
+  .user-nick {
+    font-size: 11px;
+  }
+
+  .user-details {
+    padding-left: 16px;
+    gap: 6px;
+  }
+
+  .detail-item {
+    font-size: 9px;
+  }
+
+  .simple-users-list {
+    max-height: 200px;
+    padding: 4px;
+  }
+
+  .user-delete-btn {
+    width: 22px !important;
+    height: 22px !important;
+    right: 4px;
+    font-size: 11px !important;
+  }
+}
+
+/* Landscape mode for small screens */
+@media (max-height: 500px) and (max-width: 700px) {
+  .simple-users-list {
+    max-height: 150px;
+  }
+  
+  .testing-panel-content {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* Touch-friendly adjustments */
+@media (pointer: coarse) {
+  /* Increase touch targets */
+  .user-row {
+    min-height: 44px; /* iOS recommended minimum */
+  }
+
+  .user-delete-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .test-btn {
+    min-height: 44px;
+  }
+
+  /* Add more spacing for finger taps */
+  .simple-users-list {
+    gap: 6px;
+  }
+}
+
+/* High contrast mode for better readability */
+@media (prefers-contrast: high) {
+  .user-row {
+    border-width: 2px;
+  }
+
+  .user-nick {
+    font-weight: 700;
+  }
+
+  .detail-item {
+    color: #bbb;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .simple-users-list {
+    background: #0a0a0a;
+  }
+
+  .user-row {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+  }
+
+  .user-row:hover {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.06) 100%);
+  }
+}
