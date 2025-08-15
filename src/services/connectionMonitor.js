@@ -4,7 +4,7 @@
  */
 
 import { logger } from '../utils/logger';
-import { refreshPeers } from './peerDiscovery';
+import { refreshPeers, startPeerHealthMonitoring, stopPeerHealthMonitoring } from './peerDiscovery';
 
 class ConnectionMonitor {
   constructor(gun, options = {}) {
@@ -15,6 +15,8 @@ class ConnectionMonitor {
     this.reconnectAttempts = 0;
     this.healthCheckInterval = null;
     this.listeners = new Set();
+    this.currentPeers = [];
+    this.peerHealthUnsubscribe = null;
     
     // Configuration
     this.config = {
@@ -23,11 +25,100 @@ class ConnectionMonitor {
       maxReconnectAttempts: options.maxReconnectAttempts || 5,
       reconnectDelay: options.reconnectDelay || 5000, // 5 seconds
       testTimeout: options.testTimeout || 5000, // 5 seconds
-      autoStart: options.autoStart !== false
+      autoStart: options.autoStart !== false,
+      enablePeerSwitching: options.enablePeerSwitching !== false,
+      peerHealthMonitoring: options.peerHealthMonitoring !== false
     };
     
     if (this.config.autoStart) {
       this.startHealthCheck();
+    }
+    
+    // Start peer health monitoring if enabled
+    if (this.config.peerHealthMonitoring && this.currentPeers.length > 0) {
+      this.startPeerMonitoring();
+    }
+  }
+  
+  /**
+   * Start monitoring peer health
+   */
+  startPeerMonitoring() {
+    if (this.peerHealthUnsubscribe) {
+      this.peerHealthUnsubscribe();
+    }
+    
+    this.peerHealthUnsubscribe = startPeerHealthMonitoring(
+      this.currentPeers,
+      (healthData) => {
+        if (healthData.discovered) {
+          // New peers discovered, update connection
+          this.switchToBetterPeers(healthData.discovered);
+        } else if (healthData.unhealthy && healthData.unhealthy.length > 0) {
+          logger.log(`⚠️ ${healthData.unhealthy.length} peers unhealthy`);
+          
+          // If most peers are unhealthy, trigger reconnection
+          if (healthData.unhealthy.length > healthData.healthy.length) {
+            this.handleConnectionIssue();
+          }
+        }
+      }
+    );
+  }
+  
+  /**
+   * Stop monitoring peer health
+   */
+  stopPeerMonitoring() {
+    if (this.peerHealthUnsubscribe) {
+      this.peerHealthUnsubscribe();
+      this.peerHealthUnsubscribe = null;
+    }
+    stopPeerHealthMonitoring();
+  }
+  
+  /**
+   * Switch to better performing peers
+   */
+  async switchToBetterPeers(newPeers) {
+    if (!this.config.enablePeerSwitching) {
+      return;
+    }
+    
+    logger.log('🔄 Switching to better peers:', newPeers);
+    
+    try {
+      // Update Gun.js peer configuration
+      if (this.gun && this.gun.opt) {
+        // Remove old peers
+        this.currentPeers.forEach(peer => {
+          if (this.gun._.opt.peers && this.gun._.opt.peers[peer]) {
+            delete this.gun._.opt.peers[peer];
+          }
+        });
+        
+        // Add new peers
+        newPeers.forEach(peer => {
+          this.gun.opt({ peers: [peer] });
+        });
+        
+        this.currentPeers = newPeers;
+        
+        // Restart peer monitoring with new peers
+        if (this.config.peerHealthMonitoring) {
+          this.startPeerMonitoring();
+        }
+        
+        // Notify listeners
+        this.notifyListeners({
+          healthy: true,
+          message: 'Switched to better performing peers',
+          peers: newPeers,
+          timestamp: Date.now()
+        });
+      }
+    } catch (error) {
+      logger.log('Error switching peers:', error);
     }
   }
   
@@ -80,6 +171,8 @@ class ConnectionMonitor {
       this.healthCheckInterval = null;
       logger.log('🛑 Stopped connection health monitoring');
     }
+    
+    this.stopPeerMonitoring();
   }
   
   /**

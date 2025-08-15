@@ -1,6 +1,92 @@
 // 🔐 Secure Authentication System for P2P Chat
 // IRC-style login + cryptographically signed invites
 
+import CryptoJS from 'crypto-js';
+
+// Secret for HMAC signing (should be generated per-session in production)
+const getInviteSecret = () => {
+  let secret = sessionStorage.getItem('invite_secret');
+  if (!secret) {
+    secret = CryptoJS.lib.WordArray.random(256/8).toString();
+    sessionStorage.setItem('invite_secret', secret);
+  }
+  return secret;
+};
+
+/**
+ * Validate URL format and domain
+ */
+const validateInviteUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    
+    // Check protocol
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('Invalid protocol - must be http or https');
+    }
+    
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+      /javascript:/i,
+      /data:/i,
+      /vbscript:/i,
+      /file:/i,
+      /<script/i,
+      /on\w+=/i,
+      /&#/,
+      /%3C/i,
+      /%3E/i
+    ];
+    
+    const urlString = url.toLowerCase();
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(urlString)) {
+        throw new Error('URL contains suspicious content');
+      }
+    }
+    
+    // Validate domain matches current origin in production
+    if (window.location.hostname !== 'localhost' && 
+        window.location.hostname !== '127.0.0.1') {
+      if (parsed.origin !== window.location.origin) {
+        console.warn('Invite URL domain mismatch:', {
+          expected: window.location.origin,
+          received: parsed.origin
+        });
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Invalid invite URL:', error);
+    return false;
+  }
+};
+
+/**
+ * Generate HMAC signature for invite data
+ */
+const generateInviteHMAC = (inviteData) => {
+  const secret = getInviteSecret();
+  const message = JSON.stringify({
+    id: inviteData.id,
+    fromId: inviteData.fromId,
+    fromNick: inviteData.fromNick,
+    expiresAt: inviteData.expiresAt,
+    createdAt: inviteData.createdAt
+  });
+  
+  return CryptoJS.HmacSHA256(message, secret).toString();
+};
+
+/**
+ * Verify HMAC signature
+ */
+const verifyInviteHMAC = (inviteData, hmac) => {
+  const expectedHmac = generateInviteHMAC(inviteData);
+  return hmac === expectedHmac;
+};
+
 /**
  * Generate a permanent user ID using Gun.SEA
  */
@@ -164,15 +250,20 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
       fromNick: user.nickname,
       expiresAt: expiresAt,
       used: false,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      version: '2.0' // Version for backward compatibility
     }
+    
+    // Generate HMAC for tamper detection
+    const hmac = generateInviteHMAC(inviteData);
     
     // Simple direct call for Gun.SEA.sign
     const signature = await window.Gun.SEA.sign(JSON.stringify(inviteData), user.privateKey)
     
     const signedInvite = {
       ...inviteData,
-      signature: signature
+      signature: signature,
+      hmac: hmac
     }
     
     // Store invite in Gun.js P2P network for verification
@@ -187,9 +278,22 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
       expiresAt: new Date(expiresAt).toLocaleString()
     })
     
+    // Create secure invite URL with Base64URL encoding
+    const inviteToken = btoa(JSON.stringify(signedInvite))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    const inviteUrl = `${window.location.origin}/register.html#invite=${inviteToken}`;
+    
+    // Validate the generated URL
+    if (!validateInviteUrl(inviteUrl)) {
+      throw new Error('Generated invite URL failed validation');
+    }
+    
     return {
       inviteId,
-      inviteUrl: `${window.location.origin}/register.html#invite=${btoa(JSON.stringify(signedInvite))}`,
+      inviteUrl,
       expiresAt,
       expirationChoice
     }
@@ -207,16 +311,44 @@ export const verifySecureInvite = async (inviteToken) => {
   try {
     console.log('🔍 Verifying invite token...')
     
-    const inviteData = JSON.parse(atob(inviteToken))
+    // Decode Base64URL token
+    const base64 = inviteToken
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(inviteToken.length + (4 - inviteToken.length % 4) % 4, '=');
+    
+    let inviteData;
+    try {
+      inviteData = JSON.parse(atob(base64));
+    } catch (e) {
+      // Try legacy format for backward compatibility
+      inviteData = JSON.parse(atob(inviteToken));
+    }
+    
     console.log('✅ Invite token decoded:', {
       id: inviteData.id,
       fromNick: inviteData.fromNick,
-      expiresAt: new Date(inviteData.expiresAt).toLocaleString()
+      expiresAt: new Date(inviteData.expiresAt).toLocaleString(),
+      version: inviteData.version || '1.0'
     })
+    
+    // Validate invite data structure
+    if (!inviteData.id || !inviteData.fromId || !inviteData.fromNick || !inviteData.expiresAt) {
+      throw new Error('Invalid invite data structure');
+    }
     
     // Check expiration
     if (Date.now() > inviteData.expiresAt) {
       throw new Error('This invite link has expired. Please request a new one.')
+    }
+    
+    // Verify HMAC if present (v2.0 invites)
+    if (inviteData.hmac) {
+      const { hmac, ...dataWithoutHmac } = inviteData;
+      if (!verifyInviteHMAC(dataWithoutHmac, hmac)) {
+        throw new Error('Invite HMAC verification failed. This invite may have been tampered with.');
+      }
+      console.log('✅ HMAC verified');
     }
     
     // Check if already used (if Gun.js is available)
@@ -235,7 +367,7 @@ export const verifySecureInvite = async (inviteToken) => {
     
     // Verify cryptographic signature if available
     if (inviteData.signature && window.Gun?.SEA) {
-      const { signature, ...originalData } = inviteData
+      const { signature, hmac, ...originalData } = inviteData
       const originalMessage = JSON.stringify(originalData)
       
       console.log('🔐 Verifying signature...')
