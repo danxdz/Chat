@@ -1,5 +1,7 @@
 // Storage Service - Handles all localStorage operations
 
+import { encryptPrivateKey, decryptPrivateKey } from '../utils/keyManager'
+
 // Storage keys
 const STORAGE_KEYS = {
   USERS: 'users',
@@ -11,19 +13,82 @@ const STORAGE_KEYS = {
   LAST_READ: (userId, contactId) => `lastRead_${userId}_${contactId}`
 }
 
-// Get all users
+// Helper function to sanitize user data before storage
+const sanitizeUserForStorage = async (user, password = null) => {
+  if (!user) return user;
+  
+  const sanitized = { ...user };
+  
+  // If user has a private key and password is provided, encrypt it
+  if (sanitized.privateKey && password) {
+    try {
+      sanitized.encryptedPrivateKey = await encryptPrivateKey(sanitized.privateKey, password);
+      delete sanitized.privateKey; // Remove plain private key
+    } catch (error) {
+      console.error('Failed to encrypt private key:', error);
+      // Still remove the plain key for security
+      delete sanitized.privateKey;
+    }
+  } else if (sanitized.privateKey) {
+    // If no password provided but private key exists, remove it for security
+    console.warn('Private key found without password, removing for security');
+    delete sanitized.privateKey;
+  }
+  
+  return sanitized;
+};
+
+// Helper function to restore user data after retrieval
+const restoreUserFromStorage = async (user, password = null) => {
+  if (!user) return user;
+  
+  const restored = { ...user };
+  
+  // If user has encrypted private key and password is provided, decrypt it
+  if (restored.encryptedPrivateKey && password) {
+    try {
+      restored.privateKey = await decryptPrivateKey(restored.encryptedPrivateKey, password);
+    } catch (error) {
+      console.error('Failed to decrypt private key:', error);
+    }
+  }
+  
+  return restored;
+};
+
+// Get users
 export const getUsers = () => {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]')
+    const usersData = localStorage.getItem(STORAGE_KEYS.USERS)
+    return usersData ? JSON.parse(usersData) : []
   } catch (error) {
     console.error('Failed to get users:', error)
     return []
   }
 }
 
-// Save users
-export const saveUsers = (users) => {
+// Save users (with automatic private key encryption)
+export const saveUsers = async (users, passwords = {}) => {
   try {
+    // Sanitize all users before storage
+    const sanitizedUsers = await Promise.all(
+      users.map(user => sanitizeUserForStorage(user, passwords[user.id]))
+    );
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(sanitizedUsers))
+    return true
+  } catch (error) {
+    console.error('Failed to save users:', error)
+    return false
+  }
+}
+
+// Save users without encryption (for backward compatibility - should be deprecated)
+export const saveUsersUnsafe = (users) => {
+  try {
+    // Log warning in development
+    if (import.meta.env.DEV) {
+      console.warn('Using unsafe user storage - private keys may be exposed!');
+    }
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
     return true
   } catch (error) {

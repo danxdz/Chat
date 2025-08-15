@@ -3,18 +3,23 @@
  * Handles encryption, storage, and recovery of private keys
  */
 
+import CryptoJS from 'crypto-js';
+
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
 
-// Simple encryption/decryption using Gun.SEA
+// Enhanced encryption using both crypto-js AES and Gun.SEA
 export const encryptPrivateKey = async (privateKey, password) => {
   if (!window.Gun?.SEA) {
     throw new Error('Gun.SEA not available for encryption');
   }
   
   try {
-    // Use Gun.SEA.encrypt with password as key
-    const encrypted = await window.Gun.SEA.encrypt(privateKey, password);
-    return encrypted;
+    // First layer: AES encryption with crypto-js
+    const aesEncrypted = CryptoJS.AES.encrypt(privateKey, password).toString();
+    
+    // Second layer: Gun.SEA encryption
+    const doubleEncrypted = await window.Gun.SEA.encrypt(aesEncrypted, password);
+    return doubleEncrypted;
   } catch (error) {
     console.error('Failed to encrypt private key:', error);
     throw error;
@@ -27,11 +32,18 @@ export const decryptPrivateKey = async (encryptedKey, password) => {
   }
   
   try {
-    // Use Gun.SEA.decrypt with password as key
-    const decrypted = await window.Gun.SEA.decrypt(encryptedKey, password);
-    if (!decrypted) {
+    // First layer: Gun.SEA decryption
+    const aesEncrypted = await window.Gun.SEA.decrypt(encryptedKey, password);
+    if (!aesEncrypted) {
       throw new Error('Invalid password or corrupted key');
     }
+    
+    // Second layer: AES decryption with crypto-js
+    const decrypted = CryptoJS.AES.decrypt(aesEncrypted, password).toString(CryptoJS.enc.Utf8);
+    if (!decrypted) {
+      throw new Error('Failed to decrypt with AES');
+    }
+    
     return decrypted;
   } catch (error) {
     console.error('Failed to decrypt private key:', error);

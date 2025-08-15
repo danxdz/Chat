@@ -1,4 +1,6 @@
 import React from 'react';
+import { getMonitor } from '../services/connectionMonitor';
+import { refreshPeers } from '../services/peerDiscovery';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -8,8 +10,13 @@ class ErrorBoundary extends React.Component {
       error: null,
       errorInfo: null,
       userMessage: '',
-      isRecoverable: true
+      isRecoverable: true,
+      autoRecoveryAttempts: 0,
+      maxAutoRecoveryAttempts: 3,
+      isRecovering: false
     };
+    
+    this.retryTimeout = null;
   }
 
   static getDerivedStateFromError(error) {
@@ -20,7 +27,7 @@ class ErrorBoundary extends React.Component {
     console.error('Chat application error:', error, errorInfo);
     
     // Determine user-friendly message and recovery options
-    const { message, recoverable } = this.getReadableError(error);
+    const { message, recoverable, autoRecover } = this.getReadableError(error);
     
     this.setState({
       errorInfo,
@@ -28,9 +35,20 @@ class ErrorBoundary extends React.Component {
       isRecoverable: recoverable
     });
 
+    // Attempt auto-recovery for certain errors
+    if (autoRecover && this.state.autoRecoveryAttempts < this.state.maxAutoRecoveryAttempts) {
+      this.attemptAutoRecovery();
+    }
+
     // Log to external service in production
     if (import.meta.env.PROD) {
       this.logErrorToService(error, errorInfo);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
     }
   }
 
@@ -38,10 +56,11 @@ class ErrorBoundary extends React.Component {
     const errorMessage = error?.message || error?.toString() || 'Unknown error';
     
     // Gun.js connection errors
-    if (errorMessage.includes('Gun') || errorMessage.includes('peer')) {
+    if (errorMessage.includes('Gun') || errorMessage.includes('peer') || errorMessage.includes('connection')) {
       return {
-        message: '🔌 Connection problem. Trying to reconnect...',
-        recoverable: true
+        message: '🔌 Connection problem. Attempting to reconnect automatically...',
+        recoverable: true,
+        autoRecover: true
       };
     }
     
@@ -49,15 +68,17 @@ class ErrorBoundary extends React.Component {
     if (errorMessage.includes('SEA') || errorMessage.includes('encrypt') || errorMessage.includes('decrypt')) {
       return {
         message: '🔐 Encryption error. Please check your password and try again.',
-        recoverable: true
+        recoverable: true,
+        autoRecover: false
       };
     }
     
     // Network errors
     if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
       return {
-        message: '🌐 Network issue. Please check your connection.',
-        recoverable: true
+        message: '🌐 Network issue. Checking connection...',
+        recoverable: true,
+        autoRecover: true
       };
     }
     
@@ -65,7 +86,8 @@ class ErrorBoundary extends React.Component {
     if (errorMessage.includes('localStorage') || errorMessage.includes('storage')) {
       return {
         message: '💾 Storage error. Your browser storage might be full.',
-        recoverable: true
+        recoverable: true,
+        autoRecover: false
       };
     }
     
@@ -73,15 +95,61 @@ class ErrorBoundary extends React.Component {
     if (errorMessage.includes('key') || errorMessage.includes('auth') || errorMessage.includes('password')) {
       return {
         message: '🔑 Authentication problem. Please try logging in again.',
-        recoverable: true
+        recoverable: true,
+        autoRecover: false
+      };
+    }
+    
+    // WebRTC errors
+    if (errorMessage.includes('RTC') || errorMessage.includes('webrtc')) {
+      return {
+        message: '📡 Peer-to-peer connection issue. Retrying...',
+        recoverable: true,
+        autoRecover: true
       };
     }
     
     // Default message
     return {
       message: '😕 Something went wrong. Please try refreshing the page.',
-      recoverable: false
+      recoverable: false,
+      autoRecover: false
     };
+  }
+
+  async attemptAutoRecovery() {
+    this.setState(prevState => ({
+      isRecovering: true,
+      autoRecoveryAttempts: prevState.autoRecoveryAttempts + 1
+    }));
+
+    try {
+      // Check connection monitor status
+      const monitor = getMonitor();
+      if (monitor) {
+        const status = monitor.getStatus();
+        if (!status.healthy) {
+          // Try to refresh peers and reconnect
+          await refreshPeers();
+          await monitor.forceCheck();
+        }
+      }
+
+      // Wait a bit to see if the error resolves
+      this.retryTimeout = setTimeout(() => {
+        // If still in error state, try to recover
+        if (this.state.hasError) {
+          this.handleRetry();
+        }
+      }, 3000);
+
+    } catch (recoveryError) {
+      console.error('Auto-recovery failed:', recoveryError);
+      this.setState({
+        isRecovering: false,
+        userMessage: 'Auto-recovery failed. Please refresh the page manually.'
+      });
+    }
   }
 
   logErrorToService(error, errorInfo) {
@@ -161,7 +229,33 @@ class ErrorBoundary extends React.Component {
               border: '1px solid #dee2e6'
             }}>
               {this.state.userMessage}
+              {this.state.isRecovering && (
+                <div style={{
+                  marginTop: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '3px solid #764ba2',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  <span style={{ fontSize: '14px', color: '#666' }}>
+                    Auto-recovery in progress... (Attempt {this.state.autoRecoveryAttempts}/{this.state.maxAutoRecoveryAttempts})
+                  </span>
+                </div>
+              )}
             </div>
+            
+            <style>{`
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
 
             {import.meta.env.DEV && this.state.error && (
               <details style={{

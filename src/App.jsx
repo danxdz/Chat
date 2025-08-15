@@ -21,6 +21,8 @@ import {
 } from './services/gunAuthService'
 
 import gunPeers from './config/gunPeers'
+import { getBestPeers, refreshPeers } from './services/peerDiscovery'
+import { initConnectionMonitor } from './services/connectionMonitor'
 import { initWebRTC, sendWebRTCMessage } from './services/webrtcService'
 import { logger, isDev } from './utils/logger'
 import * as adminService from './services/adminService'
@@ -242,10 +244,12 @@ function App() {
         }
       }
 
-      logger.log('🌐 Initializing Gun.js with peers:', gunPeers)
+      // Get dynamic peers
+      const dynamicPeers = await getBestPeers()
+      logger.log('🌐 Initializing Gun.js with dynamic peers:', dynamicPeers)
       
       const gunInstance = window.Gun({
-        peers: gunPeers,
+        peers: dynamicPeers,
         localStorage: true,  // Enable local caching
         radisk: true,       // Enable radix storage
         file: false,
@@ -304,6 +308,25 @@ function App() {
       
       // Store gun instance globally for register.html
       window.gun = gunInstance
+      
+      // Initialize connection monitoring
+      const monitor = initConnectionMonitor(gunInstance, {
+        checkInterval: 30000, // 30 seconds
+        maxFailedChecks: 3,
+        autoStart: true
+      })
+      
+      // Listen for connection status changes
+      monitor.addListener((status) => {
+        logger.log('Connection status:', status)
+        if (status.fatal) {
+          setError('Connection lost. Please refresh the page.')
+        } else if (!status.healthy && status.reconnecting) {
+          setInitStatus('Reconnecting to network...')
+        } else if (status.healthy) {
+          setInitStatus('Connected to P2P network')
+        }
+      })
       
       // Monitor peer connections
       const peerMonitorInterval = setInterval(() => {
