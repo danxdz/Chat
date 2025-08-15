@@ -5,6 +5,7 @@ import ChatArea from './ChatArea'
 import TestingPanel from './TestingPanel'
 import SecureInviteModal from './SecureInviteModal'
 import MobileLayout from './MobileLayout'
+import UserManagement from './UserManagement'
 import DebugNotifications from './DebugNotifications'
 
 function ChatView({ 
@@ -39,6 +40,7 @@ function ChatView({
 }) {
   const [showSecureInviteModal, setShowSecureInviteModal] = useState(false)
   const [showTests, setShowTests] = useState(false)
+  const [showUserManagement, setShowUserManagement] = useState(false)
   
 
   
@@ -56,6 +58,7 @@ function ChatView({
         connectionStatus={connectionStatus}
         onShowInvite={() => setShowSecureInviteModal(true)}
         onShowTests={() => setShowTests(true)}
+        onShowUserManagement={() => setShowUserManagement(true)}
         onChangeNickname={onNicknameChange}
         onLogout={onLogout}
         gun={gun}
@@ -145,6 +148,14 @@ function ChatView({
             console.log('📋 Pending invites updated')
             // Don't close modal - let user see QR code and copy link
           }}
+        />
+      )}
+      
+      {showUserManagement && (
+        <UserManagement
+          gun={gun}
+          currentUser={user}
+          onClose={() => setShowUserManagement(false)}
         />
       )}
     </div>

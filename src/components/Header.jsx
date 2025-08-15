@@ -10,6 +10,7 @@ export default function Header({
   connectionStatus,
   onShowInvite, 
   onShowTests,
+  onShowUserManagement,
   onChangeNickname,
   onLogout,
   gun 
@@ -187,6 +188,28 @@ export default function Header({
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             overflow: 'hidden'
           }}>
+            <button
+              onClick={() => {
+                onShowUserManagement()
+                setShowDevMenu(false)
+              }}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                padding: '1rem',
+                textAlign: 'left',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              👥 User Management
+            </button>
+            
             <button
               onClick={() => {
                 onShowTests()

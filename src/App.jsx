@@ -4,6 +4,7 @@ import NeedInviteView from './components/NeedInviteView'
 import ChatView from './components/ChatView'
 import ErrorBoundary from './components/ErrorBoundary'
 import DebugNotifications from './components/DebugNotifications'
+import UserManagement from './components/UserManagement'
 import { 
   verifySecureInvite, 
   markInviteUsed, 
