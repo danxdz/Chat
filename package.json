@@ -24,7 +24,8 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "auto-deploy": "node test-and-deploy.cjs",
-    "perfect": "node test-and-deploy.cjs"
+    "perfect": "node test-and-deploy.cjs",
+    "vercel-build": "npm ci && vite build"
   },
   "dependencies": {
     "gun": "^0.2020.1241",
