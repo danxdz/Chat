@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Join P2P Chat</title>
+    
+    <!-- Gun.js and dependencies -->
+    <script>window.global = window;</script>
+    <script src="/gun.js"></script>
+    <script src="/sea.js"></script>
+    <script src="/sodium.js"></script>
+    <script>
+      // Ensure Gun.SEA is available
+      window.addEventListener('DOMContentLoaded', function() {
+        if (window.Gun && !window.Gun.SEA && window.SEA) {
+          window.Gun.SEA = window.SEA;
+          console.log('✅ Gun.SEA attached for registration page');
+        }
+      });
+    </script>
+    
     <style>
         body {
             margin: 0;

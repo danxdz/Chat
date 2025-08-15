@@ -6,15 +6,38 @@
     <meta name="description" content="Secure P2P Chat Application" />
     <title>Secure Chat</title>
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="/sodium.js" as="script" />
+    <!-- Gun.js and dependencies - Load synchronously in order -->
+    <script>
+      // Ensure global object exists for Gun
+      window.global = window;
+    </script>
     
-    <!-- Load sodium first, synchronously -->
+    <!-- Load Gun.js core first -->
+    <script src="/gun.js"></script>
+    
+    <!-- Then load SEA (encryption) module -->
+    <script src="/sea.js"></script>
+    
+    <!-- Load sodium for additional crypto support -->
     <script src="/sodium.js"></script>
     
-    <!-- Gun.js for decentralized P2P (local copy for reliability) -->
-    <script src="/gun.js"></script>
-    <script src="/sea.js"></script>
+    <!-- Verify Gun.SEA is available -->
+    <script>
+      window.addEventListener('DOMContentLoaded', function() {
+        if (window.Gun && !window.Gun.SEA && window.SEA) {
+          window.Gun.SEA = window.SEA;
+          console.log('✅ Gun.SEA manually attached on page load');
+        }
+        
+        // Additional check after a delay
+        setTimeout(function() {
+          if (window.Gun && !window.Gun.SEA && window.SEA) {
+            window.Gun.SEA = window.SEA;
+            console.log('✅ Gun.SEA attached after delay');
+          }
+        }, 1000);
+      });
+    </script>
     
     <!-- Fallback styles for loading -->
     <style>

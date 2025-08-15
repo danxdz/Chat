@@ -219,6 +219,28 @@ function App() {
       if (!window.Gun) {
         throw new Error('Gun.js library not loaded after 5 seconds')
       }
+      
+      // Wait for Gun.SEA to be available
+      attempts = 0
+      while (!window.Gun.SEA && attempts < 10) {
+        // Check if SEA is available separately
+        if (window.SEA && !window.Gun.SEA) {
+          window.Gun.SEA = window.SEA
+          logger.log('✅ Manually attached SEA to Gun')
+          break
+        }
+        await new Promise(resolve => setTimeout(resolve, 500))
+        attempts++
+      }
+      
+      if (!window.Gun.SEA) {
+        console.error('⚠️ Gun.SEA not available after 5 seconds')
+        // Try one more time to attach it
+        if (window.SEA) {
+          window.Gun.SEA = window.SEA
+          logger.log('✅ Finally attached SEA to Gun')
+        }
+      }
 
       logger.log('🌐 Initializing Gun.js with peers:', gunPeers)
       
