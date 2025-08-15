@@ -18,36 +18,60 @@ export const gunPeers = [
   'https://gun-us.herokuapp.com/gun'
 ]
 
-// Initialize Gun.js instance
-export const initializeGun = async () => {
+// Initialize Gun.js with peers
+export const initializeGunJS = async (peers = gunPeers) => {
   try {
-    if (!window.Gun) {
-      throw new Error('Gun.js library not loaded')
+    // Wait for Gun to be available
+    let attempts = 0
+    while (!window.Gun && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
     }
-
-    logger.log('🌐 Initializing Gun.js with peers:', gunPeers)
     
-    const gunInstance = window.Gun({
-      peers: gunPeers,
-      localStorage: false,
-      radisk: false,
-      file: false
-    })
-
-    // Test Gun.js connectivity
-    const testKey = 'gun_init_test_' + Date.now()
-    await gunInstance.get(testKey).put({ test: true, timestamp: Date.now() })
+    if (!window.Gun) {
+      throw new Error('Gun.js failed to load after 2 seconds')
+    }
     
-    gunInstance.get(testKey).once((data) => {
-      if (data) {
-        logger.log('✅ Gun.js connectivity test successful')
+    // Initialize Gun with peers
+    const gun = window.Gun(peers)
+    
+    // Wait for SEA to be available
+    attempts = 0
+    while (!window.Gun.SEA && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+    
+    if (!window.Gun.SEA) {
+      console.error('⚠️ Gun.SEA not available, trying to load it manually')
+      
+      // Try to reinitialize Gun.SEA if it's not available
+      if (window.SEA) {
+        window.Gun.SEA = window.SEA
+        console.log('✅ Gun.SEA manually attached from window.SEA')
+      } else {
+        console.error('❌ SEA module not found at all')
+        // Continue without SEA - app will work but without encryption
       }
-    })
-
-    return gunInstance
-
+    }
+    
+    // Test SEA availability
+    if (window.Gun.SEA) {
+      try {
+        // Quick test to ensure SEA is working
+        const testPair = await window.Gun.SEA.pair()
+        if (testPair && testPair.pub) {
+          logger.log('✅ Gun.SEA is working properly')
+        }
+      } catch (e) {
+        console.error('⚠️ Gun.SEA test failed:', e)
+      }
+    }
+    
+    logger.log('🔫 Gun.js initialized with peers:', peers)
+    return gun
   } catch (error) {
-    logger.error('❌ Gun.js initialization failed:', error)
+    logger.error('Failed to initialize Gun.js:', error)
     throw error
   }
 }
