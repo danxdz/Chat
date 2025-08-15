@@ -14,6 +14,27 @@
   ],
   "routes": [
     {
+      "src": "/gun.js",
+      "dest": "/gun.js",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/sea.js", 
+      "dest": "/sea.js",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/sodium.js",
+      "dest": "/sodium.js",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "src": "/register.*",
       "dest": "/register.html"
     },
