@@ -34,8 +34,20 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
     
     if (!result.success) {
       setLoginError(result.error || 'Failed to create admin')
+      // If admin already exists, auto-fill the login form
+      if (result.error && result.error.includes('already exists')) {
+        setLoginNickname('Admin')
+        setLoginPassword('admin123')
+        setLoginError('Admin exists! Credentials filled. Click Login.')
+      }
       setIsLoading(false)
     }
+  }
+  
+  const handleQuickAdminLogin = () => {
+    setLoginNickname('Admin')
+    setLoginPassword('admin123')
+    setLoginError('')
   }
 
   const handleReset = () => {
@@ -124,30 +136,47 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
           {isLoading ? 'Loading...' : 'Login'}
         </button>
         
-        {allUsers && allUsers.length === 0 && (
-          <div style={{ marginTop: '20px' }}>
+        {/* Admin Account Section */}
+        <div style={{ marginTop: '20px' }}>
+          {allUsers && allUsers.length === 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={handleCreateAdmin}
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                disabled={isLoading}
+              >
+                🛡️ Create Admin Account
+              </button>
+              <div style={{ 
+                marginTop: '10px', 
+                padding: '10px', 
+                background: 'rgba(255,255,255,0.1)', 
+                borderRadius: '8px',
+                fontSize: '0.9em'
+              }}>
+                <strong>Admin will be created with:</strong><br/>
+                Username: <code style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '3px' }}>Admin</code><br/>
+                Password: <code style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '3px' }}>admin123</code>
+              </div>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={handleCreateAdmin}
-              className="btn btn-primary"
-              style={{ width: '100%' }}
+              onClick={handleQuickAdminLogin}
+              className="btn"
+              style={{ 
+                width: '100%',
+                background: 'rgba(118, 75, 162, 0.3)',
+                border: '1px solid rgba(118, 75, 162, 0.5)'
+              }}
               disabled={isLoading}
             >
-              🛡️ Create Admin Account
+              👤 Quick Fill: Admin / admin123
             </button>
-            <div style={{ 
-              marginTop: '10px', 
-              padding: '10px', 
-              background: 'rgba(255,255,255,0.1)', 
-              borderRadius: '8px',
-              fontSize: '0.9em'
-            }}>
-              <strong>Admin Credentials:</strong><br/>
-              Username: <code style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '3px' }}>Admin</code><br/>
-              Password: <code style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '3px' }}>admin123</code>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
         
         <div style={{ 
           marginTop: '30px', 
@@ -194,13 +223,21 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
                 fontSize: '0.85em',
                 lineHeight: '1.5'
               }}>
-                <strong>Can't login?</strong><br/>
-                1. Click "Reset App" above<br/>
-                2. Click "Create Admin Account"<br/>
-                3. Login with Admin / admin123<br/>
+                <strong>⚠️ Important:</strong><br/>
+                Users are stored on the P2P network (Gun.js), not just locally.<br/>
                 <br/>
-                <strong>No users showing?</strong><br/>
-                The app may need initialization. Click reset and start fresh.
+                <strong>Admin Account Already Exists?</strong><br/>
+                • Click "Quick Fill" button above<br/>
+                • Or manually enter: Admin / admin123<br/>
+                <br/>
+                <strong>Still Can't Login?</strong><br/>
+                1. Click "Reset App" to clear local cache<br/>
+                2. Try the Quick Fill button<br/>
+                3. Click Login<br/>
+                <br/>
+                <em style={{ fontSize: '0.9em', opacity: 0.8 }}>
+                  Note: Reset only clears your local data. The admin account persists on the network.
+                </em>
               </div>
             </div>
           )}
