@@ -239,6 +239,40 @@ export default function Header({
             
             <button
               onClick={() => {
+                const current = localStorage.getItem('current_db_namespace') || 'p2pchat_v2';
+                const namespaces = ['p2pchat_v1', 'p2pchat_v2', 'p2pchat_v3', 'p2pchat_test', 'p2pchat_dev'];
+                const next = namespaces[(namespaces.indexOf(current) + 1) % namespaces.length];
+                if (confirm(`Switch database from ${current} to ${next}?\n\nThis will reload the page.`)) {
+                  localStorage.setItem('current_db_namespace', next);
+                  window.location.reload();
+                }
+                setShowDevMenu(false)
+              }}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                padding: '1rem',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              🗄️ Switch Database
+              <span style={{ fontSize: '0.7em', opacity: 0.7 }}>
+                ({localStorage.getItem('current_db_namespace') || 'p2pchat_v2'})
+              </span>
+            </button>
+            
+            <button
+              onClick={() => {
                 setShowPasswordModal(true)
                 setShowDevMenu(false)
               }}

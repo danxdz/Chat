@@ -3,9 +3,16 @@
  * Change the DB_NAMESPACE to reset the entire app with a new database
  */
 
-// Change this value to reset the entire app with a new database
-// Examples: 'p2pchat_v1', 'p2pchat_v2', 'mychat_2024', etc.
-export const DB_NAMESPACE = 'p2pchat_v2';  // Changed from default to v2 for fresh start
+// Get namespace from localStorage or use default
+const getNamespace = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage.getItem('current_db_namespace') || 'p2pchat_v2';
+  }
+  return 'p2pchat_v2';
+};
+
+// Dynamically loaded from localStorage or default
+export const DB_NAMESPACE = getNamespace();
 
 // Database keys with namespace
 export const DB_KEYS = {
