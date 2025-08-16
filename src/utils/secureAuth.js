@@ -177,7 +177,7 @@ export const createSecureInvite = async (user, expirationChoice = '1h') => {
     
     // Store invite in Gun.js P2P network for verification
     if (window.gun) {
-      await window.gun.get('secure_invites').get(inviteId).put(signedInvite)
+      await window.gun.get(DB_KEYS.INVITES).get(inviteId).put(signedInvite)
     }
     
     console.log('🎫 SECURE INVITE CREATED:', {
@@ -222,7 +222,7 @@ export const verifySecureInvite = async (inviteToken) => {
     // Check if already used (if Gun.js is available)
     if (window.gun) {
       const inviteStatus = await new Promise((resolve) => {
-        window.gun.get('secure_invites').get(inviteData.id).get('used').once((used) => {
+        window.gun.get(DB_KEYS.INVITES).get(inviteData.id).get('used').once((used) => {
           resolve(used)
         })
         setTimeout(() => resolve(false), 1000)
@@ -273,7 +273,7 @@ export const markInviteUsed = async (inviteToken) => {
     const inviteData = JSON.parse(atob(inviteToken))
     
     if (window.gun && inviteData.id) {
-      await window.gun.get('secure_invites').get(inviteData.id).put({
+      await window.gun.get(DB_KEYS.INVITES).get(inviteData.id).put({
         ...inviteData,
         used: true,
         usedAt: Date.now()
@@ -307,7 +307,7 @@ export const changeNickname = async (user, newNickname, gun) => {
     if (gun) {
       const existingUser = await new Promise((resolve) => {
         const timeout = setTimeout(() => resolve(null), 2000)
-        gun.get('chat_users_by_nick').get(newNickname.toLowerCase()).once((data) => {
+        gun.get(DB_KEYS.USERS_BY_NICK).get(newNickname.toLowerCase()).once((data) => {
           clearTimeout(timeout)
           resolve(data)
         })
@@ -318,11 +318,11 @@ export const changeNickname = async (user, newNickname, gun) => {
       }
       
       // Update in Gun.js
-      await gun.get('chat_users').get(user.id).get('nickname').put(newNickname)
+      await gun.get(DB_KEYS.USERS).get(user.id).get('nickname').put(newNickname)
       
       // Remove old nickname mapping and add new one
-      await gun.get('chat_users_by_nick').get(oldNickname.toLowerCase()).put(null)
-      await gun.get('chat_users_by_nick').get(newNickname.toLowerCase()).put({
+      await gun.get(DB_KEYS.USERS_BY_NICK).get(oldNickname.toLowerCase()).put(null)
+      await gun.get(DB_KEYS.USERS_BY_NICK).get(newNickname.toLowerCase()).put({
         userId: user.id,
         nickname: newNickname
       })
@@ -351,7 +351,7 @@ export const changeNickname = async (user, newNickname, gun) => {
       
       user.friends.forEach(async (friendId) => {
         try {
-          await gun.get('notifications').get(friendId).set(notification)
+          await gun.get(DB_KEYS.NOTIFICATIONS).get(friendId).set(notification)
         } catch (e) {
           console.error('Failed to notify friend:', friendId, e)
         }
@@ -428,11 +428,11 @@ export const addMutualFriends = async (inviterId, newUserId) => {
     
     // Update Gun.js friendships
     if (window.gun) {
-      await window.gun.get('friendships').get(inviterId).get(newUserId).put({
+      await window.gun.get(DB_KEYS.FRIENDSHIPS).get(inviterId).get(newUserId).put({
         status: 'friends',
         since: Date.now()
       })
-      await window.gun.get('friendships').get(newUserId).get(inviterId).put({
+      await window.gun.get(DB_KEYS.FRIENDSHIPS).get(newUserId).get(inviterId).put({
         status: 'friends',
         since: Date.now()
       })

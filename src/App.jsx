@@ -344,7 +344,7 @@ function App() {
         
         // Monitor invites in Gun.js for real-time updates
         if (gun && user) {
-          gun.get('secure_invites').map().on((invite, key) => {
+          gun.get(DB_KEYS.INVITES).map().on((invite, key) => {
             if (invite && invite.fromId === user.id && invite.status === 'pending') {
               setPendingInvites(prev => {
                 const exists = prev.some(inv => inv.id === invite.id)
@@ -359,7 +359,7 @@ function App() {
           })
           
           // Also monitor for accepted invites to remove them from pending list
-          gun.get('secure_invites').map().on(async (invite, key) => {
+          gun.get(DB_KEYS.INVITES).map().on(async (invite, key) => {
             if (invite && invite.fromId === user.id && invite.status === 'accepted') {
               // Remove accepted invite from pending list
               setPendingInvites(prev => {
@@ -406,7 +406,7 @@ function App() {
     logger.log('🔧 Setting up Gun.js listeners for general and private chats...')
     
     // Listen for friend updates
-          gun.get('friendships').get(user.id).map().on(async (data, key) => {
+          gun.get(DB_KEYS.FRIENDSHIPS).get(user.id).map().on(async (data, key) => {
         if (data && data.status === 'friends') {
           console.log('🤝 New friend detected:', key)
           // Reload friends list from Gun.js
@@ -426,13 +426,13 @@ function App() {
       })
 
     // Listen to general chat
-    gun.get('general_chat').map().on((data, key) => {
+    gun.get(DB_KEYS.GENERAL_CHAT).map().on((data, key) => {
       logger.log('📨 GENERAL CHAT - RAW DATA:', JSON.stringify(data, null, 2))
       handleIncomingMessage(data, key, 'general')
     })
     
     // Also listen to the old chat_messages channel for backward compatibility
-    gun.get('chat_messages').map().on((data, key) => {
+    gun.get(DB_KEYS.MESSAGES).map().on((data, key) => {
       logger.log('📨 CHAT MESSAGES - RAW DATA:', JSON.stringify(data, null, 2))
       handleIncomingMessage(data, key, 'general')
     })
@@ -464,7 +464,7 @@ function App() {
 
     // IRC-style presence listener
     logger.log('👥 Setting up presence listener')
-    gun.get('user_presence').map().on((data, key) => {
+    gun.get(DB_KEYS.USER_PRESENCE).map().on((data, key) => {
       logger.log('👥 Raw presence data received:', JSON.stringify(data), 'key:', key)
       if (data && data.userId && data.nickname && data.action) {
         logger.log('✅ Valid presence update:', data.nickname, data.action, 'from user:', data.userId)
@@ -475,7 +475,7 @@ function App() {
     })
     
     // Also listen to online_users for better tracking
-    gun.get('online_users').map().on((data, userId) => {
+    gun.get(DB_KEYS.ONLINE_USERS).map().on((data, userId) => {
       console.log('🔵 Online user update:', userId, data)
       if (data && data.nickname && data.isOnline === true) {
         setOnlineUsers(prev => {
@@ -500,7 +500,7 @@ function App() {
     
     // Listen for friendships updates
     if (user) {
-      gun.get('friendships').get(user.id).map().on((friendData, friendId) => {
+      gun.get(DB_KEYS.FRIENDSHIPS).get(user.id).map().on((friendData, friendId) => {
         if (friendData && friendData.friendNick) {
           console.log('👥 New friendship detected:', friendData)
           setFriends(prev => {
@@ -1073,7 +1073,7 @@ function App() {
     try {
       console.log(`📡 Announcing presence: ${action} for ${currentUser.nickname}`, presenceData)
       // Use put instead of set for proper updates
-      await gun.get('user_presence').get(currentUser.id).put(presenceData)
+      await gun.get(DB_KEYS.USER_PRESENCE).get(currentUser.id).put(presenceData)
       
       // Also update the online_users node for better tracking
       if (action === 'join' || action === 'heartbeat') {
@@ -1082,10 +1082,10 @@ function App() {
           lastSeen: Date.now(),
           isOnline: true
         }
-        await gun.get('online_users').get(currentUser.id).put(onlineData)
+        await gun.get(DB_KEYS.ONLINE_USERS).get(currentUser.id).put(onlineData)
         console.log('✅ Updated online_users:', currentUser.nickname, onlineData)
       } else if (action === 'leave') {
-        await gun.get('online_users').get(currentUser.id).put({
+        await gun.get(DB_KEYS.ONLINE_USERS).get(currentUser.id).put({
           nickname: currentUser.nickname,
           lastSeen: Date.now(),
           isOnline: false

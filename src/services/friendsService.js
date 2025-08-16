@@ -43,7 +43,7 @@ export const getFriendsFromGun = async (gun, userId) => {
       };
       
       // Use .map().once() to get all friends
-      gun.get('chat_users').get(userId).get('friends').map().once((friendData, friendId) => {
+      gun.get(DB_KEYS.USERS).get(userId).get('friends').map().once((friendData, friendId) => {
         if (friendData && friendId && friendId !== '_') {
           hasData = true;
           friends.push(friendId);
@@ -58,7 +58,7 @@ export const getFriendsFromGun = async (gun, userId) => {
       }, 100);
       
       // Also check with a direct .once() in case the data structure is different
-      gun.get('chat_users').get(userId).get('friends').once((friendsData) => {
+      gun.get(DB_KEYS.USERS).get(userId).get('friends').once((friendsData) => {
         if (!hasData && friendsData) {
           clearTimeout(timeout);
           // Handle if friends is stored as an object
@@ -109,11 +109,11 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
     // Each friend ID is a key with value true
     
     // Add userId2 to userId1's friends
-    await gun.get('chat_users').get(userId1).get('friends').get(userId2).put(true);
+    await gun.get(DB_KEYS.USERS).get(userId1).get('friends').get(userId2).put(true);
     logger.log(`✅ Added ${userId2.substring(0, 8)} to ${userId1.substring(0, 8)}'s friends`);
     
     // Add userId1 to userId2's friends  
-    await gun.get('chat_users').get(userId2).get('friends').get(userId1).put(true);
+    await gun.get(DB_KEYS.USERS).get(userId2).get('friends').get(userId1).put(true);
     logger.log(`✅ Added ${userId1.substring(0, 8)} to ${userId2.substring(0, 8)}'s friends`);
     
     // Verify the friendship was created with retry
@@ -121,7 +121,7 @@ export const addMutualFriendship = async (gun, userId1, userId2) => {
       for (let i = 0; i < retries; i++) {
         const result = await new Promise((resolve) => {
           const timeout = setTimeout(() => resolve(false), 1000);
-          gun.get('chat_users').get(uid1).get('friends').get(uid2).once((data) => {
+          gun.get(DB_KEYS.USERS).get(uid1).get('friends').get(uid2).once((data) => {
             clearTimeout(timeout);
             resolve(data === true);
           });
@@ -164,8 +164,8 @@ export const removeFriendship = async (gun, userId1, userId2) => {
   
   try {
     // Remove by setting to null
-    await gun.get('chat_users').get(userId1).get('friends').get(userId2).put(null);
-    await gun.get('chat_users').get(userId2).get('friends').get(userId1).put(null);
+    await gun.get(DB_KEYS.USERS).get(userId1).get('friends').get(userId2).put(null);
+    await gun.get(DB_KEYS.USERS).get(userId2).get('friends').get(userId1).put(null);
     
     logger.log('✅ Friendship removed');
     return true;
@@ -214,7 +214,7 @@ export const getFriendsWithDetails = async (gun, userId, allUsers) => {
                 resolve(null);
               }, 1000);
               
-              gun.get('chat_users').get(friendId).once((data) => {
+              gun.get(DB_KEYS.USERS).get(friendId).once((data) => {
                 clearTimeout(timeout);
                 if (data && typeof data === 'object') {
                   resolve({

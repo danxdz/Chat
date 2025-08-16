@@ -1,5 +1,6 @@
 import { createGunUser, getAllGunUsers } from './gunAuthService'
 import { logger } from '../utils/logger'
+import DB_KEYS from '../config/database'
 
 // Create admin user with fixed ID for consistency
 export const createAdminUser = async (gun) => {
@@ -10,7 +11,7 @@ export const createAdminUser = async (gun) => {
     return new Promise((resolve, reject) => {
       const adminId = 'bootstrap_admin';
       
-      gun.get('chat_users').get(adminId).once(async (existingData) => {
+      gun.get(DB_KEYS.USERS).get(adminId).once(async (existingData) => {
         if (existingData && existingData.nickname) {
           logger.log('👤 Admin user already exists in Gun.js');
           
@@ -44,7 +45,7 @@ export const createAdminUser = async (gun) => {
           };
           
           // Store in Gun.js
-          await gun.get('chat_users').get(adminId).put({
+          await gun.get(DB_KEYS.USERS).get(adminId).put({
             nickname: 'Admin',
             publicKey: adminId,
             privateKey: identity.priv, // Admin keeps private key for creating invites
@@ -55,7 +56,7 @@ export const createAdminUser = async (gun) => {
           });
           
           // Also store by nickname
-          await gun.get('chat_users_by_nick').get('admin').put({
+          await gun.get(DB_KEYS.USERS_BY_NICK).get('admin').put({
             userId: adminId,
             nickname: 'Admin'
           });
@@ -183,8 +184,8 @@ export const clearAllClientsData = async (user, gun, announcePresence) => {
     if (gun) {
       try {
         await gun.get('p2pchat').get('messages').put(null)
-        await gun.get('online_users').put(null)
-        await gun.get('user_presence').put(null)
+        await gun.get(DB_KEYS.ONLINE_USERS).put(null)
+        await gun.get(DB_KEYS.USER_PRESENCE).put(null)
       } catch (e) {
         console.log('Could not clear Gun.js data:', e)
       }

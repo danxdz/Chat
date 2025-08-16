@@ -1,6 +1,7 @@
 // Gun.js Authentication Service - Cross-platform user management
 import { logger } from '../utils/logger'
 import { addMutualFriendship } from './friendsService'
+import DB_KEYS from '../config/database'
 
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
 
@@ -15,7 +16,7 @@ export const initGunUsers = (gun) => {
   
   try {
     // Create users node if it doesn't exist
-    gun.get('chat_users').put({ initialized: true })
+    gun.get(DB_KEYS.USERS).put({ initialized: true })
     logger.log('🔫 Gun.js users system initialized')
     return true
   } catch (error) {
@@ -65,7 +66,7 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
   }
   
   // Store user in Gun.js (with encrypted private key)
-  await gun.get('chat_users').get(identity.pub).put({
+  await gun.get(DB_KEYS.USERS).get(identity.pub).put({
     nickname: nickname,
     passwordHash: hashedPassword,
     passwordSalt: salt,
@@ -77,7 +78,7 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
   })
     
     // Also store by nickname for easy lookup
-    await gun.get('chat_users_by_nick').get(nickname.toLowerCase()).put({
+    await gun.get(DB_KEYS.USERS_BY_NICK).get(nickname.toLowerCase()).put({
       userId: identity.pub,
       nickname: nickname
     })
@@ -120,7 +121,7 @@ export const checkUserExists = async (gun, nickname) => {
       let resolved = false
       
       // Use .once() first for quick check, then .on() for sync
-      gun.get('chat_users_by_nick').get(nickname.toLowerCase()).once((data) => {
+      gun.get(DB_KEYS.USERS_BY_NICK).get(nickname.toLowerCase()).once((data) => {
         if (!resolved && data && data.userId) {
           resolved = true
           clearTimeout(timeout)
@@ -129,7 +130,7 @@ export const checkUserExists = async (gun, nickname) => {
       })
       
       // Also subscribe for updates in case data arrives later
-      gun.get('chat_users_by_nick').get(nickname.toLowerCase()).on((data) => {
+      gun.get(DB_KEYS.USERS_BY_NICK).get(nickname.toLowerCase()).on((data) => {
         if (!resolved && data && data.userId) {
           resolved = true
           clearTimeout(timeout)
@@ -172,7 +173,7 @@ export const loginGunUser = async (gun, nickname, password) => {
       let resolved = false
       
       // Try .once() first for quick response
-      gun.get('chat_users').get(userRef.userId).once((data) => {
+      gun.get(DB_KEYS.USERS).get(userRef.userId).once((data) => {
         if (!resolved && data && data.nickname) {
           resolved = true
           clearTimeout(timeout)
@@ -181,7 +182,7 @@ export const loginGunUser = async (gun, nickname, password) => {
       })
       
       // Also use .on() to sync from peers if needed
-      gun.get('chat_users').get(userRef.userId).on((data) => {
+      gun.get(DB_KEYS.USERS).get(userRef.userId).on((data) => {
         if (!resolved && data && data.nickname) {
           resolved = true
           clearTimeout(timeout)
@@ -286,7 +287,7 @@ export const getAllGunUsers = async (gun) => {
     }, 3000)
     
     // Use .map().on() to get all users - keep subscription for real-time updates
-    subscription = gun.get('chat_users').map().on((userData, userId) => {
+    subscription = gun.get(DB_KEYS.USERS).map().on((userData, userId) => {
       if (userData && userData.nickname && userId !== 'initialized' && !seenUsers.has(userId)) {
         seenUsers.add(userId)
         users.push({
@@ -320,20 +321,20 @@ export const getAllGunUsers = async (gun) => {
  */
 export const updateGunUser = async (gun, userId, updates) => {
   try {
-    await gun.get('chat_users').get(userId).put(updates)
+    await gun.get(DB_KEYS.USERS).get(userId).put(updates)
     
     // If nickname changed, update the nickname index
     if (updates.nickname) {
       const oldData = await new Promise((resolve) => {
-        gun.get('chat_users').get(userId).once((data) => resolve(data))
+        gun.get(DB_KEYS.USERS).get(userId).once((data) => resolve(data))
         setTimeout(() => resolve(null), 1000)
       })
       
       if (oldData && oldData.nickname !== updates.nickname) {
         // Remove old nickname reference
-        await gun.get('chat_users_by_nick').get(oldData.nickname.toLowerCase()).put(null)
+        await gun.get(DB_KEYS.USERS_BY_NICK).get(oldData.nickname.toLowerCase()).put(null)
         // Add new nickname reference
-        await gun.get('chat_users_by_nick').get(updates.nickname.toLowerCase()).put({
+        await gun.get(DB_KEYS.USERS_BY_NICK).get(updates.nickname.toLowerCase()).put({
           userId: userId,
           nickname: updates.nickname
         })
@@ -376,7 +377,7 @@ export const migrateUsersToGun = async (gun) => {
       }
       
       // Store user in Gun.js
-      await gun.get('chat_users').get(user.id).put({
+      await gun.get(DB_KEYS.USERS).get(user.id).put({
         nickname: user.nickname,
         passwordHash: user.passwordHash,
         publicKey: user.publicKey || user.id,
@@ -386,7 +387,7 @@ export const migrateUsersToGun = async (gun) => {
       })
       
       // Store nickname reference
-      await gun.get('chat_users_by_nick').get(user.nickname.toLowerCase()).put({
+      await gun.get(DB_KEYS.USERS_BY_NICK).get(user.nickname.toLowerCase()).put({
         userId: user.id,
         nickname: user.nickname
       })
@@ -417,7 +418,7 @@ export const clearMessagesOnly = async (gun) => {
     await new Promise((resolve) => {
       let timeout = setTimeout(resolve, 2000)
       
-      gun.get('general_chat').map().on(function(msg, key) {
+      gun.get(DB_KEYS.GENERAL_CHAT).map().on(function(msg, key) {
         if (msg && key && typeof msg === 'object' && msg.text) {
           // Use 'this' context to unset the message
           this.put(null)
@@ -431,7 +432,7 @@ export const clearMessagesOnly = async (gun) => {
     logger.log(`✅ Cleared ${count} messages`)
     
     // Overwrite nodes with empty data
-    await gun.get('general_chat').put({ cleared: true, timestamp: Date.now() })
+    await gun.get(DB_KEYS.GENERAL_CHAT).put({ cleared: true, timestamp: Date.now() })
     
     // Clear localStorage messages
     localStorage.removeItem('messages')
@@ -456,9 +457,9 @@ export const clearGunDatabase = async (gun) => {
     
     // Clear each user individually
     for (const user of users) {
-      await gun.get('chat_users').get(user.id).put(null)
+      await gun.get(DB_KEYS.USERS).get(user.id).put(null)
       if (user.nickname) {
-        await gun.get('chat_users_by_nick').get(user.nickname.toLowerCase()).put(null)
+        await gun.get(DB_KEYS.USERS_BY_NICK).get(user.nickname.toLowerCase()).put(null)
       }
     }
     
@@ -473,13 +474,13 @@ export const clearGunDatabase = async (gun) => {
         resolve()
       }, 3000)
       
-      gun.get('general_chat').map().on((msg, key) => {
+      gun.get(DB_KEYS.GENERAL_CHAT).map().on((msg, key) => {
         if (msg && key && !clearedMessages.has(key)) {
           clearedMessages.add(key)
           // Multiple attempts to ensure deletion
-          gun.get('general_chat').get(key).put(null)
-          gun.get('general_chat').get(key).put(undefined)
-          gun.get('general_chat').unset(key)
+          gun.get(DB_KEYS.GENERAL_CHAT).get(key).put(null)
+          gun.get(DB_KEYS.GENERAL_CHAT).get(key).put(undefined)
+          gun.get(DB_KEYS.GENERAL_CHAT).unset(key)
         }
         clearTimeout(timeout)
         timeout = setTimeout(() => {
@@ -490,9 +491,9 @@ export const clearGunDatabase = async (gun) => {
     })
     
     // Method 2: Overwrite the entire general_chat node
-    await gun.get('general_chat').put(null)
-    await gun.get('general_chat').put({})
-    await gun.get('general_chat').put({ cleared: true, at: Date.now() })
+    await gun.get(DB_KEYS.GENERAL_CHAT).put(null)
+    await gun.get(DB_KEYS.GENERAL_CHAT).put({})
+    await gun.get(DB_KEYS.GENERAL_CHAT).put({ cleared: true, at: Date.now() })
     
     // Method 3: Clear all possible message nodes
     const messageNodes = [
@@ -518,17 +519,17 @@ export const clearGunDatabase = async (gun) => {
     }
     
     // Clear all root nodes
-    await gun.get('chat_users').put(null)
-    await gun.get('chat_users_by_nick').put(null)
-    await gun.get('general_chat').put(null)
-    await gun.get('chat_messages').put(null)
+    await gun.get(DB_KEYS.USERS).put(null)
+    await gun.get(DB_KEYS.USERS_BY_NICK).put(null)
+    await gun.get(DB_KEYS.GENERAL_CHAT).put(null)
+    await gun.get(DB_KEYS.MESSAGES).put(null)
     await gun.get('messages').put(null)
-    await gun.get('secure_invites').put(null)
+    await gun.get(DB_KEYS.INVITES).put(null)
     await gun.get('invites').put(null)
-    await gun.get('user_presence').put(null)
-    await gun.get('online_users').put(null)
+    await gun.get(DB_KEYS.USER_PRESENCE).put(null)
+    await gun.get(DB_KEYS.ONLINE_USERS).put(null)
     await gun.get('presence').put(null)
-    await gun.get('friendships').put(null)
+    await gun.get(DB_KEYS.FRIENDSHIPS).put(null)
     
     // Clear localStorage too for complete reset
     localStorage.clear()
@@ -539,18 +540,18 @@ export const clearGunDatabase = async (gun) => {
     
     // Force clear by overwriting with empty objects
     const emptyData = { cleared: true, timestamp: Date.now() }
-    await gun.get('general_chat').put(emptyData)
+    await gun.get(DB_KEYS.GENERAL_CHAT).put(emptyData)
     await gun.get('messages').put(emptyData)
-    await gun.get('chat_messages').put(emptyData)
+    await gun.get(DB_KEYS.MESSAGES).put(emptyData)
     
     // Wait a bit more for sync
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     // Re-initialize empty nodes
-    await gun.get('chat_users').put({ initialized: Date.now() })
-    await gun.get('chat_users_by_nick').put({ initialized: Date.now() })
+    await gun.get(DB_KEYS.USERS).put({ initialized: Date.now() })
+    await gun.get(DB_KEYS.USERS_BY_NICK).put({ initialized: Date.now() })
     await gun.get('messages').put({ initialized: Date.now() })
-    await gun.get('general_chat').put({ initialized: Date.now() })
+    await gun.get(DB_KEYS.GENERAL_CHAT).put({ initialized: Date.now() })
     
     logger.log('✅ Gun.js database and localStorage completely cleared!')
     return true
