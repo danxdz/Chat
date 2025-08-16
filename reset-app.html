@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset P2P Chat App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #764ba2;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        button {
+            background: #764ba2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5a3785;
+        }
+        .danger {
+            background: #dc3545;
+        }
+        .danger:hover {
+            background: #c82333;
+        }
+        .success {
+            background: #28a745;
+        }
+        .success:hover {
+            background: #218838;
+        }
+        .info {
+            background: #17a2b8;
+        }
+        .info:hover {
+            background: #138496;
+        }
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .credentials {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid #b8daff;
+        }
+        .credentials strong {
+            color: #004085;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 P2P Chat App Reset Tool</h1>
+        
+        <div class="section">
+            <h2>📱 Quick Actions</h2>
+            <button onclick="clearAndReload()" class="success">
+                🚀 Clear Storage & Open App
+            </button>
+            <button onclick="openApp()" class="info">
+                📱 Open App (Keep Data)
+            </button>
+        </div>
+
+        <div class="section">
+            <h2>🗑️ Reset Options</h2>
+            <button onclick="clearLocalStorage()">
+                Clear Local Storage
+            </button>
+            <button onclick="clearSessionStorage()">
+                Clear Session Storage
+            </button>
+            <button onclick="clearAllStorage()" class="danger">
+                Clear All Storage (Full Reset)
+            </button>
+        </div>
+
+        <div class="section">
+            <h2>👤 Default Admin Credentials</h2>
+            <div class="credentials">
+                <p><strong>Username:</strong> <code>Admin</code></p>
+                <p><strong>Password:</strong> <code>admin123</code></p>
+            </div>
+            <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                If you can't login, use the "Create Admin Account" button on the app's welcome screen.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>📝 Instructions</h2>
+            <ol style="line-height: 1.8; color: #555;">
+                <li>Click <strong>"Clear Storage & Open App"</strong> for a fresh start</li>
+                <li>On the app's welcome screen, click <strong>"🛡️ Create Admin Account"</strong></li>
+                <li>Login with Username: <code>Admin</code> and Password: <code>admin123</code></li>
+                <li>Once logged in, you can create invites for other users</li>
+            </ol>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        function showMessage(text, type = 'success') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 3000);
+        }
+
+        function clearLocalStorage() {
+            try {
+                localStorage.clear();
+                showMessage('✅ Local Storage cleared successfully!');
+            } catch (error) {
+                showMessage('❌ Error clearing Local Storage: ' + error.message, 'error');
+            }
+        }
+
+        function clearSessionStorage() {
+            try {
+                sessionStorage.clear();
+                showMessage('✅ Session Storage cleared successfully!');
+            } catch (error) {
+                showMessage('❌ Error clearing Session Storage: ' + error.message, 'error');
+            }
+        }
+
+        function clearAllStorage() {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear IndexedDB if it exists
+                if (window.indexedDB) {
+                    indexedDB.databases().then(databases => {
+                        databases.forEach(db => {
+                            indexedDB.deleteDatabase(db.name);
+                        });
+                    }).catch(() => {});
+                }
+                
+                // Clear cookies for this domain
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                
+                showMessage('✅ All storage cleared successfully! App is reset.', 'success');
+            } catch (error) {
+                showMessage('❌ Error clearing storage: ' + error.message, 'error');
+            }
+        }
+
+        function openApp() {
+            // Try different possible app URLs
+            const possibleUrls = [
+                '/',
+                '/index.html',
+                window.location.origin
+            ];
+            
+            // Open in same tab
+            window.location.href = possibleUrls[0];
+        }
+
+        function clearAndReload() {
+            clearAllStorage();
+            setTimeout(() => {
+                openApp();
+            }, 1000);
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'r') {
+                    e.preventDefault();
+                    clearAndReload();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
