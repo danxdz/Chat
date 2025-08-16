@@ -21,6 +21,7 @@ import {
 } from './services/gunAuthService'
 
 import gunPeers from './config/gunPeers'
+import DB_KEYS from './config/database.js'
 import { initWebRTC, sendWebRTCMessage } from './services/webrtcService'
 import { logger, isDev } from './utils/logger'
 import * as adminService from './services/adminService'

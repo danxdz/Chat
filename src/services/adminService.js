@@ -1,6 +1,6 @@
 import { createGunUser, getAllGunUsers } from './gunAuthService'
 import { logger } from '../utils/logger'
-import DB_KEYS from '../config/database'
+import DB_KEYS from '../config/database.js'
 
 // Create admin user with fixed ID for consistency
 export const createAdminUser = async (gun) => {

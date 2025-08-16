@@ -1,7 +1,7 @@
 // Gun.js Authentication Service - Cross-platform user management
 import { logger } from '../utils/logger'
 import { addMutualFriendship } from './friendsService'
-import DB_KEYS from '../config/database'
+import DB_KEYS from '../config/database.js'
 
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost'
 

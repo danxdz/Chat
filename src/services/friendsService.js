@@ -2,6 +2,8 @@
  * Friends Service - Manages friendships in Gun.js
  */
 
+import DB_KEYS from '../config/database.js';
+
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
 
 const logger = {

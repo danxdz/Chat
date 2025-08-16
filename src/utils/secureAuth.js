@@ -1,6 +1,8 @@
 // 🔐 Secure Authentication System for P2P Chat
 // IRC-style login + cryptographically signed invites
 
+import DB_KEYS from '../config/database.js';
+
 /**
  * Generate a permanent user ID using Gun.SEA
  */
