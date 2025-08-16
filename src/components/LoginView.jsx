@@ -6,7 +6,7 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
   const [rememberMe, setRememberMe] = useState(true)
   const [loginError, setLoginError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [showReset, setShowReset] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,45 +51,71 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
   }
 
   const handleReset = () => {
-    if (confirm('This will clear all local data and reset the app. Continue?')) {
+    if (confirm('This will clear all local data. Continue?')) {
       try {
-        // Clear all storage
         localStorage.clear()
         sessionStorage.clear()
-        
-        // Clear IndexedDB if it exists
-        if (window.indexedDB && window.indexedDB.databases) {
-          window.indexedDB.databases().then(databases => {
-            databases.forEach(db => {
-              window.indexedDB.deleteDatabase(db.name)
-            })
-          }).catch(() => {})
-        }
-        
-        // Show success and reload
-        alert('✅ App has been reset! Page will reload now.')
         window.location.reload()
       } catch (error) {
-        alert('❌ Failed to reset: ' + error.message)
+        alert('Failed to reset: ' + error.message)
       }
     }
   }
 
+  const noUsers = !allUsers || allUsers.length === 0
+
   return (
     <div className="screen">
       <form className="form" onSubmit={handleSubmit}>
-        <h1>🔐 Secure P2P Chat</h1>
-        <p className="subtitle">Login to continue</p>
+        <h1>🔐 P2P Chat</h1>
+        <p className="subtitle">Secure Decentralized Messaging</p>
         
         {loginError && (
           <div className="error-message" style={{
             background: '#ff4444',
             color: 'white',
             padding: '10px',
-            borderRadius: '5px',
-            marginBottom: '15px'
+            borderRadius: '8px',
+            marginBottom: '15px',
+            fontSize: '0.9em'
           }}>
             {loginError}
+          </div>
+        )}
+        
+        {/* Quick Start for New Users */}
+        {noUsers && (
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            padding: '15px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.95em' }}>
+              First time? Start here:
+            </p>
+            <button
+              type="button"
+              onClick={handleCreateAdmin}
+              className="btn"
+              style={{ 
+                width: '100%',
+                background: 'white',
+                color: '#764ba2',
+                fontWeight: 'bold'
+              }}
+              disabled={isLoading}
+            >
+              🚀 Create Admin Account
+            </button>
+            <p style={{ 
+              margin: '10px 0 0 0', 
+              fontSize: '0.85em',
+              opacity: 0.9
+            }}>
+              Username: Admin | Password: admin123
+            </p>
           </div>
         )}
         
@@ -98,9 +124,7 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
           placeholder="Nickname"
           value={loginNickname}
           onChange={(e) => setLoginNickname(e.target.value)}
-          className="input"
           disabled={isLoading}
-          autoFocus
         />
         
         <input
@@ -108,7 +132,6 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
           placeholder="Password"
           value={loginPassword}
           onChange={(e) => setLoginPassword(e.target.value)}
-          className="input"
           disabled={isLoading}
         />
         
@@ -136,116 +159,82 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
           {isLoading ? 'Loading...' : 'Login'}
         </button>
         
-        {/* Admin Account Section */}
-        <div style={{ marginTop: '20px' }}>
-          {allUsers && allUsers.length === 0 ? (
-            <>
-              <button
-                type="button"
-                onClick={handleCreateAdmin}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                disabled={isLoading}
-              >
-                🛡️ Create Admin Account
-              </button>
-              <div style={{ 
-                marginTop: '10px', 
-                padding: '10px', 
-                background: 'rgba(255,255,255,0.1)', 
-                borderRadius: '8px',
-                fontSize: '0.9em'
-              }}>
-                <strong>Admin will be created with:</strong><br/>
-                Username: <code style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '3px' }}>Admin</code><br/>
-                Password: <code style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '3px' }}>admin123</code>
-              </div>
-            </>
-          ) : (
+        {/* Quick Actions */}
+        <div style={{ 
+          marginTop: '20px',
+          display: 'flex',
+          gap: '10px'
+        }}>
+          {!noUsers && (
             <button
               type="button"
               onClick={handleQuickAdminLogin}
               className="btn"
               style={{ 
-                width: '100%',
-                background: 'rgba(118, 75, 162, 0.3)',
-                border: '1px solid rgba(118, 75, 162, 0.5)'
+                flex: 1,
+                background: 'rgba(255,255,255,0.1)',
+                fontSize: '0.9em'
               }}
               disabled={isLoading}
             >
-              👤 Quick Fill: Admin / admin123
+              👤 Admin
             </button>
           )}
-        </div>
-        
-        <div style={{ 
-          marginTop: '30px', 
-          paddingTop: '20px', 
-          borderTop: '1px solid rgba(255,255,255,0.1)' 
-        }}>
+          
           <button
             type="button"
-            onClick={() => setShowReset(!showReset)}
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.3)',
-              color: '#fff',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.9em',
-              width: '100%'
+            onClick={() => setShowHelp(!showHelp)}
+            className="btn"
+            style={{ 
+              flex: 1,
+              background: 'rgba(255,255,255,0.1)',
+              fontSize: '0.9em'
             }}
           >
-            🔧 Troubleshooting Options {showReset ? '▲' : '▼'}
+            ❓ Help
           </button>
           
-          {showReset && (
-            <div style={{ marginTop: '15px' }}>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="btn"
-                style={{ 
-                  background: '#dc3545', 
-                  width: '100%',
-                  marginBottom: '10px'
-                }}
-              >
-                🗑️ Reset App (Clear All Data)
-              </button>
-              
-              <div style={{ 
-                padding: '10px', 
-                background: 'rgba(255,200,0,0.1)', 
-                border: '1px solid rgba(255,200,0,0.3)',
-                borderRadius: '8px',
-                fontSize: '0.85em',
-                lineHeight: '1.5'
-              }}>
-                <strong>⚠️ Important:</strong><br/>
-                Users are stored on the P2P network (Gun.js), not just locally.<br/>
-                <br/>
-                <strong>Admin Account Already Exists?</strong><br/>
-                • Click "Quick Fill" button above<br/>
-                • Or manually enter: Admin / admin123<br/>
-                <br/>
-                <strong>Still Can't Login?</strong><br/>
-                1. Click "Reset App" to clear local cache<br/>
-                2. Try the Quick Fill button<br/>
-                3. Click Login<br/>
-                <br/>
-                <em style={{ fontSize: '0.9em', opacity: 0.8 }}>
-                  Note: Reset only clears your local data. The admin account persists on the network.
-                </em>
-              </div>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={handleReset}
+            className="btn"
+            style={{ 
+              flex: 1,
+              background: 'rgba(220,53,69,0.2)',
+              fontSize: '0.9em'
+            }}
+          >
+            🔄 Reset
+          </button>
         </div>
         
-        <div style={{ marginTop: '20px', fontSize: '0.9em', color: '#888', textAlign: 'center' }}>
+        {/* Help Section */}
+        {showHelp && (
+          <div style={{
+            marginTop: '15px',
+            padding: '15px',
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '8px',
+            fontSize: '0.85em',
+            lineHeight: '1.6'
+          }}>
+            <strong>Quick Help:</strong><br/>
+            • Default admin: Admin / admin123<br/>
+            • Reset clears local cache only<br/>
+            • Users exist on P2P network<br/>
+            • Create admin if first time
+          </div>
+        )}
+        
+        {/* Status */}
+        <div style={{ 
+          marginTop: '20px', 
+          fontSize: '0.85em', 
+          color: '#888',
+          textAlign: 'center'
+        }}>
           {allUsers && allUsers.length > 0 && (
-            <p>Registered Users: {allUsers.length}</p>
+            <span>{allUsers.length} users registered</span>
           )}
         </div>
       </form>
