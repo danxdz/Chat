@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
   const [loginNickname, setLoginNickname] = useState('')
@@ -7,6 +7,15 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
   const [loginError, setLoginError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [hasInvite, setHasInvite] = useState(false)
+  
+  useEffect(() => {
+    // Check if there's an invite in the URL
+    const hash = window.location.hash
+    if (hash.startsWith('#invite=')) {
+      setHasInvite(true)
+    }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -69,6 +78,33 @@ export default function LoginView({ onLogin, onCreateAdmin, allUsers }) {
       <form className="form" onSubmit={handleSubmit}>
         <h1>🔐 P2P Chat</h1>
         <p className="subtitle">Secure Decentralized Messaging</p>
+        
+        {hasInvite && (
+          <div style={{
+            background: '#4CAF50',
+            color: 'white',
+            padding: '15px',
+            borderRadius: '10px',
+            marginBottom: '15px',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>
+              📨 You have an invite!
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn"
+              style={{ 
+                background: 'white',
+                color: '#4CAF50',
+                fontWeight: 'bold'
+              }}
+            >
+              Go to Registration →
+            </button>
+          </div>
+        )}
         
         {loginError && (
           <div className="error-message" style={{

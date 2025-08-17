@@ -204,8 +204,13 @@ function App() {
         }
       }
 
-      // Invite links now go to separate HTML page (/register.html)
-      // No need to handle them in React app
+      // Check for invite in URL
+      const hash = window.location.hash
+      if (hash.startsWith('#invite=')) {
+        console.log('📨 Found invite link, redirecting to registration')
+        setCurrentView('simpleRegister')
+        return
+      }
 
       // Always show login page - users can create admin from there
       setCurrentView('login')
