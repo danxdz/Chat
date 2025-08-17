@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { createSecureInvite } from '../utils/secureAuth'
+import { createInvite } from '../services/friendsSyncService'
 
 const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [expirationChoice, setExpirationChoice] = useState('1h')
@@ -22,14 +22,9 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
     setError('')
     
     try {
-      const invite = await createSecureInvite(user, expirationChoice)
+      // Create invite using the new service
+      const invite = await createInvite(gun, user.id, user.nickname)
       setCreatedInvite(invite)
-      
-      // Store pending invite in Gun.js for the inviter
-      if (gun && user) {
-        const { storePendingInvite } = await import('../services/inviteService')
-        await storePendingInvite(gun, user.id, invite)
-      }
       
       if (onInviteCreated) {
         onInviteCreated(invite)

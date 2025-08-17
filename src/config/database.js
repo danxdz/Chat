@@ -24,7 +24,8 @@ export const DB_KEYS = {
   NOTIFICATIONS: `${DB_NAMESPACE}_notifications`,
   ONLINE_USERS: `${DB_NAMESPACE}_online`,
   USER_PRESENCE: `${DB_NAMESPACE}_presence`,
-  GENERAL_CHAT: `${DB_NAMESPACE}_general`
+  GENERAL_CHAT: `${DB_NAMESPACE}_general`,
+  USER_INVITES: `${DB_NAMESPACE}_user_invites`
 };
 
 // Legacy keys (for migration if needed)
