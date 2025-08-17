@@ -37,7 +37,7 @@ export const createGunUser = async (gun, nickname, password, inviteData = null) 
     // Check if nickname already exists
     const existingUser = await checkUserExists(gun, nickname)
     if (existingUser) {
-      throw new Error('Nickname already taken')
+      throw new Error(`Username "${nickname}" is already taken. Please choose a different name.`)
     }
     
     // Create user identity

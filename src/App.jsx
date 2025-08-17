@@ -1510,6 +1510,11 @@ function App() {
     let inviteToken = null
     let inviterName = 'someone'
     
+    const [nicknameValue, setNicknameValue] = useState('')
+    const [isCheckingNickname, setIsCheckingNickname] = useState(false)
+    const [nicknameAvailable, setNicknameAvailable] = useState(null)
+    const [nicknameError, setNicknameError] = useState('')
+    
     if (hash.startsWith('#invite=')) {
       inviteToken = hash.replace('#invite=', '')
       try {
@@ -1519,6 +1524,47 @@ function App() {
         console.log('Could not parse invite name')
       }
     }
+    
+    // Check nickname availability
+    const checkNicknameAvailability = async (nickname) => {
+      if (!nickname || nickname.length < 2) {
+        setNicknameError('Nickname must be at least 2 characters')
+        setNicknameAvailable(false)
+        return
+      }
+      
+      setIsCheckingNickname(true)
+      setNicknameError('')
+      
+      try {
+        if (gun) {
+          const { checkUserExists } = await import('./services/gunAuthService')
+          const exists = await checkUserExists(gun, nickname)
+          
+          if (exists) {
+            setNicknameError(`"${nickname}" is already taken`)
+            setNicknameAvailable(false)
+          } else {
+            setNicknameAvailable(true)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking nickname:', error)
+      } finally {
+        setIsCheckingNickname(false)
+      }
+    }
+    
+    // Debounced nickname check
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (nicknameValue) {
+          checkNicknameAvailability(nicknameValue)
+        }
+      }, 500) // Wait 500ms after user stops typing
+      
+      return () => clearTimeout(timer)
+    }, [nicknameValue])
     
     return (
       <div className="screen">
@@ -1572,15 +1618,51 @@ function App() {
               }
             }
           }}>
-            <input
-              name="nickname"
-              type="text"
-              placeholder="Your nickname"
-              required
-              autoFocus
-              className="input"
-              style={{ marginBottom: '1rem' }}
-            />
+            <div style={{ position: 'relative', marginBottom: '1rem' }}>
+              <input
+                name="nickname"
+                type="text"
+                placeholder="Your nickname"
+                required
+                autoFocus
+                className="input"
+                value={nicknameValue}
+                onChange={(e) => setNicknameValue(e.target.value)}
+                style={{
+                  borderColor: nicknameError ? '#ff4444' : 
+                              nicknameAvailable === true ? '#4CAF50' : 
+                              undefined,
+                  paddingRight: '40px'
+                }}
+              />
+              {isCheckingNickname && (
+                <span style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '0.8em',
+                  color: '#888'
+                }}>Checking...</span>
+              )}
+              {!isCheckingNickname && nicknameAvailable === true && (
+                <span style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '1.2em'
+                }}>✅</span>
+              )}
+              {!isCheckingNickname && nicknameError && (
+                <div style={{
+                  color: '#ff4444',
+                  fontSize: '0.8em',
+                  marginTop: '5px',
+                  textAlign: 'left'
+                }}>{nicknameError}</div>
+              )}
+            </div>
             <input
               name="password"
               type="password"
@@ -1589,8 +1671,16 @@ function App() {
               className="input"
               style={{ marginBottom: '1.5rem' }}
             />
-            <button type="submit" className="btn">
-              ✨ Create Account
+            <button 
+              type="submit" 
+              className="btn"
+              disabled={!nicknameAvailable || isCheckingNickname}
+              style={{
+                opacity: (!nicknameAvailable || isCheckingNickname) ? 0.5 : 1,
+                cursor: (!nicknameAvailable || isCheckingNickname) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isCheckingNickname ? '⏳ Checking...' : '✨ Create Account'}
             </button>
           </form>
         </div>
