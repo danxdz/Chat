@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { createInvite } from '../services/friendsSyncService'
+import { createSecureInvite } from '../utils/secureAuth'
 
 const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [expirationChoice, setExpirationChoice] = useState('1h')
@@ -22,16 +23,46 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
     setError('')
     
     try {
-      // Create invite using the new service
-      const invite = await createInvite(gun, user.id, user.nickname)
+      let invite;
+      
+      // Try the new Gun.js service first
+      if (gun && user?.id && user?.nickname) {
+        try {
+          console.log('Creating invite with Gun.js service...')
+          invite = await createInvite(gun, user.id, user.nickname)
+          console.log('✅ Invite created with new service:', invite)
+        } catch (gunError) {
+          console.error('Gun.js invite creation failed, falling back:', gunError)
+          // Fall back to old method
+          invite = await createSecureInvite(user, expirationChoice)
+          console.log('✅ Invite created with fallback method:', invite)
+        }
+      } else {
+        // Use old method if Gun not available
+        console.log('Using legacy invite creation (Gun not available)')
+        invite = await createSecureInvite(user, expirationChoice)
+      }
+      
       setCreatedInvite(invite)
+      
+      // Store in Gun.js if available
+      if (gun && user && invite) {
+        try {
+          const { storePendingInvite } = await import('../services/inviteService')
+          await storePendingInvite(gun, user.id, invite)
+          console.log('✅ Invite stored in Gun.js')
+        } catch (storeError) {
+          console.error('Failed to store invite in Gun.js:', storeError)
+          // Not critical, continue
+        }
+      }
       
       if (onInviteCreated) {
         onInviteCreated(invite)
       }
       
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Failed to create invite')
       console.error('Failed to create secure invite:', err)
     } finally {
       setIsCreating(false)
