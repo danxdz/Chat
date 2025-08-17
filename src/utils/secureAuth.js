@@ -269,18 +269,29 @@ export const verifySecureInvite = async (inviteToken) => {
 /**
  * Mark invite as used (one-time use)
  */
-export const markInviteUsed = async (inviteToken) => {
+export const markInviteUsed = async (inviteToken, acceptedBy = null, acceptedNickname = null) => {
   try {
     // Decode the token to get the invite ID
     const inviteData = JSON.parse(atob(inviteToken))
     
     if (window.gun && inviteData.id) {
-      await window.gun.get(DB_KEYS.INVITES).get(inviteData.id).put({
+      const updateData = {
         ...inviteData,
         used: true,
-        usedAt: Date.now()
-      })
-      console.log('🎫 Invite marked as used:', inviteData.id)
+        status: 'accepted',
+        usedAt: Date.now(),
+        acceptedAt: Date.now()
+      }
+      
+      if (acceptedBy) {
+        updateData.acceptedBy = acceptedBy
+      }
+      if (acceptedNickname) {
+        updateData.acceptedNickname = acceptedNickname
+      }
+      
+      await window.gun.get(DB_KEYS.INVITES).get(inviteData.id).put(updateData)
+      console.log('🎫 Invite marked as accepted:', inviteData.id, 'by', acceptedNickname)
     }
   } catch (error) {
     console.error('❌ Failed to mark invite as used:', error)

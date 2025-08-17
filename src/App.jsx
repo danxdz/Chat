@@ -922,7 +922,7 @@ function App() {
       if (newUser) {
         // Mark invite as used if applicable
         if (inviteToken && inviteData) {
-          await markInviteUsed(inviteToken)
+          await markInviteUsed(inviteToken, user.id, nickname)
         }
         
         // Auto-login the new user
@@ -1525,6 +1525,13 @@ function App() {
                     }
                     console.log('✅ Added mutual friendship:', inviteData.fromNick, '<->', nickname)
                   }
+                  
+                  // Also add friendship in Gun.js
+                  if (gun) {
+                    const { addMutualFriendship } = await import('./services/friendsService')
+                    await addMutualFriendship(gun, inviteData.fromId, newUser.id)
+                    console.log('✅ Added friendship in Gun.js')
+                  }
                 }
                 
                 const updatedUsers = [...existingUsers, newUser]
@@ -1532,7 +1539,7 @@ function App() {
                 localStorage.setItem('users', JSON.stringify(updatedUsers))
                 
                 // Mark invite as used and remove from pending
-                await markInviteUsed(inviteData.id)
+                await markInviteUsed(inviteToken, newUser.id, nickname)
                 
                 // Update pending invite to show who accepted
                 const pendingInvites = JSON.parse(localStorage.getItem('pendingInvites') || '[]')
