@@ -223,6 +223,13 @@ export const monitorFriendsChanges = (gun, userId, callback) => {
  */
 export const createInvite = async (gun, userId, userNickname) => {
   try {
+    if (!gun) {
+      throw new Error('Gun instance not available');
+    }
+    if (!userId || !userNickname) {
+      throw new Error('User ID and nickname are required');
+    }
+    
     const inviteId = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
     const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
     
@@ -236,11 +243,15 @@ export const createInvite = async (gun, userId, userNickname) => {
       used: false
     };
     
+    logger.log('📝 Creating invite with data:', inviteData);
+    
     // Store in main invites database
     await gun.get(DB_KEYS.INVITES).get(inviteId).put(inviteData);
+    logger.log('✅ Stored in main invites DB');
     
     // Store in user's invites
     await gun.get(DB_KEYS.USER_INVITES).get(userId).get(inviteId).put(inviteData);
+    logger.log('✅ Stored in user invites DB');
     
     // Create invite token
     const inviteToken = btoa(JSON.stringify({
@@ -254,11 +265,12 @@ export const createInvite = async (gun, userId, userNickname) => {
     
     return {
       ...inviteData,
+      inviteId: inviteId,  // Add inviteId for backward compatibility
       token: inviteToken,
       inviteUrl: `${window.location.origin}${window.location.pathname}#invite=${inviteToken}`
     };
   } catch (error) {
-    logger.error('Failed to create invite:', error);
+    logger.error('❌ Failed to create invite:', error);
     throw error;
   }
 };
