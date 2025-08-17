@@ -8,6 +8,7 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const [isCreating, setIsCreating] = useState(false)
   const [createdInvite, setCreatedInvite] = useState(null)
   const [error, setError] = useState('')
+  const [debugInfo, setDebugInfo] = useState([])
   const [copied, setCopied] = useState(false)
   const qrRef = useRef(null)
 
@@ -21,49 +22,61 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
   const handleCreateInvite = async () => {
     setIsCreating(true)
     setError('')
+    setDebugInfo([])
+    
+    const addDebug = (msg) => {
+      setDebugInfo(prev => [...prev, msg])
+    }
     
     try {
       let invite;
       
+      // Check what we have
+      addDebug(`Gun: ${gun ? '✅' : '❌'}, User ID: ${user?.id ? '✅' : '❌'}, Nickname: ${user?.nickname || 'none'}`)
+      
       // Try the new Gun.js service first
       if (gun && user?.id && user?.nickname) {
         try {
-          console.log('Creating invite with Gun.js service...')
+          addDebug('Trying Gun.js service...')
           invite = await createInvite(gun, user.id, user.nickname)
-          console.log('✅ Invite created with new service:', invite)
+          addDebug('✅ Created with Gun.js')
         } catch (gunError) {
-          console.error('Gun.js invite creation failed, falling back:', gunError)
+          addDebug(`❌ Gun failed: ${gunError.message}`)
           // Fall back to old method
+          addDebug('Trying fallback method...')
           invite = await createSecureInvite(user, expirationChoice)
-          console.log('✅ Invite created with fallback method:', invite)
+          addDebug('✅ Created with fallback')
         }
       } else {
         // Use old method if Gun not available
-        console.log('Using legacy invite creation (Gun not available)')
+        addDebug('Using legacy method (no Gun)')
         invite = await createSecureInvite(user, expirationChoice)
+        addDebug('✅ Created with legacy')
       }
       
       setCreatedInvite(invite)
+      addDebug(`Invite ID: ${invite?.inviteId || invite?.id || 'none'}`)
       
       // Store in Gun.js if available
       if (gun && user && invite) {
         try {
+          addDebug('Storing in Gun.js...')
           const { storePendingInvite } = await import('../services/inviteService')
           await storePendingInvite(gun, user.id, invite)
-          console.log('✅ Invite stored in Gun.js')
+          addDebug('✅ Stored in Gun.js')
         } catch (storeError) {
-          console.error('Failed to store invite in Gun.js:', storeError)
-          // Not critical, continue
+          addDebug(`⚠️ Store failed: ${storeError.message}`)
         }
       }
       
       if (onInviteCreated) {
         onInviteCreated(invite)
+        addDebug('✅ Callback executed')
       }
       
     } catch (err) {
       setError(err.message || 'Failed to create invite')
-      console.error('Failed to create secure invite:', err)
+      addDebug(`❌ Fatal error: ${err.message}`)
     } finally {
       setIsCreating(false)
     }
@@ -380,6 +393,25 @@ const SecureInviteModal = ({ user, gun, onClose, onInviteCreated }) => {
             textAlign: 'center'
           }}>
             ❌ {error}
+          </div>
+        )}
+
+        {debugInfo.length > 0 && (
+          <div style={{
+            background: 'rgba(0, 100, 255, 0.1)',
+            border: '1px solid rgba(0, 100, 255, 0.3)',
+            padding: '0.8rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            fontSize: '0.7rem',
+            color: '#6bb6ff',
+            maxHeight: '150px',
+            overflow: 'auto'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>Debug Info:</div>
+            {debugInfo.map((info, i) => (
+              <div key={i} style={{ marginLeft: '0.5rem' }}>• {info}</div>
+            ))}
           </div>
         )}
 
