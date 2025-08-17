@@ -78,6 +78,21 @@ function App() {
   // Initialize sodium and check URL for invite
   const initializeApp = async () => {
     try {
+      // FIRST: Check for invite in URL - this takes absolute priority
+      const hash = window.location.hash
+      if (hash.startsWith('#invite=')) {
+        console.log('📨 Found invite link, going straight to registration')
+        setCurrentView('simpleRegister')
+        
+        // Still initialize Gun.js for the registration
+        if (window.sodium) {
+          await window.sodium.ready
+          logger.log('✅ Sodium ready for cryptography')
+        }
+        await initializeGunJS()
+        return // Stop here, don't check for sessions
+      }
+      
       if (window.sodium) {
         await window.sodium.ready
         // setSodium(window.sodium) // Removed as per new_code
@@ -204,15 +219,7 @@ function App() {
         }
       }
 
-      // Check for invite in URL
-      const hash = window.location.hash
-      if (hash.startsWith('#invite=')) {
-        console.log('📨 Found invite link, redirecting to registration')
-        setCurrentView('simpleRegister')
-        return
-      }
-
-      // Always show login page - users can create admin from there
+      // No invite, no session, no auto-login - show login page
       setCurrentView('login')
       console.log('📱 Starting at login page')
     } catch (error) {
