@@ -1504,16 +1504,58 @@ function App() {
     )
   }
 
+  // Registration form state - must be outside conditional for React hooks rules
+  const [nicknameValue, setNicknameValue] = useState('')
+  const [isCheckingNickname, setIsCheckingNickname] = useState(false)
+  const [nicknameAvailable, setNicknameAvailable] = useState(null)
+  const [nicknameError, setNicknameError] = useState('')
+  
+  // Check nickname availability
+  const checkNicknameAvailability = async (nickname) => {
+    if (!nickname || nickname.length < 2) {
+      setNicknameError('Nickname must be at least 2 characters')
+      setNicknameAvailable(false)
+      return
+    }
+    
+    setIsCheckingNickname(true)
+    setNicknameError('')
+    
+    try {
+      if (gun) {
+        const { checkUserExists } = await import('./services/gunAuthService')
+        const exists = await checkUserExists(gun, nickname)
+        
+        if (exists) {
+          setNicknameError(`"${nickname}" is already taken`)
+          setNicknameAvailable(false)
+        } else {
+          setNicknameAvailable(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking nickname:', error)
+    } finally {
+      setIsCheckingNickname(false)
+    }
+  }
+  
+  // Debounced nickname check
+  useEffect(() => {
+    if (currentView === 'simpleRegister' && nicknameValue) {
+      const timer = setTimeout(() => {
+        checkNicknameAvailability(nicknameValue)
+      }, 500) // Wait 500ms after user stops typing
+      
+      return () => clearTimeout(timer)
+    }
+  }, [nicknameValue, currentView])
+
   if (currentView === 'simpleRegister') {
     // Get invite token directly from URL - no sessionStorage
     const hash = window.location.hash
     let inviteToken = null
     let inviterName = 'someone'
-    
-    const [nicknameValue, setNicknameValue] = useState('')
-    const [isCheckingNickname, setIsCheckingNickname] = useState(false)
-    const [nicknameAvailable, setNicknameAvailable] = useState(null)
-    const [nicknameError, setNicknameError] = useState('')
     
     if (hash.startsWith('#invite=')) {
       inviteToken = hash.replace('#invite=', '')
@@ -1524,47 +1566,6 @@ function App() {
         console.log('Could not parse invite name')
       }
     }
-    
-    // Check nickname availability
-    const checkNicknameAvailability = async (nickname) => {
-      if (!nickname || nickname.length < 2) {
-        setNicknameError('Nickname must be at least 2 characters')
-        setNicknameAvailable(false)
-        return
-      }
-      
-      setIsCheckingNickname(true)
-      setNicknameError('')
-      
-      try {
-        if (gun) {
-          const { checkUserExists } = await import('./services/gunAuthService')
-          const exists = await checkUserExists(gun, nickname)
-          
-          if (exists) {
-            setNicknameError(`"${nickname}" is already taken`)
-            setNicknameAvailable(false)
-          } else {
-            setNicknameAvailable(true)
-          }
-        }
-      } catch (error) {
-        console.error('Error checking nickname:', error)
-      } finally {
-        setIsCheckingNickname(false)
-      }
-    }
-    
-    // Debounced nickname check
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        if (nicknameValue) {
-          checkNicknameAvailability(nicknameValue)
-        }
-      }, 500) // Wait 500ms after user stops typing
-      
-      return () => clearTimeout(timer)
-    }, [nicknameValue])
     
     return (
       <div className="screen">
